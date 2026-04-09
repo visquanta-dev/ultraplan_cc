@@ -8,6 +8,8 @@ Autonomous, high-quality blog generation engine for [visquanta.com](https://visq
 
 **Phase 1 — Bootstrap Steps 1–5** is the current build target. See the implementation plan at `~/.claude/plans/async-riding-leaf.md`.
 
+**Live preview:** [ultraplan-cc.vercel.app](https://ultraplan-cc.vercel.app) — auto-deploys from `main` via Vercel GitHub integration on the `vis-quanta` team.
+
 ## Core principles (from spec §2)
 
 1. **No source = no sentence.** Every paragraph binds to a verbatim quote in a pre-assembled research bundle.
