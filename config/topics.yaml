@@ -1,0 +1,85 @@
+# ============================================================================
+# UltraPlan — editorial calendar
+# The steering wheel of the whole system. Every change to cadence, lanes,
+# word counts, or model selection lives here. Spec §9.
+# ============================================================================
+
+version: 2026-Q2
+timezone: America/Chicago
+
+global_constraints:
+  - never_mention_specific_clients
+  - reputable_sources_only
+  - source_first_drafting
+
+lanes:
+  daily_seo:
+    cadence: "MON,FRI 06:00"
+    funnel_target: ToFu
+    word_count:
+      min: 1000
+      max: 1400
+    sources:
+      - trade_press
+      - regulatory
+      - reddit
+    topic_strategy: trend_hijack
+    image:
+      count: 1
+      style: daily_seo
+    review: pr_only
+    models:
+      drafter: claude-opus-4-6
+      judge: gpt-5
+      image: google/gemini-2.5-flash-image-preview-pro
+
+  weekly_authority:
+    cadence: "WED 06:00"
+    funnel_target: MoFu
+    word_count:
+      min: 1800
+      max: 2400
+    sources:
+      - linkedin_dealer_principals
+      - trade_press
+      - reddit
+    topic_strategy: opinion_on_signal
+    image:
+      count: 3
+      style: weekly_authority
+    review: pr_only
+    models:
+      drafter: claude-opus-4-6
+      judge: gpt-5
+      image: google/gemini-2.5-flash-image-preview-pro
+
+  monthly_anonymized_case:
+    # Replaces the daily_seo Friday slot on the 1st Friday of each month.
+    cadence: "1ST FRI 06:00"
+    funnel_target: BoFu
+    word_count:
+      min: 2200
+      max: 3000
+    sources:
+      - trade_press
+      - regulatory
+    topic_strategy: pattern_extraction
+    image:
+      count: 4
+      style: monthly_case_study
+    review: pr_plus_anonymization_rescrub
+    hard_constraint: no_client_names
+    models:
+      drafter: claude-opus-4-6
+      judge: gpt-5
+      image: google/gemini-2.5-flash-image-preview-pro
+
+# Inputs synced from visquanta-dev/site at runtime to drive slot resolution
+# (trend ∩ gap targeting, spec §4 "slot resolution = trend ∩ gap").
+audit_inputs:
+  - sync: visquanta-dev/site/BLOG_FUNNEL_AUDIT.md
+    purpose: gap_targeting
+  - sync: visquanta-dev/site/ahref_reports/
+    purpose: keyword_gaps
+  - sync: visquanta-dev/site/SITEMAP.md
+    purpose: avoid_duplicates
