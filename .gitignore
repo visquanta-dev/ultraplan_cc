@@ -46,3 +46,5 @@ tmp/
 # Data that shouldn't be committed
 data/rejection_log.jsonl
 data/slot_resolutions/
+
+.vercel
