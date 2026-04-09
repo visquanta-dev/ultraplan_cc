@@ -10,6 +10,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.86.1",
     "@vercel/config": "^0.1.0",
     "next": "16.2.3",
     "react": "19.2.4",
