@@ -1,0 +1,77 @@
+# ============================================================================
+# UltraPlan — image style: monthly_anonymized_case lane
+# Prepended to every image gen for the monthly case study lane. This lane
+# has the highest bar because case studies need to feel "real" without
+# using any identifiable client imagery — ever.
+# ============================================================================
+
+lane: monthly_anonymized_case
+model: google/gemini-2.5-flash-image-preview-pro
+
+dimensions:
+  hero:
+    width: 1600
+    height: 900
+    aspect_ratio: "16:9"
+  inline:
+    width: 1200
+    height: 800
+    aspect_ratio: "3:2"
+  count:
+    hero: 1
+    inline: 3
+
+# ----------------------------------------------------------------------------
+# Style prompt — prepended verbatim
+# ----------------------------------------------------------------------------
+style_prompt: |
+  Documentary case study illustration style. Restrained, almost architectural.
+  Palette: monochrome with a single strategic spot of color (deep navy
+  #0D1B2A base, with one accent drawn from: brick red #9B2226, sage
+  #606C38, copper #BC6C25). Composition feels like an infographic treatment
+  of a business diagram — clean geometry, confident lines, generous negative
+  space. Subject is an abstract representation of a business process or
+  outcome. Think: Harvard Business Review case study art, McKinsey exhibit,
+  Financial Times feature graphic. Sophisticated, understated, built to
+  signal credibility. No text. No logos of any kind. No humans. No
+  identifiable buildings, vehicles, or dealership signage.
+
+negative_prompt: |
+  photorealistic car, dealership storefront, photograph of any building,
+  human faces, crowds, stock photo aesthetic, bright saturated colors,
+  cartoon, 3D render, text overlay, logos, brand marks, NHTSA logo,
+  OEM logos, Hyundai logo, Ford logo, Chevrolet logo, Genesis logo,
+  Volkswagen logo, specific dealership signage, identifiable license
+  plates, AI text artifacts, watermarks
+
+# ----------------------------------------------------------------------------
+# Anonymization hard rule (on top of brand fit)
+# ----------------------------------------------------------------------------
+anonymization_rule: |
+  Vision check at stage 6b MUST verify: no identifiable OEM logos or
+  branding, no specific dealership signage, no recognizable real cars
+  (no specific makes/models visible), no identifiable real buildings,
+  no license plates, no human faces that could be identified. Any single
+  violation = automatic regeneration. After 2 regeneration retries =
+  blocked draft.
+
+# ----------------------------------------------------------------------------
+# Inline image guidance
+# ----------------------------------------------------------------------------
+inline_guidance: |
+  Three inline images for this lane. They should map to the case study's
+  three-act structure:
+    1. The pattern being extracted (abstract visualization of the problem)
+    2. The intervention (abstract visualization of the change)
+    3. The measurable outcome (abstract visualization of the result, often
+       using restrained number/chart treatment)
+  Every image echoes the hero's monochrome-plus-spot-color palette.
+
+brand_fit_rubric:
+  - "Monochrome palette with one strategic spot of color"
+  - "Architectural/infographic composition, clean geometry, generous negative space"
+  - "Abstract representation of business concept, never literal"
+  - "Feels like HBR case study art or McKinsey exhibit"
+  - "No OEM logos, no dealership signage, no specific car makes/models"
+  - "No humans, no identifiable buildings, no text"
+  - "Understated and credibility-signaling, not flashy"

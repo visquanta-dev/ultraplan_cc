@@ -1,0 +1,62 @@
+# ============================================================================
+# UltraPlan — image style: weekly_authority lane
+# Prepended to every image gen for the weekly authority lane. More
+# sophisticated than daily_seo — hero + 2 inline images, meant to feel like
+# a magazine feature.
+# ============================================================================
+
+lane: weekly_authority
+model: google/gemini-2.5-flash-image-preview-pro
+
+dimensions:
+  hero:
+    width: 1600
+    height: 900
+    aspect_ratio: "16:9"
+  inline:
+    width: 1200
+    height: 800
+    aspect_ratio: "3:2"
+  count:
+    hero: 1
+    inline: 2
+
+# ----------------------------------------------------------------------------
+# Style prompt — prepended verbatim
+# ----------------------------------------------------------------------------
+style_prompt: |
+  Magazine feature illustration style. Sophisticated, slightly textured —
+  think New Yorker feature opener or Atlantic long-read cover art. Palette:
+  muted earth tones (burnt umber #6B4226, deep ochre #8B6914, moss green
+  #3C4B33, slate #455A64) on a warm off-white background (#F4EDE4). Texture
+  suggests subtle paper grain or lithograph print. Subject is metaphorical
+  and intellectually provocative — the kind of image a reader would stop
+  scrolling to look at. More complex composition than daily_seo: two or
+  three elements working together, never a single floating object. No text.
+  No logos. No humans in focus (distant silhouettes acceptable if integral
+  to the metaphor). No photorealism.
+
+negative_prompt: |
+  photorealistic car, stock photo, 3D render, close-up human face,
+  cartoonish, anime, pastel kid's book, flat vector without texture,
+  text overlay, logos, NHTSA marks, OEM marks, AI text artifacts,
+  oversaturated, neon, glow effects
+
+# ----------------------------------------------------------------------------
+# Inline image guidance — what the 2 non-hero images should depict
+# ----------------------------------------------------------------------------
+inline_guidance: |
+  Inline images are used to re-energize the reader mid-article. They should
+  echo the hero's palette and texture but depict a different facet of the
+  argument. Never literal — always metaphorical. Common patterns: a contrast
+  image (what's broken vs what works), a process image (a simplified diagram
+  of a workflow), a consequence image (what happens if the reader does/doesn't
+  act on the argument).
+
+brand_fit_rubric:
+  - "Magazine feature illustration with subtle texture, not flat vector"
+  - "Muted earth tone palette on warm off-white background"
+  - "Metaphorical subject relating to article's central argument"
+  - "Composition has 2-3 elements in relationship, not a single object"
+  - "No text, no logos, no human faces in focus"
+  - "Feels like it belongs in a New Yorker feature or Atlantic long-read"

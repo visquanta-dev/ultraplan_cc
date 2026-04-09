@@ -1,0 +1,52 @@
+# ============================================================================
+# UltraPlan — image style: daily_seo lane
+# Per spec §7, this YAML is prepended to every Nano Banana Pro generation
+# call for the daily_seo lane. The goal is lane-consistent visual identity:
+# every daily SEO post hero reads as part of the same publication.
+# ============================================================================
+
+lane: daily_seo
+model: google/gemini-2.5-flash-image-preview-pro
+
+# ----------------------------------------------------------------------------
+# Aspect ratio + dimensions (hero only — inline images are single per post)
+# ----------------------------------------------------------------------------
+dimensions:
+  hero:
+    width: 1600
+    height: 900
+    aspect_ratio: "16:9"
+
+# ----------------------------------------------------------------------------
+# Style prompt — prepended verbatim to every prompt for this lane
+# ----------------------------------------------------------------------------
+style_prompt: |
+  Editorial illustration style. Clean, modern, flat-ish vector feel with
+  confident color blocking. Limited palette: off-white background (#F7F7F5),
+  one bold accent color per image (rotating from a set of: deep teal #0F4C5C,
+  burnt orange #D35400, steel blue #34495E, charcoal #2C3E50). Subject is
+  abstract or metaphorical — never a photorealistic car or dealership
+  storefront. Think: WSJ Opinion page illustration, Bloomberg feature art,
+  The Economist Espresso. No text. No logos. No humans. No photorealism.
+  Strong negative space. Single clear visual metaphor per image.
+
+# ----------------------------------------------------------------------------
+# Negative prompt — hard rejections
+# ----------------------------------------------------------------------------
+negative_prompt: |
+  photorealistic car, photograph of a dealership, stock photo aesthetic,
+  3D render, human faces, human figures, text overlay, logos, brand marks,
+  NHTSA logo, OEM logo, cluttered composition, drop shadows, gradient
+  backgrounds, cartoon, anime, AI-generated text artifacts
+
+# ----------------------------------------------------------------------------
+# Brand-fit vision check rubric (stage 6b gate)
+# ----------------------------------------------------------------------------
+# Gemini 2.5 Pro Vision scores each generated image 1-10 against this rubric.
+# Minimum passing score: 7.
+brand_fit_rubric:
+  - "Single clear visual metaphor that relates to the article topic"
+  - "Off-white background with one dominant accent color"
+  - "No photorealism, no text, no logos, no human faces"
+  - "Flat editorial illustration style consistent with WSJ/Bloomberg feature art"
+  - "Strong negative space; composition is not cluttered"
