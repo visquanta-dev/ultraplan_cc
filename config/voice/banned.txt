@@ -125,3 +125,37 @@ comprehensive solution
 robust solution
 powerful solution
 innovative solution
+
+# ---- "AI" compound buzzwords — reader fatigue is real ----
+# The dealership audience is exhausted by "AI this, AI that" marketing.
+# Ban the compound constructions but allow bare "AI" used sparingly.
+# See voice_prompt.md for the vocabulary strategy and per-post cap.
+AI-driven
+AI-powered
+AI-enabled
+AI-first
+AI-native
+AI-ready
+AI-fueled
+AI-backed
+AI-led
+powered by AI
+driven by AI
+enabled by AI
+fueled by AI
+the power of AI
+the promise of AI
+the AI revolution
+AI revolution
+AI transformation
+AI-led transformation
+harness AI
+leverage AI
+embrace AI
+the age of AI
+the era of AI
+the rise of AI
+AI is changing
+AI is transforming
+AI is reshaping
+AI is redefining

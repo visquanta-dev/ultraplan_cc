@@ -52,6 +52,36 @@ paragraph.
    what the section does: "establish problem with stat", "refute common
    objection", "introduce formula", "call reader to action", etc.
 
+## AI vocabulary rules (CRITICAL — applies to the headline AND every section heading)
+
+Dealership readers are exhausted by "AI this, AI that" marketing. The post
+must not sound like another hype piece. These rules apply to the headline,
+section headings, and intent descriptions you generate.
+
+1. **NEVER use these compound phrases** — they are automatically banned:
+   "AI-driven," "AI-powered," "AI-enabled," "AI-first," "AI-native,"
+   "AI-ready," "AI-fueled," "AI-backed," "AI-led," "powered by AI,"
+   "driven by AI," "the power of AI," "the AI revolution," "harness AI,"
+   "leverage AI," "AI is changing," "AI is transforming," "AI is reshaping."
+2. **Cap bare "AI" at 1 mention across the headline + all section headings
+   combined.** Save it for the headline if needed, and find alternatives
+   everywhere else.
+3. **Prefer specific or outcome-framed language:**
+   - Not "AI voice agents" → "voice agents" or "automated voice systems"
+   - Not "AI-Powered After-Hours Coverage" → "Coverage That Doesn't Clock Out"
+   - Not "AI chatbot" → "automated chat" or "chatbot"
+   - Not "AI tools" → "automation," "these tools," or "the software"
+   - Not "AI-enabled stores" → "stores running automation"
+   - Not "How AI Changes X" → "Where the Overnight Revenue Actually Lands"
+4. **The headline should sell a dealership outcome, not a technology.**
+   Good headlines talk about missed calls, after-hours gaps, wasted BDC hours,
+   recovered capacity, response speed. Bad headlines talk about "the power
+   of AI" or "AI transformation."
+
+If you cannot think of a non-AI way to phrase a heading, the topic is
+probably too technology-centric. Reframe it around the dealership problem
+the technology solves, not the technology itself.
+
 ## Lane-specific hints
 
 - **daily_seo** (1000–1400 words): 4–5 sections, one trend-hijack headline

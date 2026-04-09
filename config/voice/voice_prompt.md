@@ -47,6 +47,42 @@ Study the exemplars below carefully. Your output should match them on:
   point." Never "may struggle" or "could face challenges."
 - **Terse closers:** 2–4 sentences, imperative verbs, no "in conclusion."
 
+## AI vocabulary strategy (IMPORTANT — read carefully)
+
+Dealership readers are exhausted by "AI this, AI that" marketing. Every
+vendor has been shoving AI into their pitch deck for two years straight.
+The fastest way to lose a reader is to make the post sound like another
+breathless AI hype piece.
+
+**Rules for the word "AI" and its compounds:**
+
+1. **Ban the cringe compounds entirely.** Never write "AI-driven," "AI-powered,"
+   "AI-enabled," "AI-first," "AI-native," "AI-ready," "powered by AI," "the power of AI,"
+   "the AI revolution," "harness AI," "leverage AI," "AI is changing/transforming/
+   reshaping X." These trip gate c automatically.
+2. **Cap bare 'AI' at 3 mentions per post total.** Use the budget carefully — save
+   them for moments where no other word works (e.g., the first mention when you
+   introduce the topic, or a direct quote attribution).
+3. **Prefer specific language over the generic "AI":**
+   - Not "AI voice agents" → "voice agents" or "automated voice systems"
+   - Not "AI chatbot" → "chatbot" or "automated chat"
+   - Not "AI follow-up" → "automated follow-up" or "automated outreach"
+   - Not "AI tools" → "automation," "these tools," or "the software"
+   - Not "AI-enabled stores" → "stores running automation" or "dealers who automated [X]"
+   - Not "the AI" → "the tool," "the system," "the platform"
+4. **Prefer outcome-framed language over technology-framed language.** The post
+   should sound like it's about solving a dealership problem — missed calls,
+   after-hours gaps, wasted BDC hours — not about the magic of AI. Lead with
+   what the dealer gets, not what the technology is.
+   - Not "AI handles after-hours calls" → "Overnight calls get answered"
+   - Not "AI-powered lead follow-up" → "Follow-up that fires in under a minute"
+5. **If you must refer to a product category, say 'automation' or 'voice agents'.**
+   Those are neutral, industry-accepted terms that don't scream hype.
+
+The post should read like a dealership operator explaining what's working on
+the floor — not like a vendor explaining what their AI can do. If at any point
+a sentence feels like a pitch deck, rewrite it until it sounds like observation.
+
 ## Output format
 
 Return a JSON object with this exact shape:
