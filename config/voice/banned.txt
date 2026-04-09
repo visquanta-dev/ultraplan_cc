@@ -1,0 +1,127 @@
+# Slop lexicon — spec §6 gate c
+# Any exact phrase match (case-insensitive) in a draft body blocks it at gate c.
+# One phrase per line. Lines starting with # are comments. Blank lines ignored.
+# Keep the list specific — overbroad words like "innovative" would reject too
+# much legitimate writing. Prefer multi-word phrases that only appear in AI slop.
+
+# ---- the classic AI openers ----
+in today's fast-paced
+in today's ever-evolving
+in today's digital age
+in an era where
+in the world of
+in the realm of
+in the landscape of
+in the ever-changing
+when it comes to
+at the end of the day
+it's important to note that
+it's worth noting that
+it is worth mentioning
+
+# ---- the "X isn't just Y, it's Z" construction ----
+isn't just about
+is more than just
+isn't merely
+is not merely
+beyond just
+more than a
+more than just a
+not merely a
+
+# ---- hype verbs that scream AI ----
+revolutionize
+revolutionizing
+revolutionized
+revolutionizes
+unlock the power of
+unleash the power of
+harness the power of
+tap into the power of
+leverage the power of
+supercharge your
+skyrocket your
+transform your
+elevate your
+unlock new levels
+take it to the next level
+step up your game
+level up
+
+# ---- "game-changer" family ----
+game-changer
+game changer
+game-changing
+game changing
+paradigm shift
+paradigm-shifting
+holy grail
+silver bullet
+magic wand
+secret sauce
+secret weapon
+
+# ---- "ever-evolving" cousins ----
+ever-evolving
+ever-changing
+ever-growing
+fast-paced world
+rapidly changing
+cutting-edge
+state-of-the-art
+bleeding edge
+next-generation
+
+# ---- hollow intensifiers ----
+absolutely essential
+crucially important
+vitally important
+critically important
+of paramount importance
+paramount to
+integral to
+
+# ---- "delve" and friends ----
+delve into
+delve deep into
+dive deep into
+deep dive into
+let's explore
+let's dive into
+let's take a look at
+join me as we
+
+# ---- conclusion slop ----
+in conclusion
+to conclude
+in summary
+to sum up
+to wrap up
+all in all
+when all is said and done
+at the heart of it
+
+# ---- "tapestry" and other literary gestures ----
+rich tapestry
+tapestry of
+woven into the fabric
+navigating the complexities
+navigating the nuances
+striking the right balance
+
+# ---- buzzwords the dealership industry would roll its eyes at ----
+seamless experience
+seamlessly integrate
+frictionless
+holistic approach
+synergize
+synergy
+best-in-class
+world-class
+next-level
+first-of-its-kind
+one-of-a-kind solution
+comprehensive solution
+robust solution
+powerful solution
+innovative solution
