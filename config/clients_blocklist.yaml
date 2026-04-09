@@ -1,0 +1,99 @@
+# ============================================================================
+# UltraPlan — client blocklist
+# Gate e (anonymization) in spec §6 checks every draft against this file.
+# Any match = immediate gate failure, zero exceptions.
+#
+# This file is intentionally permissive: include any variant of a name a
+# writer might plausibly use (legal name, common name, dealership name,
+# owner name). False positives are fine; false negatives are not.
+#
+# The monthly_anonymized_case lane has a hard constraint `no_client_names`
+# that elevates this gate to an automatic block if any entry matches.
+# ============================================================================
+
+version: 1
+
+# ----------------------------------------------------------------------------
+# Active Visquanta dealer clients (as of 2026-04-09)
+# ----------------------------------------------------------------------------
+dealers:
+  - name: Genesis of Norman
+    variants:
+      - "Genesis of Norman"
+      - "Genesis Norman"
+      - "Norman Genesis"
+
+  - name: OKC Volkswagen
+    variants:
+      - "OKC Volkswagen"
+      - "Oklahoma City Volkswagen"
+      - "OKC VW"
+
+  - name: Norman Hyundai
+    variants:
+      - "Norman Hyundai"
+      - "Hyundai of Norman"
+
+  - name: Lake Hartwell Chevrolet
+    variants:
+      - "Lake Hartwell Chevrolet"
+      - "Lake Hartwell Chevy"
+
+  - name: Brookshire Hyundai
+    variants:
+      - "Brookshire Hyundai"
+      - "Hyundai of Brookshire"
+
+  - name: Kansas City Hyundai
+    variants:
+      - "Kansas City Hyundai"
+      - "KC Hyundai"
+
+  - name: Glenwood Springs Ford
+    variants:
+      - "Glenwood Springs Ford"
+      - "Ford of Glenwood Springs"
+
+  - name: CrossRoads Hyundai
+    variants:
+      - "CrossRoads Hyundai"
+      - "Crossroads Hyundai"
+
+# ----------------------------------------------------------------------------
+# Active Visquanta non-dealer clients
+# ----------------------------------------------------------------------------
+other_clients:
+  - name: Body Kinetics
+    variants:
+      - "Body Kinetics"
+      - "BodyKinetics"
+
+# ----------------------------------------------------------------------------
+# Generic descriptors that anonymized case studies SHOULD use instead
+# ----------------------------------------------------------------------------
+# These are the safe vocabulary for the monthly_anonymized_case lane.
+# Spec §4 strategy pattern_extraction example: "a midwest Hyundai store".
+safe_patterns:
+  - "a midwest Hyundai store"
+  - "a southeastern Chevrolet dealership"
+  - "a front-range Ford store"
+  - "a Great Plains Genesis dealership"
+  - "a midwest VW franchise"
+  - "a Texas Hyundai group"
+
+# ----------------------------------------------------------------------------
+# Enforcement rules
+# ----------------------------------------------------------------------------
+enforcement:
+  # Case-insensitive substring match across the whole draft body and
+  # frontmatter. Matching the spec §6 description "Regex against
+  # clients_blocklist.yaml".
+  match_mode: case_insensitive_substring
+
+  # When the gate fails, the draft is blocked regardless of how many retries
+  # remain — anonymization leaks are unrecoverable.
+  fail_fast: true
+
+  # monthly_anonymized_case lane always runs this gate even if other gates
+  # are configured to "warn only" during development.
+  always_enforce_on_monthly_case: true
