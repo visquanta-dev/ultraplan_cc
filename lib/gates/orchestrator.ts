@@ -8,6 +8,7 @@ import {
   computeVerdict,
   collectFailingParagraphIndices,
 } from './types';
+import { runTraceBackGate } from './trace-back';
 
 // ---------------------------------------------------------------------------
 // Gate orchestrator — spec §6
@@ -59,8 +60,8 @@ function placeholderGate(
   };
 }
 
-async function runGateA(_ctx: OrchestratorContext): Promise<GateResult> {
-  return placeholderGate('trace-back', true);
+async function runGateA(ctx: OrchestratorContext): Promise<GateResult> {
+  return runTraceBackGate(ctx.paragraphs, ctx.bundle, ctx.outline);
 }
 
 async function runGateB(_ctx: OrchestratorContext): Promise<GateResult> {
