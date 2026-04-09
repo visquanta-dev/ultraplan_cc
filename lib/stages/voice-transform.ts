@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { callClaudeStructured } from '../llm/claude';
+import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { DraftedParagraph } from './paragraph-draft';
 
 // ---------------------------------------------------------------------------
@@ -80,10 +80,11 @@ export async function voiceTransform(
     2,
   );
 
-  return await callClaudeStructured<TransformedParagraphs>({
+  return await callLLMStructured<TransformedParagraphs>({
     system,
     user,
     schema: TRANSFORM_SCHEMA,
+    model: MODELS.DRAFTER,
     maxTokens: 8192,
     parse: (raw: unknown): TransformedParagraphs => {
       if (!raw || typeof raw !== 'object') {

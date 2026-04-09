@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { callClaudeStructured } from '../llm/claude';
+import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
 import type { Outline } from './outline';
 
@@ -107,10 +107,11 @@ export async function draftParagraphs(
     2,
   );
 
-  return await callClaudeStructured<DraftedParagraphs>({
+  return await callLLMStructured<DraftedParagraphs>({
     system,
     user,
     schema: PARAGRAPH_SCHEMA,
+    model: MODELS.DRAFTER,
     maxTokens: 8192,
     parse: (raw: unknown): DraftedParagraphs => {
       if (!raw || typeof raw !== 'object') {

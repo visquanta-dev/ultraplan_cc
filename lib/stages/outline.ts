@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { callClaudeStructured } from '../llm/claude';
+import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
 
 // ---------------------------------------------------------------------------
@@ -116,10 +116,11 @@ export async function generateOutline(
     2,
   );
 
-  return await callClaudeStructured<Outline>({
+  return await callLLMStructured<Outline>({
     system,
     user,
     schema: OUTLINE_SCHEMA,
+    model: MODELS.DRAFTER,
     maxTokens: 4096,
     parse: (raw: unknown): Outline => {
       if (!raw || typeof raw !== 'object') {
