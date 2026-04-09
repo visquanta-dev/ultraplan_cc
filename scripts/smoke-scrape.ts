@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import 'dotenv/config';
+import '../lib/load-env';
 import { scrape } from '../lib/sources/firecrawl';
 import { scrapeSubreddit } from '../lib/sources/apify-reddit';
 import { scrapeHashtag } from '../lib/sources/apify-linkedin';
