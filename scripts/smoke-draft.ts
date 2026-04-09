@@ -27,10 +27,13 @@ import type { ScrapedInput } from '../lib/bundle/types';
 // Usage:    npx tsx scripts/smoke-draft.ts
 // ---------------------------------------------------------------------------
 
+// Deep article URLs (not section fronts) for organic end-to-end testing.
+// Section fronts were returning navigation chrome to Firecrawl, which had
+// nothing for the drafter to anchor on.
 const TEST_URLS = [
-  'https://www.automotivenews.com/dealers',
-  'https://www.wardsauto.com/dealers',
-  'https://www.autoremarketing.com/',
+  'https://www.autoremarketing.com/ar/analysis/spyne-report-says-2026-will-be-first-true-ai-operations-year',
+  'https://www.wardsauto.com/news/how-ai-could-help-improve-dealer-operations/808076/',
+  'https://digitaldealer.com/news/where-ai-is-delivering-real-value-in-dealership-operations/169901',
 ];
 
 const TEST_TOPIC_SLUG = 'after-hours-ai-coverage';
