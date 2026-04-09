@@ -1,0 +1,92 @@
+# ============================================================================
+# UltraPlan — source allowlist
+# Per spec §2 principle 2: "Sources are not 'the open web'. A sources.yaml
+# file whitelists exact domains. Anything off-list is rejected at scrape time."
+#
+# Any domain NOT in this file will be refused by lib/sources/firecrawl.ts
+# before a network request is made.
+# ============================================================================
+
+version: 1
+
+# ----------------------------------------------------------------------------
+# Trade press — the backbone source for all three lanes
+# ----------------------------------------------------------------------------
+trade_press:
+  domains:
+    - automotivenews.com
+    - wardsauto.com
+    - autoremarketing.com
+    - autonews.com
+    - dealer-magazine.com
+    - autosuccessonline.com
+    - f-i-magazine.com
+    - cbtnews.com
+    - digitaldealer.com
+    - autodealertodaymagazine.com
+  notes: |
+    Primary domains for the daily_seo trend_hijack strategy. These are the
+    publications dealer principals actually read. Expand with editorial
+    approval only — do not add blog aggregators or SEO farms.
+
+# ----------------------------------------------------------------------------
+# Regulatory / government — fact anchors for claim support
+# ----------------------------------------------------------------------------
+regulatory:
+  domains:
+    - nhtsa.gov
+    - ftc.gov
+    - cfpb.gov
+    - dol.gov
+    - nada.org
+    - niada.com
+  notes: |
+    Used to anchor statistical claims in daily_seo and monthly_anonymized_case.
+    Spec §6 gate b (fact recheck) re-fetches these URLs to verify claims.
+
+# ----------------------------------------------------------------------------
+# Reddit — signal source for trend detection and dealer sentiment
+# ----------------------------------------------------------------------------
+reddit:
+  subreddits:
+    - askcarsales
+    - cardealers
+    - usedcars
+    - autodetailing
+    - service_advisor
+  notes: |
+    Scraped via Apify for the last 48 hours of posts. Used as signal input to
+    the cluster step (spec §3 stage 3). Quotes from reddit never appear in
+    published posts — only used to detect which topics are heating up.
+
+# ----------------------------------------------------------------------------
+# LinkedIn — dealer principal opinion signals (weekly_authority only)
+# ----------------------------------------------------------------------------
+linkedin_dealer_principals:
+  # Scraped via Apify LinkedIn scraper. Usernames/profiles added as the
+  # weekly_authority lane launches.
+  profiles: []
+  hashtags:
+    - "#dealership"
+    - "#automotiveindustry"
+    - "#autodealer"
+    - "#cardealer"
+    - "#automotiveretail"
+  notes: |
+    Input for the opinion_on_signal topic strategy. Spec §4 describes this
+    lane as "filtered by gap map" — controversial dealer-principal posts are
+    the best raw material for the weekly MoFu piece.
+
+# ----------------------------------------------------------------------------
+# Global enforcement rules
+# ----------------------------------------------------------------------------
+enforcement:
+  # Any URL whose hostname does not match one of the domains above is
+  # refused before a network request is made.
+  strict_mode: true
+
+  # Scraping refuses if robots.txt disallows — even for allowlisted domains.
+  respect_robots_txt: true
+
+  # Max request rate per host (requests per minute)
+  rate_limit_per_host_rpm: 10
