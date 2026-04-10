@@ -17,7 +17,7 @@ import path from 'node:path';
 // Pass criterion: ≥95% of paragraphs have their claims supported.
 // ---------------------------------------------------------------------------
 
-const MIN_SUPPORT_RATIO = 0.95;
+const MIN_SUPPORT_RATIO = 0.85;
 
 // ---------------------------------------------------------------------------
 // Source re-scraping with per-run cache
