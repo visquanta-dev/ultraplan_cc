@@ -1,0 +1,125 @@
+# ============================================================================
+# Internal link map — visquanta.com pages for auto-linking
+# Format: keywords → URL + anchor text
+# The auto-linker scans each paragraph and inserts the first matching link
+# that hasn't been used yet. Max 8 internal links per post.
+# ============================================================================
+
+# Product / service pages
+pages:
+  - url: /book-demo
+    anchor: schedule a strategy call
+    keywords: [demo, get started, next step, talk to us, strategy call, contact]
+    type: cta
+
+  - url: /lead-reactivation
+    anchor: lead reactivation platform
+    keywords: [lead reactivation, reactivate leads, dormant leads, dead leads, old leads]
+    type: product
+
+  - url: /custom-campaigns
+    anchor: custom campaign engine
+    keywords: [custom campaigns, outbound campaigns, email campaigns, campaign]
+    type: product
+
+  - url: /speed-to-lead
+    anchor: speed-to-lead solution
+    keywords: [speed to lead, response time, first contact, lead response]
+    type: product
+
+  - url: /reputation-management
+    anchor: reputation management tools
+    keywords: [reputation, reviews, online reviews, CSI scores, customer satisfaction]
+    type: product
+
+  - url: /service-drive
+    anchor: service drive automation
+    keywords: [service drive, service department, fixed ops, service lane, service retention]
+    type: product
+
+  - url: /dealer-services
+    anchor: dealer services
+    keywords: [dealer services, dealership solutions]
+    type: product
+
+# Blog posts (top 25 most linkable)
+blog:
+  - url: /blog/dealership-call-management-strategies
+    anchor: call management strategies
+    keywords: [missed calls, call management, phone calls, unanswered calls, call handling]
+
+  - url: /blog/how-ai-voice-agents-improve-service-retention-and-loyalty-for-dealerships
+    anchor: voice agents driving retention
+    keywords: [voice agents, voice AI, service retention, AI agents]
+
+  - url: /blog/voice-ai-service-scheduling-tools-dealership
+    anchor: voice AI scheduling tools
+    keywords: [service scheduling, appointment scheduling, booking appointments]
+
+  - url: /blog/speed-to-lead-why-it-matters-in-car-sales
+    anchor: why speed to lead matters
+    keywords: [speed to lead, lead response time, response speed]
+
+  - url: /blog/crm-database-reactivation-guide
+    anchor: CRM reactivation guide
+    keywords: [CRM, database, reactivation, dormant data, CRM data]
+
+  - url: /blog/lead-generation-car-sales-dealership-playbook
+    anchor: lead generation playbook
+    keywords: [lead generation, lead gen, generating leads]
+
+  - url: /blog/ai-bdc-guide-for-car-dealerships
+    anchor: AI BDC guide
+    keywords: [BDC, business development center, AI BDC]
+
+  - url: /blog/whats-killing-retention-in-your-service-department-missed-calls
+    anchor: missed calls killing retention
+    keywords: [retention, service department, missed calls retention]
+
+  - url: /blog/why-your-service-department-needs-24-7-call-answering-not-just-voicemail
+    anchor: 24/7 call answering
+    keywords: [24/7, after hours, voicemail, after-hours, overnight]
+
+  - url: /blog/ai-roi-for-dealerships
+    anchor: AI ROI breakdown
+    keywords: [ROI, return on investment, cost savings, payback]
+
+  - url: /blog/how-to-measure-lead-loss-in-dealership-crms
+    anchor: measuring lead loss
+    keywords: [lead loss, lost leads, lead leakage]
+
+  - url: /blog/dealerships-ai-improve-csi-scores
+    anchor: improving CSI with AI
+    keywords: [CSI, customer satisfaction index, satisfaction scores]
+
+  - url: /blog/internet-leads-dying-in-crm-5-minute-window-youre-missing
+    anchor: the 5-minute lead window
+    keywords: [internet leads, 5 minute, five minute, lead decay]
+
+  - url: /blog/5-reasons-car-buyers-prefer-sms-over-phone-calls-from-dealerships
+    anchor: why buyers prefer SMS
+    keywords: [SMS, text message, texting, messaging]
+
+  - url: /blog/how-conversational-ai-over-sms-is-reducing-lead-loss-in-car-dealerships
+    anchor: conversational AI over SMS
+    keywords: [conversational AI, SMS AI, text conversations]
+
+  - url: /blog/ai-powered-crm-vs-traditional-systems-advantage-us-dealerships
+    anchor: AI CRM vs traditional systems
+    keywords: [CRM comparison, traditional CRM, modern CRM]
+
+  - url: /blog/7-crm-strategies-to-revive-dormant-leads
+    anchor: 7 strategies to revive dormant leads
+    keywords: [dormant leads, revive leads, cold leads]
+
+  - url: /blog/automotive-ai-complete-guide-car-dealerships
+    anchor: automotive AI guide
+    keywords: [automotive AI, AI for dealerships, AI technology]
+
+  - url: /blog/feedback-impacts-dealership-reputation
+    anchor: feedback and reputation
+    keywords: [feedback, dealership reputation, online reputation]
+
+  - url: /blog/car-dealership-roi-calculator
+    anchor: ROI calculator
+    keywords: [calculator, ROI calculator, calculate ROI]

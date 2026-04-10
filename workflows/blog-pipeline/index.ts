@@ -9,6 +9,7 @@ import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
+import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
 import matter from 'gray-matter';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -122,18 +123,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // Step 7: Create GitHub PR
     console.log('[pipeline] Step 7/7: Creating GitHub PR');
 
-    // Build source attribution map: src_001 → "Spyne's 2026 Report"
-    const sourceAttrMap = new Map<string, string>();
-    for (const src of bundle.sources) {
-      const domain = src.domain.replace(/^www\./, '').split('.')[0];
-      const siteName = domain.charAt(0).toUpperCase() + domain.slice(1);
-      const label = src.title
-        ? `${siteName} (${src.title.slice(0, 60)}${src.title.length > 60 ? '...' : ''})`
-        : siteName;
-      sourceAttrMap.set(src.source_id, label);
-    }
-
-    // Strip (src_XXX) citation markers from paragraph text
+    // Strip remaining (src_XXX) citation markers
     function stripCitations(text: string): string {
       return text.replace(/\s*\(src_\d+\)/g, '');
     }
@@ -159,21 +149,44 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       return true;
     });
 
-    // Render markdown
+    // External links: convert (src_XXX) markers into inline source links
+    console.log('[pipeline] Step 5b/7: Inserting external + internal links');
+    const withExternalLinks = insertExternalLinks(dedupedParagraphs, bundle);
+
+    // Render markdown by section
     const bodyBySection = new Map<number, string[]>();
-    for (const para of dedupedParagraphs) {
-      const arr = bodyBySection.get(para.section_index) ?? [];
+    for (const para of withExternalLinks) {
+      const sIdx: number = para.section_index;
+      const arr = bodyBySection.get(sIdx) ?? [];
       arr.push(stripCitations(para.text));
-      bodyBySection.set(para.section_index, arr);
+      bodyBySection.set(sIdx, arr);
     }
+
+    // Internal links: scan rendered paragraphs and insert contextual links
+    for (const [sIdx, paras] of bodyBySection.entries()) {
+      bodyBySection.set(sIdx, insertInternalLinks(paras));
+    }
+
+    const sectionCount = outline.sections.length;
+    const midPoint = Math.floor(sectionCount / 2);
 
     const bodyParts: string[] = [];
     outline.sections.forEach((section, i) => {
       bodyParts.push(`## ${section.heading}\n`);
       const paras = bodyBySection.get(i) ?? [];
       bodyParts.push(paras.join('\n\n'));
+
+      // Insert mid-article CTA after the middle section
+      if (i === midPoint) {
+        bodyParts.push(buildMidArticleCTA());
+      }
       bodyParts.push('');
     });
+
+    // Append related posts section
+    const relatedPosts = buildRelatedPosts(bodyParts.join('\n'));
+    if (relatedPosts) bodyParts.push(relatedPosts);
+
     const body = bodyParts.join('\n');
 
     // Generate real meta description from headline + first paragraph
