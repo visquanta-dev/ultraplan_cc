@@ -51,8 +51,9 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
     return null;
   }
 
-  // Strip citations and dedup
+  // Strip citations, em dashes, and dedup
   function stripCitations(text: string) { return text.replace(/\s*\(src_\d+\)/g, ''); }
+  function stripEmDashes(text: string) { return text.replace(/\s*—\s*/g, ' - ').replace(/\s*–\s*/g, ' - '); }
   function sentences(text: string) { return new Set(text.split(/[.!?]+/).map(s => s.trim().toLowerCase()).filter(s => s.length > 20)); }
 
   const deduped = final.filter((p, i) => {
@@ -73,7 +74,7 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
   const bodyBySection = new Map<number, string[]>();
   for (const p of withExtLinks) {
     const arr = bodyBySection.get(p.section_index) ?? [];
-    arr.push(stripCitations(p.text));
+    arr.push(stripEmDashes(stripCitations(p.text)));
     bodyBySection.set(p.section_index, arr);
   }
 

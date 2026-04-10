@@ -12,8 +12,8 @@ import type { Bundle } from '../bundle/types';
 // CTAs: injected at mid-article and end-of-article positions
 // ---------------------------------------------------------------------------
 
-const MAX_INTERNAL_LINKS = 8;
-const MAX_EXTERNAL_LINKS_PER_POST = 5;
+const MAX_INTERNAL_LINKS = 15;
+const MAX_EXTERNAL_LINKS_PER_POST = 20;
 
 interface LinkEntry {
   url: string;
@@ -146,13 +146,12 @@ export function insertExternalLinks<T extends { text: string }>(
       }
     }
 
-    // Apply first replacement only (one external link per paragraph max)
-    if (replacements.length > 0) {
-      const first = replacements[0];
-      newText = newText.replace(first.marker, first.link);
-      // Strip remaining markers in this paragraph
-      newText = newText.replace(/\s*\(src_\d+\)/g, '');
+    // Apply all replacements (multiple external links per paragraph OK)
+    for (const rep of replacements) {
+      newText = newText.replace(rep.marker, rep.link);
     }
+    // Strip any remaining unresolved markers
+    newText = newText.replace(/\s*\(src_\d+\)/g, '');
 
     return { ...para, text: newText };
   });

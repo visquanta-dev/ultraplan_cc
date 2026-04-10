@@ -123,3 +123,125 @@ blog:
   - url: /blog/car-dealership-roi-calculator
     anchor: ROI calculator
     keywords: [calculator, ROI calculator, calculate ROI]
+
+  - url: /blog/speed-to-lead-slow-follow-up-sales-impact
+    anchor: speed-to-lead vs slow follow-up
+    keywords: [slow follow-up, follow-up, delayed response]
+
+  - url: /blog/ai-tools-that-used-car-dealerships-cant-afford-to-ignore
+    anchor: must-have AI tools for used car dealers
+    keywords: [used car, pre-owned, used vehicle]
+
+  - url: /blog/reputation-is-revenue-why-dealers-need-ai-to-manage-online-reviews
+    anchor: why reputation is revenue
+    keywords: [online reviews, Google reviews, review management, review response]
+
+  - url: /blog/why-every-dealership-needs-ai-for-lead-reactivation-in-2026
+    anchor: why every dealer needs lead reactivation
+    keywords: [lead reactivation 2026, reactivation strategy]
+
+  - url: /blog/sms-vs-email-vs-ai-chatbot-the-ultimate-guide-for-dealerships
+    anchor: SMS vs email vs chatbot guide
+    keywords: [SMS vs email, chatbot vs, email marketing, communication channel]
+
+  - url: /blog/emerging-ai-innovations-for-car-dealerships-to-increase-sales-in-2026
+    anchor: emerging AI innovations for 2026
+    keywords: [emerging technology, innovation, new technology, 2026 trends]
+
+  - url: /blog/csi-scores-how-top-dealers-use-ai-to-keep-5-stars-year-round
+    anchor: keeping 5 stars year-round
+    keywords: [five star, 5 star, star rating, star reviews]
+
+  - url: /blog/how-car-dealerships-use-conversational-ai-to-re-engage-old-prospects
+    anchor: re-engaging old prospects with AI
+    keywords: [old prospects, re-engage, winback, win back]
+
+  - url: /blog/ai-isnt-replacing-car-dealership-jobs-its-transforming-them
+    anchor: how AI transforms dealership jobs
+    keywords: [replacing jobs, job loss, workforce, employees, staff, headcount]
+
+  - url: /blog/top-pitfalls-when-car-dealerships-rush-to-adopt-ai-solutions
+    anchor: pitfalls of rushing AI adoption
+    keywords: [pitfalls, mistakes, rushing, implementation mistakes]
+
+  - url: /blog/ai-in-auto-sales-frequently-asked-questions
+    anchor: AI in auto sales FAQ
+    keywords: [frequently asked, FAQ, common questions]
+
+  - url: /blog/lead-loss-mitigation-what-dealers-get-wrong-and-how-to-fix-it
+    anchor: what dealers get wrong about lead loss
+    keywords: [lead loss mitigation, lead management, pipeline leaks]
+
+  - url: /blog/how-to-reduce-lead-response-time-in-auto-sales
+    anchor: reducing lead response time
+    keywords: [reduce response time, faster response, quick response]
+
+  - url: /blog/nada-show-2026-dealership-leaders-need-to-know-ai
+    anchor: NADA Show 2026 AI takeaways
+    keywords: [NADA, NADA Show, convention, trade show]
+
+  - url: /blog/promax-visquanta-partnership-dealership-growth
+    anchor: ProMax x VisQuanta partnership
+    keywords: [ProMax, integration, partnership]
+
+  - url: /blog/third-party-lead-providers-dealerships
+    anchor: top third-party lead providers
+    keywords: [third-party leads, lead providers, lead sources, third party]
+
+  - url: /blog/reactivating-old-leads-timing-tips-for-dealers
+    anchor: timing tips for reactivating leads
+    keywords: [timing, when to contact, best time, outreach timing]
+
+  - url: /blog/ultimate-guide-to-dealership-reputation-metrics
+    anchor: dealership reputation metrics guide
+    keywords: [reputation metrics, NPS, net promoter, review metrics]
+
+  - url: /blog/7-ai-tools-that-boost-car-dealership-sales-performance
+    anchor: 7 AI tools that boost sales
+    keywords: [sales performance, boost sales, increase sales, sales tools]
+
+  - url: /blog/why-ai-lead-handoffs-fail-modern-car-dealerships
+    anchor: why AI lead handoffs fail
+    keywords: [handoff, hand-off, lead handoff, transfer leads]
+
+  - url: /blog/ai-in-automotive-7-myths-car-dealership-owners-still-believe
+    anchor: 7 myths about automotive AI
+    keywords: [myths, misconceptions, myth, believe]
+
+  - url: /blog/boost-dealership-sales-with-automaster-suite
+    anchor: AutoMaster Suite
+    keywords: [AutoMaster, auto master, suite]
+
+  - url: /blog/how-to-improve-first-contact-rates-in-dealerships
+    anchor: improving first contact rates
+    keywords: [first contact, contact rate, connection rate, reach rate]
+
+  - url: /blog/ai-revives-dormant-crm-data
+    anchor: reviving dormant CRM data
+    keywords: [dormant CRM, dead data, stale data, old data]
+
+# Additional product pages
+  - url: /paid-campaigns
+    anchor: paid campaign management
+    keywords: [paid campaigns, PPC, paid advertising, ad spend, advertising]
+    type: product
+
+  - url: /website-widget
+    anchor: website widget
+    keywords: [website widget, chat widget, web chat, live chat]
+    type: product
+
+  - url: /auto-master-suite
+    anchor: AutoMaster Suite platform
+    keywords: [platform, all-in-one, suite, complete solution]
+    type: product
+
+  - url: /case-studies
+    anchor: dealer case studies
+    keywords: [case study, case studies, success story, results]
+    type: product
+
+  - url: /integrations
+    anchor: CRM integrations
+    keywords: [integration, integrate, connect, API, sync]
+    type: product

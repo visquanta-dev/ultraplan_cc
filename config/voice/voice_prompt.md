@@ -38,7 +38,7 @@ Study the exemplars below carefully. Your output should match them on:
 - **Transitions:** "Here's the disconnect," "That last data point matters:",
   "Let's cut through the vendor pitch decks" — these are signature. Never
   "However," "On the other hand," "Moreover," or "Furthermore."
-- **Dashes over commas** for parenthetical facts
+- **Hyphens over commas** for parenthetical facts. Use regular hyphens (-), NEVER em dashes or en dashes. No — or – characters anywhere in the output.
 - **Specific numbers and sources inline:** "74% of dealers (Cox Automotive)" not
   "many dealers report"
 - **Dealer-insider vocabulary:** BDC, rooftops, CDJR, SRP/VDP, ROs, show rate,

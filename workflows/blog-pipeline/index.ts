@@ -128,6 +128,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       return text.replace(/\s*\(src_\d+\)/g, '');
     }
 
+    // Replace em dashes with regular dashes
+    function stripEmDashes(text: string): string {
+      return text.replace(/\s*—\s*/g, ' - ').replace(/\s*–\s*/g, ' - ');
+    }
+
     // Deduplicate paragraphs that share >60% of the same sentences
     function extractSentences(text: string): Set<string> {
       return new Set(
@@ -158,7 +163,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     for (const para of withExternalLinks) {
       const sIdx: number = para.section_index;
       const arr = bodyBySection.get(sIdx) ?? [];
-      arr.push(stripCitations(para.text));
+      arr.push(stripEmDashes(stripCitations(para.text)));
       bodyBySection.set(sIdx, arr);
     }
 
@@ -202,7 +207,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     };
 
     const frontmatter = {
-      title: outline.headline,
+      title: stripEmDashes(outline.headline),
       slug,
       metaDescription,
       image: `/images/blog/${slug}/hero.webp`,
