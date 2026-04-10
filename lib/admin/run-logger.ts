@@ -1,15 +1,10 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import type { GateReport } from '../gates/types';
+import { writeJson, listByPrefix, readJson } from '../storage/blob';
 
 // ---------------------------------------------------------------------------
-// Run logger — Phase 13
-// Persists pipeline run results to data/runs/ for the admin dashboard.
-// NOTE: Local filesystem for dev. Swap to Vercel Blob for production.
+// Run logger — Phase 13 → Phase 14 (Vercel Blob)
+// Persists pipeline run results to Vercel Blob for the admin dashboard.
 // ---------------------------------------------------------------------------
-
-const RUNS_DIR = path.join(process.cwd(), 'data', 'runs');
-const BLOCKED_DIR = path.join(process.cwd(), 'data', 'blocked');
 
 export interface RunRecord {
   slug: string;
@@ -26,32 +21,82 @@ export interface RunRecord {
   manual_override?: { approved_at: string; reason: string };
 }
 
-function ensureDir(dir: string): void {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
 /**
  * Save a completed run (passed gates, PR created).
  */
-export function logRun(record: RunRecord): void {
-  ensureDir(RUNS_DIR);
+export async function logRun(record: RunRecord): Promise<void> {
   const filename = `${record.created_at.split('T')[0]}-${record.slug}.json`;
-  fs.writeFileSync(
-    path.join(RUNS_DIR, filename),
-    JSON.stringify(record, null, 2),
-  );
+  await writeJson(`runs/${filename}`, record);
 }
 
 /**
  * Save a blocked draft (gate failure after retry exhaustion).
  */
-export function logBlocked(record: RunRecord): void {
-  ensureDir(BLOCKED_DIR);
-  const filename = `${record.slug}.json`;
-  fs.writeFileSync(
-    path.join(BLOCKED_DIR, filename),
-    JSON.stringify(record, null, 2),
-  );
+export async function logBlocked(record: RunRecord): Promise<void> {
+  await writeJson(`blocked/${record.slug}.json`, record);
+}
+
+/**
+ * List recent runs from Blob storage.
+ */
+export async function listRuns(limit = 100): Promise<RunRecord[]> {
+  const blobs = await listByPrefix('runs/', { limit });
+  const runs: RunRecord[] = [];
+  for (const blob of blobs) {
+    const record = await readJson<RunRecord>(blob.pathname);
+    if (record) runs.push(record);
+  }
+  // Sort newest first
+  runs.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return runs;
+}
+
+/**
+ * List blocked drafts from Blob storage.
+ */
+export async function listBlocked(): Promise<RunRecord[]> {
+  const blobs = await listByPrefix('blocked/');
+  const blocked: RunRecord[] = [];
+  for (const blob of blobs) {
+    const record = await readJson<RunRecord>(blob.pathname);
+    if (record) blocked.push(record);
+  }
+  blocked.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return blocked;
+}
+
+/**
+ * Get a single blocked draft by slug.
+ */
+export async function getBlocked(slug: string): Promise<RunRecord | null> {
+  return readJson<RunRecord>(`blocked/${slug}.json`);
+}
+
+/**
+ * Move a blocked draft to runs (manual override).
+ */
+export async function overrideBlocked(
+  slug: string,
+  reason: string,
+): Promise<RunRecord | null> {
+  const draft = await getBlocked(slug);
+  if (!draft) return null;
+
+  draft.manual_override = {
+    approved_at: new Date().toISOString(),
+    reason,
+  };
+
+  await writeJson(`runs/${slug}.json`, draft);
+
+  // Delete the blocked entry
+  const blockedBlobs = await listByPrefix(`blocked/${slug}.json`);
+  for (const blob of blockedBlobs) {
+    const { deleteBlob } = await import('../storage/blob');
+    await deleteBlob(blob.url);
+  }
+
+  return draft;
 }
 
 /**

@@ -107,7 +107,7 @@ export async function generateOutline(
 ): Promise<Outline> {
   const validQuoteIds = collectBundleQuoteIds(bundle);
   const baseSystem = loadSystemPrompt();
-  const feedback = buildRejectionFeedbackBlock();
+  const feedback = await buildRejectionFeedbackBlock();
   const system = feedback ? `${baseSystem}\n${feedback}` : baseSystem;
   const user = JSON.stringify(
     {

@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
+import { appendJsonl } from '../../../../lib/storage/blob';
 
 // ---------------------------------------------------------------------------
-// GitHub PR webhook — spec §8-9
+// GitHub PR webhook — spec §8-9 (Vercel Blob storage)
 // Receives PR events from GitHub and triggers the appropriate workflow
 // action: merge → post-publish, request_changes → regen, close → reject.
 // ---------------------------------------------------------------------------
-
-const REJECTION_LOG_PATH = path.join(process.cwd(), 'data', 'rejection_log.jsonl');
 
 interface PRWebhookPayload {
   action: string;
@@ -76,9 +73,9 @@ function extractRejectionReason(
 }
 
 /**
- * Append a rejection entry to data/rejection_log.jsonl.
+ * Append a rejection entry to rejection_log.jsonl in Vercel Blob.
  */
-function logRejection(entry: {
+async function logRejection(entry: {
   date: string;
   slug: string;
   lane: string | null;
@@ -86,10 +83,8 @@ function logRejection(entry: {
   feedback: string;
   reviewer: string;
   pr_url: string;
-}): void {
-  const dir = path.dirname(REJECTION_LOG_PATH);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.appendFileSync(REJECTION_LOG_PATH, JSON.stringify(entry) + '\n', 'utf-8');
+}): Promise<void> {
+  await appendJsonl('rejection_log.jsonl', entry);
 }
 
 export async function POST(request: NextRequest) {
@@ -133,7 +128,7 @@ export async function POST(request: NextRequest) {
         payload.pull_request.body,
       );
 
-      logRejection({
+      await logRejection({
         date: new Date().toISOString().split('T')[0],
         slug,
         lane,

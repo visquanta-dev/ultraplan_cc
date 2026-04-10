@@ -94,7 +94,7 @@ export async function draftParagraphs(
   wordCount: { min: number; max: number },
 ): Promise<DraftedParagraphs> {
   const baseSystem = loadSystemPrompt();
-  const feedback = buildRejectionFeedbackBlock();
+  const feedback = await buildRejectionFeedbackBlock();
   const system = feedback ? `${baseSystem}\n${feedback}` : baseSystem;
   const quoteIndex = indexBundleQuotes(bundle);
   const sectionAnchors = indexSectionAnchors(outline);

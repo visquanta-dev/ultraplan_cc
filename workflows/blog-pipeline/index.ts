@@ -95,7 +95,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         gate_report: report,
         duration_ms: Date.now() - startTime,
       };
-      logBlocked(record);
+      await logBlocked(record);
       await notifyPipelineBlocked(slug, lane, report.blocked_reason ?? 'Unknown');
       return {
         slug,
@@ -197,7 +197,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       pr_number: prResult.prNumber,
       duration_ms: Date.now() - startTime,
     };
-    logRun(record);
+    await logRun(record);
 
     await notifyPipelineComplete(slug, lane, prResult.prUrl);
 
@@ -233,7 +233,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       error,
       duration_ms: Date.now() - startTime,
     };
-    logBlocked(record);
+    await logBlocked(record);
 
     return {
       slug,

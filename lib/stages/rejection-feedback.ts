@@ -1,14 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { readJsonl } from '../storage/blob';
 
 // ---------------------------------------------------------------------------
-// Rejection learning loop — spec §8-9, Phase 12
-// Loads the last 30 days of rejection feedback from data/rejection_log.jsonl
-// and formats it as a "lessons learned" block to inject into the drafter's
-// system prompt. Over time, this feedback loop should reduce rejection rate.
+// Rejection learning loop — spec §8-9, Phase 12 → Phase 14 (Vercel Blob)
+// Loads the last 30 days of rejection feedback from Vercel Blob and formats
+// it as a "lessons learned" block to inject into the drafter's system prompt.
 // ---------------------------------------------------------------------------
 
-const REJECTION_LOG_PATH = path.join(process.cwd(), 'data', 'rejection_log.jsonl');
 const FEEDBACK_WINDOW_DAYS = 30;
 
 interface RejectionEntry {
@@ -24,22 +21,15 @@ interface RejectionEntry {
 /**
  * Load rejection entries from the last N days.
  */
-function loadRecentRejections(days: number = FEEDBACK_WINDOW_DAYS): RejectionEntry[] {
-  if (!fs.existsSync(REJECTION_LOG_PATH)) return [];
+async function loadRecentRejections(days: number = FEEDBACK_WINDOW_DAYS): Promise<RejectionEntry[]> {
+  const all = await readJsonl<RejectionEntry>('rejection_log.jsonl');
+  if (all.length === 0) return [];
 
-  const raw = fs.readFileSync(REJECTION_LOG_PATH, 'utf-8');
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  return raw
-    .split('\n')
-    .filter((line) => line.trim().length > 0)
-    .map((line) => {
-      try { return JSON.parse(line) as RejectionEntry; }
-      catch { return null; }
-    })
-    .filter((entry): entry is RejectionEntry => entry !== null && entry.date >= cutoffStr);
+  return all.filter((entry) => entry.date >= cutoffStr);
 }
 
 /**
@@ -49,7 +39,6 @@ function groupByTheme(entries: RejectionEntry[]): Map<string, RejectionEntry[]> 
   const groups = new Map<string, RejectionEntry[]>();
 
   for (const entry of entries) {
-    // Simple keyword-based grouping
     const reason = entry.reason.toLowerCase();
     let theme = 'general';
 
@@ -77,8 +66,8 @@ function groupByTheme(entries: RejectionEntry[]): Map<string, RejectionEntry[]> 
  * Build a "lessons learned" block to inject into the drafter's system
  * prompt. Returns an empty string if no recent rejections exist.
  */
-export function buildRejectionFeedbackBlock(): string {
-  const entries = loadRecentRejections();
+export async function buildRejectionFeedbackBlock(): Promise<string> {
+  const entries = await loadRecentRejections();
   if (entries.length === 0) return '';
 
   const grouped = groupByTheme(entries);
@@ -93,7 +82,6 @@ export function buildRejectionFeedbackBlock(): string {
 
   for (const [theme, themeEntries] of grouped) {
     lessons.push(`### ${theme} (${themeEntries.length} rejections)`);
-    // Show at most 5 examples per theme to keep the prompt manageable
     for (const entry of themeEntries.slice(0, 5)) {
       lessons.push(`- **${entry.slug}** (${entry.date}): ${entry.feedback}`);
     }
@@ -110,6 +98,7 @@ export function buildRejectionFeedbackBlock(): string {
 /**
  * Convenience: check if there's any feedback to inject.
  */
-export function hasRejectionFeedback(): boolean {
-  return loadRecentRejections().length > 0;
+export async function hasRejectionFeedback(): Promise<boolean> {
+  const entries = await loadRecentRejections();
+  return entries.length > 0;
 }
