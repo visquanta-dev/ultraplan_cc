@@ -136,8 +136,10 @@ export interface CreateDraftPRResult {
  * Labels: lane:*, funnel:*, ultraplan-draft, ready-for-review
  */
 export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDraftPRResult> {
-  const date = new Date().toISOString().split('T')[0];
-  const branchName = `ultraplan/${date}-${input.slug}`;
+  const now = new Date();
+  const date = now.toISOString().split('T')[0];
+  const ts = now.getTime().toString(36); // short unique suffix
+  const branchName = `ultraplan/${date}-${input.slug}-${ts}`;
 
   // 1. Create branch
   await createBranch(branchName);
