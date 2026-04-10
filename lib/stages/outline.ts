@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
+import { buildRejectionFeedbackBlock } from './rejection-feedback';
 
 // ---------------------------------------------------------------------------
 // Outline stage — spec §5b
@@ -105,7 +106,9 @@ export async function generateOutline(
   wordCount: { min: number; max: number },
 ): Promise<Outline> {
   const validQuoteIds = collectBundleQuoteIds(bundle);
-  const system = loadSystemPrompt();
+  const baseSystem = loadSystemPrompt();
+  const feedback = buildRejectionFeedbackBlock();
+  const system = feedback ? `${baseSystem}\n${feedback}` : baseSystem;
   const user = JSON.stringify(
     {
       bundle,

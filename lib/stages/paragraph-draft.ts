@@ -3,6 +3,7 @@ import path from 'node:path';
 import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
 import type { Outline } from './outline';
+import { buildRejectionFeedbackBlock } from './rejection-feedback';
 
 // ---------------------------------------------------------------------------
 // Paragraph drafting stage — spec §5c
@@ -92,7 +93,9 @@ export async function draftParagraphs(
   bundle: Bundle,
   wordCount: { min: number; max: number },
 ): Promise<DraftedParagraphs> {
-  const system = loadSystemPrompt();
+  const baseSystem = loadSystemPrompt();
+  const feedback = buildRejectionFeedbackBlock();
+  const system = feedback ? `${baseSystem}\n${feedback}` : baseSystem;
   const quoteIndex = indexBundleQuotes(bundle);
   const sectionAnchors = indexSectionAnchors(outline);
 
