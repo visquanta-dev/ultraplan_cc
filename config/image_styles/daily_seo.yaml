@@ -1,15 +1,14 @@
 # ============================================================================
 # UltraPlan — image style: daily_seo lane
-# Per spec §7, this YAML is prepended to every Nano Banana Pro generation
-# call for the daily_seo lane. The goal is lane-consistent visual identity:
-# every daily SEO post hero reads as part of the same publication.
+# Flux 2 Pro photorealistic editorial style. Every daily SEO post hero reads
+# as part of the same professional publication.
 # ============================================================================
 
 lane: daily_seo
-model: google/gemini-2.5-flash-image-preview-pro
+model: black-forest-labs/flux-2-pro
 
 # ----------------------------------------------------------------------------
-# Aspect ratio + dimensions (hero only — inline images are single per post)
+# Aspect ratio + dimensions (hero only)
 # ----------------------------------------------------------------------------
 dimensions:
   hero:
@@ -21,32 +20,42 @@ dimensions:
 # Style prompt — prepended verbatim to every prompt for this lane
 # ----------------------------------------------------------------------------
 style_prompt: |
-  Editorial illustration style. Clean, modern, flat-ish vector feel with
-  confident color blocking. Limited palette: off-white background (#F7F7F5),
-  one bold accent color per image (rotating from a set of: deep teal #0F4C5C,
-  burnt orange #D35400, steel blue #34495E, charcoal #2C3E50). Subject is
-  abstract or metaphorical — never a photorealistic car or dealership
-  storefront. Think: WSJ Opinion page illustration, Bloomberg feature art,
-  The Economist Espresso. No text. No logos. No humans. No photorealism.
-  Strong negative space. Single clear visual metaphor per image.
+  Professional editorial photograph for a business technology blog.
+  Clean composition, studio lighting, shallow depth of field.
+  Modern, minimal environments — think: Harvard Business Review, Fast Company,
+  Wired editorial photography. Warm, inviting tones. Subject should be
+  abstract or environmental — empty modern spaces, abstract technology
+  patterns, geometric light compositions, clean surfaces with subtle tech
+  elements, close-up textures of premium materials, bokeh light patterns.
+  NEVER show a dealership interior, showroom, service bay, or cars.
+  NEVER show identifiable human faces or people.
+  NEVER include brand logos, car badges, text, or signage.
+  Strong compositional balance with clear focal point and negative space.
 
 # ----------------------------------------------------------------------------
 # Negative prompt — hard rejections
 # ----------------------------------------------------------------------------
 negative_prompt: |
-  photorealistic car, photograph of a dealership, stock photo aesthetic,
-  3D render, human faces, human figures, text overlay, logos, brand marks,
-  NHTSA logo, OEM logo, cluttered composition, drop shadows, gradient
-  backgrounds, cartoon, anime, AI-generated text artifacts
+  identifiable human faces, brand logos, car badges, OEM logos, NHTSA logo,
+  text overlay, text artifacts, cluttered composition, stock photo aesthetic,
+  corporate clip art, cartoon, anime, 3D render, gradient backgrounds,
+  watermarks, low resolution
 
 # ----------------------------------------------------------------------------
 # Brand-fit vision check rubric (stage 6b gate)
 # ----------------------------------------------------------------------------
-# Gemini 2.5 Pro Vision scores each generated image 1-10 against this rubric.
+# Vision model scores each generated image 1-10 against this rubric.
 # Minimum passing score: 7.
 brand_fit_rubric:
-  - "Single clear visual metaphor that relates to the article topic"
-  - "Off-white background with one dominant accent color"
-  - "No photorealism, no text, no logos, no human faces"
-  - "Flat editorial illustration style consistent with WSJ/Bloomberg feature art"
-  - "Strong negative space; composition is not cluttered"
+  - "Professional editorial photography quality — not stock photo aesthetic"
+  - "Clean composition with clear focal point and strong balance"
+  - "No identifiable human faces, no brand logos, no text in the image"
+  - "Warm, modern tones appropriate for a business technology publication"
+  - "Subject matter is relevant or abstractly evocative of the article topic"
+
+# ----------------------------------------------------------------------------
+# Anonymization — extra check for client-identifying content
+# ----------------------------------------------------------------------------
+anonymization_rule: |
+  No specific dealership names, no identifiable car brand logos or badges,
+  no OEM branding visible anywhere in the image.

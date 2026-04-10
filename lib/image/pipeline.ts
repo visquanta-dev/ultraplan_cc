@@ -40,11 +40,12 @@ function buildSubjectFromArticle(
 ): string {
   if (imageType === 'hero') {
     return [
-      `Article headline: "${headline}"`,
-      `Key topics: ${sectionHeadings.join(', ')}`,
+      `The article discusses: ${sectionHeadings.slice(0, 3).join('; ')}`,
       '',
-      'Create a hero image that captures the central thesis of this article.',
-      'The image should be abstract and metaphorical — never literal.',
+      'Create an ABSTRACT hero image that evokes the themes of business technology and operational efficiency.',
+      'DO NOT depict a dealership, showroom, cars, or people.',
+      'Instead show: abstract geometric patterns, light compositions, clean modern surfaces,',
+      'premium textures, bokeh, or minimal architectural elements.',
     ].join('\n');
   }
 

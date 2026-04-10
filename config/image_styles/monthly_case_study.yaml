@@ -6,7 +6,7 @@
 # ============================================================================
 
 lane: monthly_anonymized_case
-model: google/gemini-2.5-flash-image-preview-pro
+model: black-forest-labs/flux-2-pro
 
 dimensions:
   hero:
