@@ -10,7 +10,7 @@
 // Model IDs (spec §9):
 //   drafter: anthropic/claude-opus-4-6        (outline, paragraph, voice)
 //   judge:   openai/gpt-5                     (fact recheck, originality — Phase 2)
-//   image:   google/gemini-2.5-flash-image-preview-pro (Phase 2)
+//   image:   google/gemini-2.5-flash-image
 //
 // Docs: https://openrouter.ai/docs/api-reference/chat-completion
 // ---------------------------------------------------------------------------
@@ -222,5 +222,5 @@ export async function callLLMText(
 export const MODELS = {
   DRAFTER: 'anthropic/claude-opus-4-6',
   JUDGE: 'anthropic/claude-sonnet-4-6',  // GPT-5 blocked by Azure content policy; Sonnet is cheaper + reliable
-  IMAGE: 'google/gemini-2.5-flash-image-preview-pro',
+  IMAGE: 'google/gemini-2.5-flash-image',
 } as const;

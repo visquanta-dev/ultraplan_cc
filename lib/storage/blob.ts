@@ -24,6 +24,7 @@ export async function writeJson(
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
   return blob.url;
 }
@@ -97,6 +98,7 @@ export async function appendJsonl(
     access: 'public',
     contentType: 'application/x-ndjson',
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
 }
 

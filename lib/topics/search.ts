@@ -15,18 +15,21 @@ export interface SearchResult {
   publishedAt: string | null;
 }
 
-interface FirecrawlSearchResponse {
-  success: boolean;
-  data?: Array<{
-    url?: string;
+interface FirecrawlSearchItem {
+  url?: string;
+  title?: string;
+  description?: string;
+  position?: number;
+  metadata?: {
+    publishedTime?: string;
     title?: string;
     description?: string;
-    metadata?: {
-      publishedTime?: string;
-      title?: string;
-      description?: string;
-    };
-  }>;
+  };
+}
+
+interface FirecrawlSearchResponse {
+  success: boolean;
+  data?: FirecrawlSearchItem[] | { web?: FirecrawlSearchItem[] };
   error?: string;
 }
 
@@ -78,7 +81,12 @@ export async function searchRecentArticles(
     const body = (await response.json()) as FirecrawlSearchResponse;
     if (!body.success || !body.data) continue;
 
-    for (const item of body.data) {
+    // Firecrawl v2 returns data as { web: [...] } or as a flat array
+    const items: FirecrawlSearchItem[] = Array.isArray(body.data)
+      ? body.data
+      : (body.data.web ?? []);
+
+    for (const item of items) {
       if (!item.url) continue;
       allResults.push({
         url: item.url,

@@ -27,7 +27,8 @@ interface OpenRouterImageResponse {
   choices: Array<{
     message: {
       role: string;
-      content: string | ContentBlock[];
+      content: string | ContentBlock[] | null;
+      images?: ImageContentBlock[];
     };
     finish_reason: string;
   }>;
@@ -93,7 +94,13 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
     throw new Error(`[image-generate] ${model} returned no choices`);
   }
 
-  const content = body.choices[0].message.content;
+  const msg = body.choices[0].message;
+  const content = msg.content;
+
+  // Gemini models return images in a separate `images` array on the message
+  if (msg.images?.length) {
+    return parseDataUrl(msg.images[0].image_url.url, model);
+  }
 
   // Content can be a string or an array of content blocks
   if (Array.isArray(content)) {
