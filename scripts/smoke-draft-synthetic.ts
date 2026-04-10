@@ -7,6 +7,7 @@ import { generateOutline } from '../lib/stages/outline';
 import { draftParagraphs } from '../lib/stages/paragraph-draft';
 import { checkRephraseDistances, partitionByDistance } from '../lib/stages/rephrase-distance';
 import { voiceTransform } from '../lib/stages/voice-transform';
+import { runWithRetry } from '../lib/gates/retry-loop';
 import type { Bundle } from '../lib/bundle/types';
 
 // ---------------------------------------------------------------------------
@@ -124,10 +125,10 @@ async function main() {
   console.log('\n=== UltraPlan drafter smoke test (synthetic bundle) ===');
   console.log('Using hand-built bundle with real quotes from Spyne, AutoRaptor, and Cox Automotive.\n');
 
-  console.log(`[1/5] Bundle ready: ${BUNDLE.sources.length} sources, ${BUNDLE.sources.reduce((s, src) => s + src.quotes.length, 0)} quotes`);
+  console.log(`[1/6] Bundle ready: ${BUNDLE.sources.length} sources, ${BUNDLE.sources.reduce((s, src) => s + src.quotes.length, 0)} quotes`);
 
   // 1. Outline
-  console.log('[2/5] Generating outline (Claude Opus 4.6 via OpenRouter)');
+  console.log('[2/6] Generating outline (Claude Opus 4.6 via OpenRouter)');
   const outline = await generateOutline(BUNDLE, WORD_COUNT);
   console.log(`  headline: "${outline.headline}"`);
   console.log(`  sections: ${outline.sections.length}`);
@@ -136,12 +137,12 @@ async function main() {
   });
 
   // 2. Paragraphs
-  console.log('\n[3/5] Drafting paragraphs (Claude Opus 4.6 via OpenRouter)');
+  console.log('\n[3/6] Drafting paragraphs (Claude Opus 4.6 via OpenRouter)');
   const drafted = await draftParagraphs(outline, BUNDLE, WORD_COUNT);
   console.log(`  paragraphs: ${drafted.paragraphs.length}`);
 
   // 3. Rephrase distance
-  console.log('\n[4/5] Checking rephrase distances (local embeddings)');
+  console.log('\n[4/6] Checking rephrase distances (local embeddings)');
   const distances = await checkRephraseDistances(drafted.paragraphs, BUNDLE);
   const { inBand, outOfBand } = partitionByDistance(drafted.paragraphs, distances);
   console.log(`  in band:     ${inBand.length}/${drafted.paragraphs.length}`);
@@ -152,13 +153,33 @@ async function main() {
   });
 
   // 4. Voice transform
-  console.log('\n[5/5] Voice transform (Claude Opus 4.6 via OpenRouter)');
+  console.log('\n[5/6] Voice transform (Claude Opus 4.6 via OpenRouter)');
   const transformed = await voiceTransform(drafted.paragraphs);
   console.log(`  transformed paragraphs: ${transformed.paragraphs.length}`);
 
-  // 5. Render
+  // 5. Hard gates + retry loop (spec §6)
+  console.log('\n[6/6] Running hard gates with retry loop');
+  const { report: gateReport, paragraphs: finalParagraphs, retries } = await runWithRetry(
+    { paragraphs: transformed.paragraphs, bundle: BUNDLE, outline, attempt: 1 },
+    {
+      onGateStart: (gate) => process.stdout.write(`  ${gate}... `),
+      onGateFinish: (r) => console.log(`${r.passed ? 'PASS' : 'FAIL'} — ${r.summary}`),
+      onRetryStart: (attempt, indices) =>
+        console.log(`\n  --- Retry ${attempt}: regenerating paragraphs [${indices.join(', ')}] ---`),
+    },
+  );
+  console.log(`\n  verdict: ${gateReport.verdict}`);
+  console.log(`  retries: ${retries}`);
+  if (gateReport.failing_paragraph_indices.length > 0) {
+    console.log(`  failing paragraph indices: [${gateReport.failing_paragraph_indices.join(', ')}]`);
+  }
+  if (gateReport.blocked_reason) {
+    console.log(`  blocked_reason: ${gateReport.blocked_reason}`);
+  }
+
+  // 6. Render (use final paragraphs from retry loop)
   const bodyBySection = new Map<number, string[]>();
-  for (const para of transformed.paragraphs) {
+  for (const para of finalParagraphs) {
     const arr = bodyBySection.get(para.section_index) ?? [];
     arr.push(para.text);
     bodyBySection.set(para.section_index, arr);
@@ -210,7 +231,7 @@ async function main() {
   console.log(`  file:         ${outPath}`);
   console.log(`  word count:   ${wordCount} (target ${WORD_COUNT.min}-${WORD_COUNT.max})`);
   console.log(`  sections:     ${outline.sections.length}`);
-  console.log(`  paragraphs:   ${transformed.paragraphs.length}`);
+  console.log(`  paragraphs:   ${finalParagraphs.length}`);
   console.log();
 }
 
