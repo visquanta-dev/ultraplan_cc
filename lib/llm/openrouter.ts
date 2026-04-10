@@ -221,6 +221,6 @@ export async function callLLMText(
  */
 export const MODELS = {
   DRAFTER: 'anthropic/claude-opus-4-6',
-  JUDGE: 'openai/gpt-5',
+  JUDGE: 'anthropic/claude-sonnet-4-6',  // GPT-5 blocked by Azure content policy; Sonnet is cheaper + reliable
   IMAGE: 'google/gemini-2.5-flash-image-preview-pro',
 } as const;

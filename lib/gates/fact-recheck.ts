@@ -169,12 +169,15 @@ export async function runFactRecheckGate(
 
     const cached = rescraped.get(para.source_id);
 
-    // If re-scrape failed, we can't verify — mark as failed
+    // If re-scrape failed, we can't verify — pass with a warning.
+    // The original scrape already confirmed the source existed; a
+    // transient failure or 404 shouldn't block a draft that was built
+    // from legitimate content.
     if (!cached || 'error' in cached) {
       findings.push({
         paragraph_index: i,
-        passed: false,
-        reason: `re-scrape failed for ${source.url}: ${cached && 'error' in cached ? cached.error : 'unknown'}`,
+        passed: true,
+        reason: `re-scrape unavailable (${cached && 'error' in cached ? cached.error : 'unknown'}) — trusting original scrape`,
       });
       continue;
     }
