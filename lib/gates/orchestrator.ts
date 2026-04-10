@@ -9,6 +9,7 @@ import {
   collectFailingParagraphIndices,
 } from './types';
 import { runTraceBackGate } from './trace-back';
+import { runSlopLexiconGate } from './slop-lexicon';
 
 // ---------------------------------------------------------------------------
 // Gate orchestrator — spec §6
@@ -68,8 +69,8 @@ async function runGateB(_ctx: OrchestratorContext): Promise<GateResult> {
   return placeholderGate('fact-recheck', true);
 }
 
-async function runGateC(_ctx: OrchestratorContext): Promise<GateResult> {
-  return placeholderGate('slop-lexicon', true);
+async function runGateC(ctx: OrchestratorContext): Promise<GateResult> {
+  return runSlopLexiconGate(ctx.paragraphs);
 }
 
 async function runGateD(_ctx: OrchestratorContext): Promise<GateResult> {
