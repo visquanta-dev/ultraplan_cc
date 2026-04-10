@@ -11,6 +11,7 @@ import {
 import { runTraceBackGate } from './trace-back';
 import { runSlopLexiconGate } from './slop-lexicon';
 import { runAnonymizationGate } from './anonymization';
+import { runOriginalityGate } from './originality';
 
 // ---------------------------------------------------------------------------
 // Gate orchestrator — spec §6
@@ -74,8 +75,8 @@ async function runGateC(ctx: OrchestratorContext): Promise<GateResult> {
   return runSlopLexiconGate(ctx.paragraphs);
 }
 
-async function runGateD(_ctx: OrchestratorContext): Promise<GateResult> {
-  return placeholderGate('originality', true);
+async function runGateD(ctx: OrchestratorContext): Promise<GateResult> {
+  return runOriginalityGate(ctx.paragraphs, ctx.bundle);
 }
 
 async function runGateE(ctx: OrchestratorContext): Promise<GateResult> {
