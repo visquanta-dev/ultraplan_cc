@@ -48,3 +48,4 @@ data/rejection_log.jsonl
 data/slot_resolutions/
 
 .vercel
+.env*.local

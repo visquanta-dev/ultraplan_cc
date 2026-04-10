@@ -4,92 +4,27 @@ import type { GateReport } from './gates/types';
 import type { Bundle } from './bundle/types';
 
 // ---------------------------------------------------------------------------
-// GitHub App client — spec §8 (stage 7)
-// Creates branches and PRs on visquanta-dev/site using a GitHub App
-// installation token. Scopes: contents:write, pull_requests:write.
+// GitHub PAT client — spec §8 (stage 7)
+// Creates branches and PRs on visquanta-dev/site using a Personal Access Token.
+// Scopes needed: repo (contents + pull requests).
 // ---------------------------------------------------------------------------
 
 const GITHUB_API = 'https://api.github.com';
 const TARGET_REPO = 'visquanta-dev/site';
 
-interface GitHubConfig {
-  appId: string;
-  privateKey: string;
-  installationId: string;
-}
-
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-function getConfig(): GitHubConfig {
-  const appId = process.env.GITHUB_APP_ID;
-  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
-  const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
-
-  if (!appId || !privateKey || !installationId) {
-    throw new Error(
-      '[github] Missing env vars: GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_INSTALLATION_ID',
-    );
+function getToken(): string {
+  const token = process.env.GITHUB_PAT;
+  if (!token) {
+    throw new Error('[github] Missing env var: GITHUB_PAT');
   }
-
-  return { appId, privateKey, installationId };
-}
-
-/**
- * Create a JWT for GitHub App authentication.
- * Uses the jsonwebtoken-compatible approach with native crypto.
- */
-async function createAppJwt(config: GitHubConfig): Promise<string> {
-  // Dynamic import to avoid loading at module level
-  const { default: jwt } = await import('jsonwebtoken');
-  const now = Math.floor(Date.now() / 1000);
-  return jwt.sign(
-    { iss: config.appId, iat: now - 60, exp: now + 600 },
-    config.privateKey,
-    { algorithm: 'RS256' },
-  );
-}
-
-/**
- * Get or refresh installation access token.
- */
-async function getInstallationToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
-    return cachedToken.token;
-  }
-
-  const config = getConfig();
-  const jwt = await createAppJwt(config);
-
-  const res = await fetch(
-    `${GITHUB_API}/app/installations/${config.installationId}/access_tokens`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    },
-  );
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`[github] Failed to get installation token: ${res.status} ${text}`);
-  }
-
-  const body = await res.json() as { token: string; expires_at: string };
-  cachedToken = {
-    token: body.token,
-    expiresAt: new Date(body.expires_at).getTime(),
-  };
-  return cachedToken.token;
+  return token;
 }
 
 async function ghFetch(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const token = await getInstallationToken();
+  const token = getToken();
   return fetch(`${GITHUB_API}${endpoint}`, {
     ...options,
     headers: {
