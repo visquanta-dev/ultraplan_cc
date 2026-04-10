@@ -12,6 +12,7 @@ import { runTraceBackGate } from './trace-back';
 import { runSlopLexiconGate } from './slop-lexicon';
 import { runAnonymizationGate } from './anonymization';
 import { runOriginalityGate } from './originality';
+import { runFactRecheckGate } from './fact-recheck';
 
 // ---------------------------------------------------------------------------
 // Gate orchestrator — spec §6
@@ -27,8 +28,7 @@ import { runOriginalityGate } from './originality';
 //   4. originality      — n-gram + GPT-5 judge
 //   5. fact-recheck     — re-scrape + GPT-5 judge (most expensive)
 //
-// Each gate is still a placeholder at this point. Subsequent commits in
-// Phase 2 replace these placeholders with real implementations.
+// All five gates are now real implementations.
 // ---------------------------------------------------------------------------
 
 export interface OrchestratorContext {
@@ -45,30 +45,12 @@ export interface OrchestratorContext {
   attempt?: number;
 }
 
-// Placeholder gate functions — replaced by real implementations in
-// subsequent commits (Steps 2–6 of Phase 2).
-
-function placeholderGate(
-  gate: GateResult['gate'],
-  retriable: boolean,
-): GateResult {
-  return {
-    gate,
-    passed: true,
-    aggregate_score: undefined,
-    paragraph_findings: [],
-    summary: `${gate} placeholder — real implementation pending`,
-    retriable,
-    failing_paragraph_indices: [],
-  };
-}
-
 async function runGateA(ctx: OrchestratorContext): Promise<GateResult> {
   return runTraceBackGate(ctx.paragraphs, ctx.bundle, ctx.outline);
 }
 
-async function runGateB(_ctx: OrchestratorContext): Promise<GateResult> {
-  return placeholderGate('fact-recheck', true);
+async function runGateB(ctx: OrchestratorContext): Promise<GateResult> {
+  return runFactRecheckGate(ctx.paragraphs, ctx.bundle);
 }
 
 async function runGateC(ctx: OrchestratorContext): Promise<GateResult> {
