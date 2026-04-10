@@ -10,6 +10,7 @@ import {
 } from './types';
 import { runTraceBackGate } from './trace-back';
 import { runSlopLexiconGate } from './slop-lexicon';
+import { runAnonymizationGate } from './anonymization';
 
 // ---------------------------------------------------------------------------
 // Gate orchestrator — spec §6
@@ -77,10 +78,8 @@ async function runGateD(_ctx: OrchestratorContext): Promise<GateResult> {
   return placeholderGate('originality', true);
 }
 
-async function runGateE(_ctx: OrchestratorContext): Promise<GateResult> {
-  // Gate e is the only gate where retriable=false regardless of outcome.
-  const result = placeholderGate('anonymization', false);
-  return result;
+async function runGateE(ctx: OrchestratorContext): Promise<GateResult> {
+  return runAnonymizationGate(ctx.paragraphs, ctx.headlineAndMeta);
 }
 
 // ---------------------------------------------------------------------------
