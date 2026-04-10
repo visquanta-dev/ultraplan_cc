@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveSlot } from '../../../../lib/topics/resolver';
+import { runBlogPipeline } from '../../../../workflows/blog-pipeline';
 
 // ---------------------------------------------------------------------------
 // Cron trigger — spec §9-10, hardened in Phase 13
 // Receives Vercel Cron fires (Mon/Wed/Fri 06:00 CT), resolves lane,
-// and dispatches the blog pipeline. Returns immediately; pipeline runs
-// in the background via Vercel's 300s function timeout.
+// discovers a topic, and dispatches the blog pipeline end-to-end.
 //
-// When Vercel Workflow (WDK) stabilizes, this becomes a workflow.start()
-// call. The pipeline logic stays identical — only the execution wrapper
-// changes.
+// Full flow: cron → search → cluster → scrape → bundle → pipeline → PR
 // ---------------------------------------------------------------------------
 
 type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
@@ -51,20 +50,38 @@ export async function GET(request: NextRequest) {
 
   console.log(`[cron] Triggered — lane: ${lane}, word count: ${wordCount.min}-${wordCount.max}`);
 
-  // The pipeline is dispatched but not awaited here — it runs within
-  // the function's 300s timeout. In production with WDK, this would be
-  // a durable workflow.start() call that survives function recycling.
-  //
-  // Bundle assembly (scrape → assemble) feeds into the pipeline.
-  // For now, the cron endpoint returns the resolved config. The full
-  // end-to-end flow is: cron → scrape sources → assemble bundle →
-  // runBlogPipeline(bundle) → PR. The scrape-to-bundle step uses
-  // the existing lib/sources/ and lib/bundle/ modules from Phase 1.
+  // Run the full pipeline: topic discovery → scrape → bundle → draft → gates → PR
+  // This runs within the function's 300s timeout via Fluid Compute.
+  try {
+    const { bundle } = await resolveSlot(lane);
 
-  return NextResponse.json({
-    triggered: true,
-    lane,
-    wordCount,
-    timestamp: new Date().toISOString(),
-  });
+    const result = await runBlogPipeline({ bundle, wordCount });
+
+    console.log(`[cron] Pipeline finished — verdict: ${result.verdict}, slug: ${result.slug}`);
+
+    return NextResponse.json({
+      triggered: true,
+      lane,
+      wordCount,
+      slug: result.slug,
+      verdict: result.verdict,
+      prUrl: result.prUrl,
+      durationMs: result.durationMs,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[cron] Pipeline failed: ${message}`);
+
+    return NextResponse.json(
+      {
+        triggered: true,
+        lane,
+        wordCount,
+        error: message,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    );
+  }
 }
