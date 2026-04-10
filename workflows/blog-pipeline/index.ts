@@ -177,7 +177,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     const bodyParts: string[] = [];
     outline.sections.forEach((section, i) => {
-      bodyParts.push(`## ${section.heading}\n`);
+      bodyParts.push(`## ${stripEmDashes(section.heading)}\n`);
       const paras = bodyBySection.get(i) ?? [];
       bodyParts.push(paras.join('\n\n'));
 

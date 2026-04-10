@@ -191,7 +191,7 @@ export function buildMidArticleCTA(): string {
     '',
     '---',
     '',
-    '**Ready to stop losing revenue to missed calls?** [Schedule a strategy call](https://www.visquanta.com/book-demo) with the VisQuanta team — we\'ll audit your after-hours coverage and show you exactly where the gaps are.',
+    '**Ready to stop losing revenue to missed calls?** [Schedule a strategy call](https://www.visquanta.com/book-demo) with the VisQuanta team - we\'ll audit your after-hours coverage and show you exactly where the gaps are.',
     '',
     '---',
     '',

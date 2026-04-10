@@ -88,7 +88,7 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
 
   const parts: string[] = [];
   outline.sections.forEach((s, i) => {
-    parts.push(`## ${s.heading}\n`);
+    parts.push(`## ${stripEmDashes(s.heading)}\n`);
     parts.push((bodyBySection.get(i) ?? []).join('\n\n'));
     if (i === midPoint) parts.push(buildMidArticleCTA());
     parts.push('');
@@ -102,7 +102,7 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
   const meta = firstPara.length > 155 ? firstPara.slice(0, 152).replace(/\s+\S*$/, '') + '...' : firstPara;
 
   const md = matter.stringify(parts.join('\n'), {
-    title: outline.headline,
+    title: stripEmDashes(outline.headline),
     slug: bundle.topic_slug,
     metaDescription: meta,
     publishedAt: new Date().toISOString().split('T')[0],
