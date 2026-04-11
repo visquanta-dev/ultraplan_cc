@@ -95,7 +95,18 @@ TEXT OVERLAY (if applicable):
 
 Hard Rules
 MANDATORY — Photorealism Only
-Every image must look like it was shot by a professional photographer or designed by a senior graphic designer. Ultra-photorealistic. Natural lighting, real environments, real people, real objects.
+Every image must look like it was shot by a professional photographer or designed by a senior graphic designer. Ultra-photorealistic. Natural lighting, real environments, real objects.
+
+MANDATORY — Legal Safety (gates will reject images that violate these)
+These rules exist because generated images go through automated vision gates that check for legal/copyright violations. If your prompt causes any of these, the image WILL be rejected and retried:
+
+1. NO identifiable human faces. Show people from behind, silhouetted, out of focus, cropped at shoulders, or in deep background blur only. Close-ups of hands, arms, or torsos are fine.
+2. NO readable text in the scene. Do not depict signs, name tags, screen text, building signage, or any legible writing. If a screen or sign must appear, it should be blurred, angled away, or too distant to read.
+3. NO brand logos or trademarks. Do not depict recognizable car manufacturer badges (Ford, Hyundai, Chevrolet, etc.), tech brand logos (Cisco, Dell, Apple), or any copyrighted marks. Vehicles should be generic/unbranded. Phones and monitors should be plain/logo-free.
+4. NO identifiable trademarked vehicle designs. Show generic vehicle silhouettes, partial views, or angled shots that don't reveal distinctive brand-specific grille/badge designs.
+
+Compose every prompt to naturally avoid these: prefer object close-ups, over-the-shoulder angles, silhouetted figures, shallow depth-of-field that blurs faces/text, and generic unbranded environments.
+
 ABSOLUTELY BANNED — No Exceptions
 
 Futuristic imagery of any kind (glowing UIs, holographic displays, neon grids, digital particles, floating data)

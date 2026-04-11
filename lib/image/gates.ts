@@ -132,19 +132,22 @@ async function checkBannedContent(
   image: GeneratedImage,
   style: ImageStyleConfig,
 ): Promise<{ passed: boolean; violations: string[] }> {
-  const system = `You are an image content reviewer. Check whether this image contains any banned content. Return JSON only.`;
+  const system = `You are an image content reviewer for a blog. Your job is to catch PROMINENT legal risks, not incidental background details. Return JSON only.`;
 
   const user = [
-    'Check this image for the following banned content:',
+    'Check this image for PROMINENT banned content. Only flag items that are clearly featured or central to the composition:',
     '',
-    '1. Identifiable human faces (blurred/silhouetted people are OK)',
-    '2. Text or text-like artifacts rendered in the image',
-    '3. Copyrighted logos (NHTSA, OEM branding like Ford/Hyundai/Chevrolet/Audi logos)',
-    '4. Clearly identifiable trademarked car models with visible badges',
+    '1. Identifiable human faces that are clearly visible and in focus (blurred, silhouetted, distant, or out-of-focus people are FINE)',
+    '2. Large, readable text that is a focal element of the image (small/distant/blurred text on screens, signs, or objects in the background is FINE)',
+    '3. Copyrighted logos that are prominently displayed and clearly the focus or a major element (small badges on vehicle rears, tiny logos on phones/monitors in the background are FINE)',
+    '4. A specific trademarked vehicle model that is the clear hero/subject AND its badge is prominently readable (generic vehicles with small distant badges are FINE)',
+    '',
+    'IMPORTANT: This is for editorial blog imagery, not advertising. Incidental background details (small car badges, distant signage, blurred screen text) are expected in realistic photographs and are NOT violations. Only flag items that could be mistaken for brand endorsement or sponsorship.',
     '',
     style.anonymization_rule ? `Additional anonymization rules:\n${style.anonymization_rule}` : '',
     '',
     'Return: {"has_violations": boolean, "violations": ["description of each violation"]}',
+    'If nothing is prominently featured, return: {"has_violations": false, "violations": []}',
   ].join('\n');
 
   const result = await callVision<BannedContentResponse>(image, system, user, (raw) => {

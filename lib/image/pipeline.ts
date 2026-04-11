@@ -161,7 +161,7 @@ export async function runImagePipeline(
       prompt = await generateImagePrompt(headline, articleContent);
     } else {
       // Fallback: basic prompt from headline
-      prompt = `Ultra-realistic photograph, modern car dealership environment related to: "${headline}". Professional editorial quality, warm lighting, automotive setting. No watermarks, no logos.`;
+      prompt = `Ultra-realistic photograph, modern car dealership environment related to: "${headline}". Professional editorial quality, warm lighting, automotive setting. No identifiable faces (show people from behind or silhouetted only). No readable text or signage. No brand logos or car manufacturer badges. No watermarks.`;
     }
     const outputPath = path.join(outputDir, 'hero.webp');
 
@@ -178,7 +178,7 @@ export async function runImagePipeline(
   // Generate inline images
   for (let i = 0; i < counts.inline; i++) {
     const sectionContext = i < sectionHeadings.length ? sectionHeadings[i] : headline;
-    const prompt = `Ultra-realistic photograph, modern car dealership scene related to: "${sectionContext}". Professional editorial quality, warm showroom lighting. No text, no watermarks, no logos.`;
+    const prompt = `Ultra-realistic photograph, modern car dealership scene related to: "${sectionContext}". Professional editorial quality, warm showroom lighting. No identifiable faces (show people from behind or silhouetted only). No readable text or signage. No brand logos or car manufacturer badges. No watermarks.`;
     const outputPath = path.join(outputDir, `inline-${i + 1}.webp`);
 
     const result = await generateAndValidate(prompt, style, 'inline', outputPath, options, i);
