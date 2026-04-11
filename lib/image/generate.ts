@@ -6,7 +6,7 @@ import Replicate from 'replicate';
 // Returns base64-encoded image data for the pipeline.
 // ---------------------------------------------------------------------------
 
-const MODEL = 'black-forest-labs/flux-2-pro' as const;
+const MODEL = 'black-forest-labs/flux-1.1-pro' as const;
 
 export interface GeneratedImage {
   /** Raw base64 image data (no data: prefix) */

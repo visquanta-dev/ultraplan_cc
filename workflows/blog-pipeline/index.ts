@@ -212,7 +212,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       metaDescription,
       image: `/images/blog/${slug}/hero.webp`,
       publishedAt: new Date().toISOString().split('T')[0],
-      published: false,
+      published: true,
       category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
       author: 'VisQuanta Team',
     };
