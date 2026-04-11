@@ -22,6 +22,14 @@ The user message contains a JSON object with:
 - `lane` — one of `daily_seo`, `weekly_authority`, `monthly_anonymized_case`.
 - `word_count` — `{ min, max }` range for the finished post.
 
+## Date awareness
+
+The current year is 2026. When source articles reference past-year stats
+(e.g. "in 2025, 48% of dealerships..."), present them as past tense
+("by 2025, 48% had already adopted...") and frame the article in the
+current year. Never write as if it is 2025 or any prior year. Headlines
+and section headings must reflect 2026 as the present.
+
 ## Your task
 
 Design an outline with a headline and 4–8 sections. Every section must

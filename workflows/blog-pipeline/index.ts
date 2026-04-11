@@ -241,9 +241,13 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const articleText = bodyParts.join('\n');
       const enriched = await enrichContent(articleText, bundle, outline.headline);
 
-      // Insert TL;DR after first heading
+      // Insert TL;DR after first section's content (heading + paragraphs)
       if (enriched.tldr) {
-        bodyParts.splice(1, 0, `\n**TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
+        // bodyParts structure: [heading, paragraphs, "", heading, paragraphs, "", ...]
+        // Find the first empty string (section separator) and insert before it
+        const firstBreak = bodyParts.findIndex((p, i) => i > 0 && p.trim() === '');
+        const insertAt = firstBreak > 0 ? firstBreak : 2;
+        bodyParts.splice(insertAt, 0, `\n**TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
       }
 
       // Insert tables at target positions
