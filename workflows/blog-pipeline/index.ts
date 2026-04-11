@@ -247,7 +247,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         // Find the first empty string (section separator) and insert before it
         const firstBreak = bodyParts.findIndex((p, i) => i > 0 && p.trim() === '');
         const insertAt = firstBreak > 0 ? firstBreak : 2;
-        bodyParts.splice(insertAt, 0, `\n**TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
+        bodyParts.splice(insertAt, 0, `\n**Key Takeaway:** ${stripEmDashes(enriched.tldr)}\n`);
       }
 
       // Insert tables at target positions
