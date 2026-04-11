@@ -40,12 +40,22 @@ function buildSubjectFromArticle(
 ): string {
   if (imageType === 'hero') {
     return [
-      `The article discusses: ${sectionHeadings.slice(0, 3).join('; ')}`,
+      `Generate a high-quality, photorealistic hero image for a business blog post titled: "${headline}"`,
       '',
-      'Create an ABSTRACT hero image that evokes the themes of business technology and operational efficiency.',
-      'DO NOT depict a dealership, showroom, cars, or people.',
-      'Instead show: abstract geometric patterns, light compositions, clean modern surfaces,',
-      'premium textures, bokeh, or minimal architectural elements.',
+      `The article covers these topics: ${sectionHeadings.slice(0, 3).join(', ')}`,
+      '',
+      'The image should visually represent the core theme of the article.',
+      'Think editorial photography for Harvard Business Review or Fast Company.',
+      'The scene should clearly relate to the headline - if the article is about missed calls,',
+      'show a phone or service desk; if about technology adoption, show screens or dashboards.',
+      '',
+      'Rules:',
+      '- Photorealistic, professional quality, 16:9 aspect ratio',
+      '- No identifiable human faces (silhouettes or backs of heads OK)',
+      '- No brand logos, car badges, or trademarked names',
+      '- No text overlays or watermarks',
+      '- Clean, well-lit composition with a clear focal point',
+      '- Warm, modern color palette',
     ].join('\n');
   }
 

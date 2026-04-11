@@ -5,7 +5,7 @@
 # ============================================================================
 
 lane: daily_seo
-model: black-forest-labs/flux-2-pro
+model: google/gemini-3.1-flash-image-preview
 
 # ----------------------------------------------------------------------------
 # Aspect ratio + dimensions (hero only)
@@ -20,17 +20,16 @@ dimensions:
 # Style prompt — prepended verbatim to every prompt for this lane
 # ----------------------------------------------------------------------------
 style_prompt: |
-  Professional editorial photograph for a business technology blog.
-  Clean composition, studio lighting, shallow depth of field.
-  Modern, minimal environments — think: Harvard Business Review, Fast Company,
-  Wired editorial photography. Warm, inviting tones. Subject should be
-  abstract or environmental — empty modern spaces, abstract technology
-  patterns, geometric light compositions, clean surfaces with subtle tech
-  elements, close-up textures of premium materials, bokeh light patterns.
-  NEVER show a dealership interior, showroom, service bay, or cars.
-  NEVER show identifiable human faces or people.
-  NEVER include brand logos, car badges, text, or signage.
-  Strong compositional balance with clear focal point and negative space.
+  Photorealistic editorial photograph for a professional business blog.
+  The image must visually relate to the article's headline and core topic.
+  Think: Harvard Business Review cover art, Wired feature photography.
+  Clean composition, natural lighting, shallow depth of field.
+  Show a real scene that a dealership manager would recognize - service desks,
+  phone systems, empty waiting areas, digital dashboards, scheduling screens,
+  clean modern office environments, professional workspaces.
+  Warm, modern color palette. Clear focal point.
+  No identifiable human faces (silhouettes or backs of heads OK).
+  No brand logos, car badges, or text overlays.
 
 # ----------------------------------------------------------------------------
 # Negative prompt — hard rejections
