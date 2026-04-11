@@ -11,6 +11,7 @@ import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete }
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
 import { enrichContent, renderTLDR, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
+import { callLLMStructured } from '../../lib/llm/openrouter';
 import matter from 'gray-matter';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,6 +26,50 @@ import path from 'node:path';
 // function that runs synchronously — WDK wrapping is a config change,
 // not a logic change, once the @vercel/workflow SDK stabilizes.
 // ---------------------------------------------------------------------------
+
+/**
+ * Generate an LLM-crafted meta description optimized for SERP click-through
+ * and AI engine snippet extraction. Replaces the old first-paragraph truncation.
+ */
+async function generateMetaDescription(headline: string, openingText: string): Promise<string> {
+  try {
+    const result = await callLLMStructured<{ metaDescription: string }>({
+      system: [
+        'You write meta descriptions for blog posts about car dealership operations.',
+        'Rules:',
+        '- Exactly 120-155 characters (this is critical for SERP display)',
+        '- Start with a concrete benefit, stat, or question that makes a dealer GM click',
+        '- Include the core topic keyword naturally',
+        '- End with implicit value (what they will learn or gain)',
+        '- No hype words: no "revolutionary", "game-changing", "unlock", "supercharge"',
+        '- No brand name (VisQuanta) — this is editorial, not promotional',
+        '- Write for humans first, search engines second',
+      ].join('\n'),
+      user: `Headline: ${headline}\n\nOpening content: ${openingText.slice(0, 800)}`,
+      schema: {
+        type: 'object',
+        properties: {
+          metaDescription: { type: 'string', description: 'The meta description, 120-155 characters' },
+        },
+        required: ['metaDescription'],
+      },
+      parse: (raw) => {
+        const obj = raw as Record<string, unknown>;
+        let desc = String(obj.metaDescription ?? '').trim();
+        // Hard cap at 160 chars as safety net
+        if (desc.length > 160) desc = desc.slice(0, 157).replace(/\s+\S*$/, '') + '...';
+        return { metaDescription: desc };
+      },
+      maxTokens: 256,
+      temperature: 0.6,
+    });
+    return result.metaDescription;
+  } catch {
+    // Fallback to old truncation if LLM fails
+    const fallback = openingText.slice(0, 155);
+    return fallback.length > 152 ? fallback.slice(0, 152).replace(/\s+\S*$/, '') + '...' : fallback;
+  }
+}
 
 export interface PipelineInput {
   bundle: Bundle;
@@ -231,11 +276,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const wordCount2 = body.split(/\s+/).filter(Boolean).length;
     const readingTime = Math.max(1, Math.ceil(wordCount2 / 200));
 
-    // Generate real meta description from headline + first paragraph
-    const firstPara = stripEmDashes(stripCitations(dedupedParagraphs[0]?.text ?? ''));
-    const metaDescription = firstPara.length > 155
-      ? firstPara.slice(0, 152).replace(/\s+\S*$/, '') + '...'
-      : firstPara;
+    // Generate LLM-crafted meta description for SERP + AI snippet extraction
+    const metaDescription = await generateMetaDescription(
+      outline.headline,
+      dedupedParagraphs.slice(0, 4).map(p => stripEmDashes(stripCitations(p.text))).join(' '),
+    );
 
     const LANE_TITLES: Record<string, string> = {
       daily_seo: 'Industry Insights',
@@ -268,6 +313,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       image: `/images/blog/${slug}/hero.webp`,
       readingTime,
       publishedAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0],
       published: true,
       category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
       tags: LANE_TAGS[lane] ?? [],

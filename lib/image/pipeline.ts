@@ -13,9 +13,43 @@ import { callLLMStructured } from '../llm/openrouter';
 
 const MAX_IMAGE_RETRIES = 2;
 
+/**
+ * Generate descriptive alt text for an image based on its context.
+ * Used for accessibility and image search SEO.
+ */
+async function generateAltText(context: string, role: string): Promise<string> {
+  try {
+    const result = await callLLMStructured<{ alt: string }>({
+      system: [
+        'Generate alt text for a blog image about car dealership operations.',
+        'Rules:',
+        '- 10-25 words, one sentence',
+        '- Describe what the image depicts in the context of the article',
+        '- Be specific to the dealership industry',
+        '- No "image of" or "photo of" prefix',
+        '- No brand names',
+      ].join('\n'),
+      user: `Article context: ${context}\nImage role: ${role}`,
+      schema: {
+        type: 'object',
+        properties: { alt: { type: 'string' } },
+        required: ['alt'],
+      },
+      parse: (raw) => ({ alt: String((raw as Record<string, unknown>).alt ?? '').trim() }),
+      maxTokens: 64,
+      temperature: 0.5,
+    });
+    return result.alt;
+  } catch {
+    return `Dealership scene related to ${context.slice(0, 60)}`;
+  }
+}
+
 export interface ImagePipelineResult {
   /** Paths relative to project root (e.g. public/images/blog/slug/hero.webp) */
   paths: string[];
+  /** Alt text keyed by relative path */
+  altTexts: Record<string, string>;
   /** Per-image gate results for diagnostics */
   gateResults: Array<{ type: 'hero' | 'inline'; index: number; result: ImageGateResult; attempts: number }>;
   /** Whether all images passed gates */
@@ -150,6 +184,7 @@ export async function runImagePipeline(
   const outputDir = path.join(process.cwd(), 'public', 'images', 'blog', slug);
 
   const paths: string[] = [];
+  const altTexts: Record<string, string> = {};
   const gateResults: ImagePipelineResult['gateResults'] = [];
   const blockedImages: string[] = [];
 
@@ -169,7 +204,9 @@ export async function runImagePipeline(
     gateResults.push({ type: 'hero', index: 0, result: result.gateResult, attempts: result.attempts });
 
     if (result.path) {
-      paths.push(path.relative(process.cwd(), result.path));
+      const relPath = path.relative(process.cwd(), result.path);
+      paths.push(relPath);
+      altTexts[relPath] = await generateAltText(headline, 'hero image');
     } else {
       blockedImages.push('hero.webp');
     }
@@ -185,7 +222,9 @@ export async function runImagePipeline(
     gateResults.push({ type: 'inline', index: i, result: result.gateResult, attempts: result.attempts });
 
     if (result.path) {
-      paths.push(path.relative(process.cwd(), result.path));
+      const relPath = path.relative(process.cwd(), result.path);
+      paths.push(relPath);
+      altTexts[relPath] = await generateAltText(sectionContext, `section image for ${sectionContext}`);
     } else {
       blockedImages.push(`inline-${i + 1}.webp`);
     }
@@ -193,6 +232,7 @@ export async function runImagePipeline(
 
   return {
     paths,
+    altTexts,
     gateResults,
     allPassed: blockedImages.length === 0,
     blockedImages,
