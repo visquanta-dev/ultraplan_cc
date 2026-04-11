@@ -110,45 +110,63 @@ function buildSourceMap(bundle: Bundle): Map<string, { url: string; siteName: st
   return map;
 }
 
+// Varied attribution phrases to avoid repetition
+const ATTRIBUTION_PHRASES = [
+  (name: string, url: string) => `[according to ${name}](${url})`,
+  (name: string, url: string) => `[as reported by ${name}](${url})`,
+  (name: string, url: string) => `[per ${name}](${url})`,
+  (name: string, url: string) => `[research from ${name}](${url})`,
+  (name: string, url: string) => `[${name} reports](${url})`,
+  (name: string, url: string) => `[data from ${name}](${url})`,
+  (name: string, url: string) => `[${name} found](${url})`,
+  (name: string, url: string) => `[a ${name} analysis shows](${url})`,
+];
+
 /**
  * Insert external source links into paragraphs.
- * Finds (src_XXX) markers in the raw text and converts them to inline links.
- * Call this BEFORE stripping citations.
+ * Each unique source URL is linked only ONCE (first mention).
+ * Subsequent mentions of the same source just use the name, no link.
+ * Attribution phrasing is varied to avoid repetition.
  */
 export function insertExternalLinks<T extends { text: string }>(
   paragraphs: T[],
   bundle: Bundle,
 ): T[] {
   const sourceMap = buildSourceMap(bundle);
-  let externalCount = 0;
+  const linkedUrls = new Set<string>(); // track which URLs have been linked
+  let phraseIdx = 0;
 
   return paragraphs.map((para) => {
-    if (externalCount >= MAX_EXTERNAL_LINKS_PER_POST) return para;
-
-    // Find all (src_XXX) markers in this paragraph
     const srcPattern = /\(src_(\d+)\)/g;
     let match: RegExpExecArray | null;
     let newText = para.text;
-    const replacements: Array<{ marker: string; link: string }> = [];
+    const replacements: Array<{ marker: string; replacement: string }> = [];
 
     while ((match = srcPattern.exec(para.text)) !== null) {
-      if (externalCount >= MAX_EXTERNAL_LINKS_PER_POST) break;
-
       const srcId = `src_${match[1]}`;
       const source = sourceMap.get(srcId);
-      if (source) {
-        // First occurrence: turn into a linked attribution
+      if (!source) continue;
+
+      if (!linkedUrls.has(source.url)) {
+        // First time seeing this source - create a linked attribution
+        const phrase = ATTRIBUTION_PHRASES[phraseIdx % ATTRIBUTION_PHRASES.length];
         replacements.push({
           marker: match[0],
-          link: `, [according to ${source.siteName}](${source.url})`,
+          replacement: `, ${phrase(source.siteName, source.url)}`,
         });
-        externalCount++;
+        linkedUrls.add(source.url);
+        phraseIdx++;
+      } else {
+        // Already linked this source - just strip the marker
+        replacements.push({
+          marker: match[0],
+          replacement: '',
+        });
       }
     }
 
-    // Apply all replacements (multiple external links per paragraph OK)
     for (const rep of replacements) {
-      newText = newText.replace(rep.marker, rep.link);
+      newText = newText.replace(rep.marker, rep.replacement);
     }
     // Strip any remaining unresolved markers
     newText = newText.replace(/\s*\(src_\d+\)/g, '');

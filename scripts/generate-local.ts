@@ -8,6 +8,7 @@ config({ path: '.env.local', override: true });
 
 import { resolveSlot } from '../lib/topics/resolver';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../lib/stages/auto-linker';
+import { enrichContent, renderTLDR, renderTable, renderFAQ, insertTables } from '../lib/stages/enrich-content';
 import { generateOutline } from '../lib/stages/outline';
 import { draftParagraphs } from '../lib/stages/paragraph-draft';
 import { checkRephraseDistances } from '../lib/stages/rephrase-distance';
@@ -93,6 +94,38 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
     if (i === midPoint) parts.push(buildMidArticleCTA());
     parts.push('');
   });
+
+  // Enrich: TL;DR, tables, FAQ
+  console.log('  Enriching: TL;DR + tables + FAQ...');
+  try {
+    const articleText = parts.join('\n');
+    const enriched = await enrichContent(articleText, bundle, outline.headline);
+
+    // Insert TL;DR after first heading
+    if (enriched.tldr) {
+      parts.splice(1, 0, renderTLDR(stripEmDashes(enriched.tldr)));
+    }
+
+    // Insert tables at their target positions
+    if (enriched.tables.length > 0) {
+      const headings = outline.sections.map(s => s.heading);
+      const withTables = insertTables(parts, enriched.tables, headings);
+      parts.length = 0;
+      parts.push(...withTables);
+    }
+
+    // Append FAQ before Related Reading
+    if (enriched.faqs.length > 0) {
+      parts.push(renderFAQ(enriched.faqs.map(f => ({
+        question: stripEmDashes(f.question),
+        answer: stripEmDashes(f.answer),
+      }))));
+    }
+
+    console.log(`  Enriched: ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs`);
+  } catch (e: any) {
+    console.warn('  Enrichment failed (non-fatal):', e.message);
+  }
 
   // Related posts
   const related = buildRelatedPosts(parts.join('\n'));
