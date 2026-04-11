@@ -131,16 +131,40 @@ async function generateOne(index: number, lane: typeof lanes[number]) {
   const related = buildRelatedPosts(parts.join('\n'));
   if (related) parts.push(related);
 
-  const firstPara = stripCitations(deduped[0]?.text ?? '');
+  const bodyText = parts.join('\n');
+  const wordCount2 = bodyText.split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.max(1, Math.ceil(wordCount2 / 200));
+
+  const firstPara = stripEmDashes(stripCitations(deduped[0]?.text ?? ''));
   const meta = firstPara.length > 155 ? firstPara.slice(0, 152).replace(/\s+\S*$/, '') + '...' : firstPara;
 
-  const md = matter.stringify(parts.join('\n'), {
+  const LANE_TAGS: Record<string, Array<{ slug: string; title: string }>> = {
+    daily_seo: [
+      { slug: 'dealership-operations', title: 'Dealership Operations' },
+      { slug: 'service-drive', title: 'Service Drive' },
+      { slug: 'automation', title: 'Automation' },
+    ],
+    weekly_authority: [
+      { slug: 'leadership', title: 'Leadership' },
+      { slug: 'dealer-principal', title: 'Dealer Principal' },
+      { slug: 'dealership-operations', title: 'Dealership Operations' },
+    ],
+    monthly_anonymized_case: [
+      { slug: 'case-study', title: 'Case Study' },
+      { slug: 'dealership-operations', title: 'Dealership Operations' },
+      { slug: 'results', title: 'Results' },
+    ],
+  };
+
+  const md = matter.stringify(bodyText, {
     title: stripEmDashes(outline.headline),
     slug: bundle.topic_slug,
     metaDescription: meta,
+    readingTime,
     publishedAt: new Date().toISOString().split('T')[0],
-    published: false,
+    published: true,
     category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
+    tags: LANE_TAGS[lane] ?? [],
     author: 'VisQuanta Team',
   });
 
