@@ -10,7 +10,8 @@ import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
-import { enrichContent, renderTLDR, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
+import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
+import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { callLLMStructured } from '../../lib/llm/openrouter';
 import matter from 'gray-matter';
 import fs from 'node:fs';
@@ -255,15 +256,27 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
       // Append FAQ before Related Reading
       if (enriched.faqs.length > 0) {
-        bodyParts.push(renderFAQ(enriched.faqs.map(f => ({
+        const cleanFaqs = enriched.faqs.map(f => ({
           question: stripEmDashes(f.question),
           answer: stripEmDashes(f.answer),
-        }))));
+        }));
+        bodyParts.push(renderFAQ(cleanFaqs));
+        // Embed FAQPage JSON-LD schema for Google rich results + AI engine consumption
+        bodyParts.push(renderFAQSchema(cleanFaqs));
       }
 
       console.log(`[pipeline]   enriched: ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs`);
     } catch (err) {
       console.warn('[pipeline]   enrichment failed (non-fatal):', (err as Error).message);
+    }
+
+    // Insert contextual calculator/tool embeds based on content keywords
+    console.log('[pipeline] Step 5d/7: Inserting tool embeds');
+    const embedResult = insertToolEmbeds(bodyParts);
+    bodyParts.length = 0;
+    bodyParts.push(...embedResult.parts);
+    if (embedResult.inserted.length > 0) {
+      console.log(`[pipeline]   embedded: ${embedResult.inserted.join(', ')}`);
     }
 
     // Append related posts section

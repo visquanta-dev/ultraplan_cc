@@ -175,6 +175,29 @@ export function renderTLDR(tldr: string): string {
 }
 
 /**
+ * Render FAQPage JSON-LD schema from FAQ items.
+ * Embedded as a <script> tag in the markdown so the main site renders it.
+ */
+export function renderFAQSchema(
+  faqs: Array<{ question: string; answer: string }>,
+): string {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+
+  return `\n<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>\n`;
+}
+
+/**
  * Insert tables into article markdown at the correct positions.
  */
 export function insertTables(

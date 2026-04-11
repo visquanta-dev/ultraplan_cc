@@ -1,5 +1,6 @@
 import { searchForLane } from './search';
 import { clusterArticles, type TopicCluster } from './cluster';
+import { filterDuplicateClusters } from './dedup';
 import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
@@ -48,12 +49,21 @@ export async function resolveSlot(
   console.log(`[resolver] Found ${searchResults.length} articles`);
 
   // Step 2: Cluster
-  const clusters = clusterArticles(searchResults, { maxClusters: 5 });
-  if (clusters.length === 0) {
+  const rawClusters = clusterArticles(searchResults, { maxClusters: 5 });
+  if (rawClusters.length === 0) {
     throw new Error('[resolver] Clustering produced zero clusters');
   }
 
-  // Pick the strongest cluster (first = most diverse source coverage)
+  // Step 2b: Filter out topics that overlap with existing published content
+  const { filtered: clusters, removed } = filterDuplicateClusters(rawClusters);
+  for (const r of removed) {
+    console.log(`[resolver] Skipped cluster "${r.cluster.label}" — ${r.reason}`);
+  }
+  if (clusters.length === 0) {
+    throw new Error('[resolver] All clusters overlap with existing content. Try again tomorrow or expand search queries.');
+  }
+
+  // Pick the strongest non-duplicate cluster
   const winner = clusters[0];
   options.onCluster?.(winner);
   console.log(
