@@ -52,25 +52,10 @@ ROI / revenue | GM reviewing reports/dashboards at a desk, dealership visible th
 Industry trends / NADA | Conference setting, exhibition floor, keynote stage
 Step 4 — Choose a Format
 Not every blog image should look the same. A professionally designed publication varies its visual formats. Choose ONE format per blog post:
-A) Editorial Photo (~55% of posts)
-A realistic, high-quality photograph of a real-world scene directly tied to the article content. People, environments, objects, all grounded in reality. This is the default.
-B) Text Overlay on Photo (~20% of posts)
-A realistic photograph used as a background, with bold, clean text overlaid. Use this when the article has a strong headline, a compelling stat, or a punchy title that benefits from visual emphasis. Always specify:
+A) Editorial Photo (~70% of posts)
+A realistic, high-quality photograph of a real-world scene directly tied to the article content. Environments, objects, silhouetted or background figures, all grounded in reality. This is the default and safest option.
 
-Exact text to display
-Font: bold, modern sans-serif (Montserrat, Inter, or similar)
-Text colour: white on dark backgrounds, dark on light
-Placement: centred, lower third, or left-aligned
-Readability treatment: dark gradient overlay (50-60% opacity black from bottom), slight gaussian blur on background, or desaturated/darkened photo
-
-C) Text on Solid/Gradient Background (~15% of posts)
-A clean, minimal typographic design. No photograph. Bold text on a solid colour or subtle gradient. Use for listicles, opinion pieces, "X things you need to know" articles, or when a forced photo would look generic. Always specify:
-
-Background: use Visquanta brand colours. Dark navy/charcoal (#08080A or #1a1f36) with optional subtle gradient, or dark with orange (#F97316) accent elements
-Text content, font style, weight, colour, layout
-Keep it minimal: no icons, no illustrations, no decorative clutter
-
-D) Close-Up Detail Shot (~10% of posts)
+B) Close-Up Detail Shot (~30% of posts)
 A tight macro or detail photograph of a relevant object. Use to break visual monotony and add editorial texture. Examples:
 
 Car key fob on a polished desk next to a phone
@@ -81,17 +66,12 @@ Coffee cup next to a CRM-filled laptop on a sales desk
 
 Step 5 — Compose the Prompt
 Use this exact output structure:
-FORMAT: [Editorial Photo / Text Overlay on Photo / Text on Solid Background / Close-Up Detail]
+FORMAT: [Editorial Photo / Close-Up Detail]
 REASON: [One sentence explaining why this format fits this article]
 
-PROMPT: [The image generation prompt, 40-80 words, excluding text overlay specs]
+PROMPT: [The image generation prompt, 40-80 words]
 
-TEXT OVERLAY (if applicable):
-- Text: "[exact text to display]"
-- Font: [font name], [weight], [size guidance]
-- Colour: [hex or description]
-- Position: [placement on image]
-- Background treatment: [gradient/blur/darken specs]
+Do NOT include text overlay specifications. The image must be purely photographic with no text rendered in it.
 
 Hard Rules
 MANDATORY — Photorealism Only
@@ -128,12 +108,12 @@ Dealership signage or lot elements
 
 Prompt Construction Rules
 
-Keep prompts between 40-80 words (excluding text overlay specs)
+Keep prompts between 40-80 words
 Always specify lighting: natural, warm showroom, fluorescent service bay, golden hour lot, overcast, etc.
 Always specify camera angle: wide establishing shot, over-the-shoulder, eye-level, overhead, close-up macro, etc.
-Always end the prompt with "No watermarks, no logos." (only add "No text" if the format is Editorial Photo or Close-Up Detail — obviously do NOT say "no text" for text overlay formats)
+Always end the prompt with "No readable text, no watermarks, no logos, no identifiable faces."
 Use "ultra-realistic photograph" or "professional editorial photograph" as the style anchor
-Never describe screens showing specific UI text — say "CRM dashboard" or "data on screen," not "screen showing customer name John Smith with phone number"
+Never describe screens showing specific UI text — say "CRM dashboard" or "blurred data on screen," not specific text content
 
 Diversity and Variation
 
