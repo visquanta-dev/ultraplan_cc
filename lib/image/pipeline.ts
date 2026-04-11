@@ -3,6 +3,7 @@ import path from 'node:path';
 import { loadImageStyle, buildImagePrompt, getImageCount, type ImageStyleConfig } from './style-loader';
 import { generateImage, type GeneratedImage } from './generate';
 import { runImageGates, type ImageGateResult } from './gates';
+import { callLLMStructured } from '../llm/openrouter';
 
 // ---------------------------------------------------------------------------
 // Image generation pipeline — spec §7 (stage 6b)
@@ -28,47 +29,62 @@ export interface ImagePipelineOptions {
   onImageResult?: (type: 'hero' | 'inline', index: number, passed: boolean, attempt: number) => void;
 }
 
+const IMAGE_AGENT_PROMPT_PATH = path.join(
+  process.cwd(),
+  'workflows',
+  'blog-pipeline',
+  'prompts',
+  'image-agent.md',
+);
+
+let cachedImageAgentPrompt: string | null = null;
+
+function loadImageAgentPrompt(): string {
+  if (cachedImageAgentPrompt) return cachedImageAgentPrompt;
+  cachedImageAgentPrompt = fs.readFileSync(IMAGE_AGENT_PROMPT_PATH, 'utf-8');
+  return cachedImageAgentPrompt;
+}
+
 /**
- * Build a subject description for image generation from the article headline
- * and section headings.
+ * Use the Image Agent prompt to generate a content-relevant image prompt.
+ * The agent reads the blog content and outputs a production-ready prompt
+ * following the VisQuanta brand guidelines.
  */
-function buildSubjectFromArticle(
+async function generateImagePrompt(
   headline: string,
-  sectionHeadings: string[],
-  imageType: 'hero' | 'inline',
-  inlineIndex?: number,
-): string {
-  if (imageType === 'hero') {
-    return [
-      `Generate a high-quality, photorealistic hero image for a business blog post titled: "${headline}"`,
-      '',
-      `The article covers these topics: ${sectionHeadings.slice(0, 3).join(', ')}`,
-      '',
-      'The image should visually represent the core theme of the article.',
-      'Think editorial photography for Harvard Business Review or Fast Company.',
-      'The scene should clearly relate to the headline - if the article is about missed calls,',
-      'show a phone or service desk; if about technology adoption, show screens or dashboards.',
-      '',
-      'Rules:',
-      '- Photorealistic, professional quality, 16:9 aspect ratio',
-      '- No identifiable human faces (silhouettes or backs of heads OK)',
-      '- No brand logos, car badges, or trademarked names',
-      '- No text overlays or watermarks',
-      '- Clean, well-lit composition with a clear focal point',
-      '- Warm, modern color palette',
-    ].join('\n');
-  }
+  articleContent: string,
+): Promise<string> {
+  const agentSystem = loadImageAgentPrompt();
 
-  const sectionContext = inlineIndex !== undefined && inlineIndex < sectionHeadings.length
-    ? `This inline image accompanies the section: "${sectionHeadings[inlineIndex]}"`
-    : `This is inline image ${(inlineIndex ?? 0) + 1} for the article.`;
+  // Truncate content to keep within token limits
+  const truncatedContent = articleContent.slice(0, 4000);
+  const userMessage = `Read the following blog post and generate one image prompt following the rules exactly.\n\n# ${headline}\n\n${truncatedContent}`;
 
-  return [
-    `Article headline: "${headline}"`,
-    sectionContext,
-    '',
-    'Create an inline image that re-energizes the reader at this point in the article.',
-  ].join('\n');
+  const result = await callLLMStructured<{ format: string; reason: string; prompt: string }>({
+    system: agentSystem,
+    user: userMessage,
+    schema: {
+      type: 'object',
+      properties: {
+        format: { type: 'string', description: 'Editorial Photo, Text Overlay on Photo, Text on Solid Background, or Close-Up Detail' },
+        reason: { type: 'string', description: 'One sentence explaining why this format fits' },
+        prompt: { type: 'string', description: 'The image generation prompt, 40-80 words' },
+      },
+      required: ['format', 'reason', 'prompt'],
+    },
+    parse: (raw) => {
+      const obj = raw as Record<string, unknown>;
+      return {
+        format: String(obj.format ?? 'Editorial Photo'),
+        reason: String(obj.reason ?? ''),
+        prompt: String(obj.prompt ?? ''),
+      };
+    },
+  });
+
+  console.log(`[image-agent] Format: ${result.format}`);
+  console.log(`[image-agent] Reason: ${result.reason}`);
+  return result.prompt;
 }
 
 /**
@@ -117,8 +133,9 @@ async function generateAndValidate(
  *
  * @param slug - Article slug (used for output directory)
  * @param lane - Editorial lane (determines style config)
- * @param headline - Article headline (used to generate subject prompts)
+ * @param headline - Article headline
  * @param sectionHeadings - Section headings from the outline
+ * @param articleContent - Full article markdown (passed to image agent)
  */
 export async function runImagePipeline(
   slug: string,
@@ -126,6 +143,7 @@ export async function runImagePipeline(
   headline: string,
   sectionHeadings: string[],
   options: ImagePipelineOptions = {},
+  articleContent?: string,
 ): Promise<ImagePipelineResult> {
   const style = loadImageStyle(lane);
   const counts = getImageCount(style);
@@ -135,10 +153,16 @@ export async function runImagePipeline(
   const gateResults: ImagePipelineResult['gateResults'] = [];
   const blockedImages: string[] = [];
 
-  // Generate hero image
+  // Generate hero image using the Image Agent prompt
   {
-    const subject = buildSubjectFromArticle(headline, sectionHeadings, 'hero');
-    const prompt = buildImagePrompt(style, subject, 'hero');
+    let prompt: string;
+    if (articleContent) {
+      // Use the Image Agent to generate a content-relevant prompt
+      prompt = await generateImagePrompt(headline, articleContent);
+    } else {
+      // Fallback: basic prompt from headline
+      prompt = `Ultra-realistic photograph, modern car dealership environment related to: "${headline}". Professional editorial quality, warm lighting, automotive setting. No watermarks, no logos.`;
+    }
     const outputPath = path.join(outputDir, 'hero.webp');
 
     const result = await generateAndValidate(prompt, style, 'hero', outputPath, options, 0);
@@ -153,8 +177,8 @@ export async function runImagePipeline(
 
   // Generate inline images
   for (let i = 0; i < counts.inline; i++) {
-    const subject = buildSubjectFromArticle(headline, sectionHeadings, 'inline', i);
-    const prompt = buildImagePrompt(style, subject, 'inline', i);
+    const sectionContext = i < sectionHeadings.length ? sectionHeadings[i] : headline;
+    const prompt = `Ultra-realistic photograph, modern car dealership scene related to: "${sectionContext}". Professional editorial quality, warm showroom lighting. No text, no watermarks, no logos.`;
     const outputPath = path.join(outputDir, `inline-${i + 1}.webp`);
 
     const result = await generateAndValidate(prompt, style, 'inline', outputPath, options, i);

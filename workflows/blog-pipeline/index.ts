@@ -115,7 +115,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
       onImageResult: (type, idx, passed, attempt) =>
         console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
-    });
+    }, finalParagraphs.map(p => p.text).join('\n\n'));
 
     if (!imageResult.allPassed) {
       console.warn(`[pipeline]   ${imageResult.blockedImages.length} images blocked — continuing with available`);
