@@ -25,15 +25,18 @@ function resolveLane(): Lane {
     timeZone: 'America/Chicago',
   });
 
-  if (dayOfWeek === 'Wed') return 'weekly_authority';
+  // Wednesday + Saturday: leadership / authority content
+  if (dayOfWeek === 'Wed' || dayOfWeek === 'Sat') return 'weekly_authority';
 
+  // First Friday of the month: case study
   if (dayOfWeek === 'Fri') {
     const chicagoDate = new Date(
       now.toLocaleString('en-US', { timeZone: 'America/Chicago' }),
     );
-    return chicagoDate.getDate() <= 7 ? 'monthly_anonymized_case' : 'daily_seo';
+    if (chicagoDate.getDate() <= 7) return 'monthly_anonymized_case';
   }
 
+  // All other days: daily SEO content
   return 'daily_seo';
 }
 

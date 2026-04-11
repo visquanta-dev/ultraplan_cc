@@ -92,10 +92,9 @@ the technology solves, not the technology itself.
 3. **At least 2 sections must contain a bullet or numbered list.** Walls of
    text kill engagement and lose featured snippet eligibility. Lists should
    contain 3-6 items with real data points, not filler.
-4. **Include a dedicated FAQ section as the second-to-last section.** Title it
-   "Frequently Asked Questions" with 4-6 H3 questions underneath. Each answer
-   should be 2-3 sentences citing data from the bundle. This enables FAQPage
-   schema and AI Overview inclusion.
+4. **Do NOT include a FAQ section in the outline.** FAQs are generated
+   automatically by the enrichment stage after drafting. Adding one in the
+   outline creates duplicates.
 5. **Target keyword must appear in the headline AND in at least 2 section
    headings** (naturally, not stuffed).
 
