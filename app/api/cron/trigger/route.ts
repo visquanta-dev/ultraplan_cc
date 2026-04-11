@@ -13,9 +13,9 @@ import { runBlogPipeline } from '../../../../workflows/blog-pipeline';
 type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
 
 const WORD_COUNTS: Record<Lane, { min: number; max: number }> = {
-  daily_seo: { min: 1000, max: 1400 },
-  weekly_authority: { min: 1800, max: 2400 },
-  monthly_anonymized_case: { min: 2200, max: 3000 },
+  daily_seo: { min: 1800, max: 2200 },
+  weekly_authority: { min: 2200, max: 2800 },
+  monthly_anonymized_case: { min: 2500, max: 3200 },
 };
 
 function resolveLane(): Lane {

@@ -10,6 +10,7 @@ import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
+import { enrichContent, renderTLDR, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
 import matter from 'gray-matter';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -188,14 +189,50 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       bodyParts.push('');
     });
 
+    // Enrichment: TL;DR, tables, FAQ
+    console.log('[pipeline] Step 5c/7: Enriching content (TL;DR + tables + FAQ)');
+    try {
+      const articleText = bodyParts.join('\n');
+      const enriched = await enrichContent(articleText, bundle, outline.headline);
+
+      // Insert TL;DR after first heading
+      if (enriched.tldr) {
+        bodyParts.splice(1, 0, `\n**TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
+      }
+
+      // Insert tables at target positions
+      if (enriched.tables.length > 0) {
+        const headings = outline.sections.map(s => s.heading);
+        const withTables = insertTables(bodyParts, enriched.tables, headings);
+        bodyParts.length = 0;
+        bodyParts.push(...withTables);
+      }
+
+      // Append FAQ before Related Reading
+      if (enriched.faqs.length > 0) {
+        bodyParts.push(renderFAQ(enriched.faqs.map(f => ({
+          question: stripEmDashes(f.question),
+          answer: stripEmDashes(f.answer),
+        }))));
+      }
+
+      console.log(`[pipeline]   enriched: ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs`);
+    } catch (err) {
+      console.warn('[pipeline]   enrichment failed (non-fatal):', (err as Error).message);
+    }
+
     // Append related posts section
     const relatedPosts = buildRelatedPosts(bodyParts.join('\n'));
     if (relatedPosts) bodyParts.push(relatedPosts);
 
     const body = bodyParts.join('\n');
 
+    // Calculate reading time
+    const wordCount2 = body.split(/\s+/).filter(Boolean).length;
+    const readingTime = Math.max(1, Math.ceil(wordCount2 / 200));
+
     // Generate real meta description from headline + first paragraph
-    const firstPara = stripCitations(dedupedParagraphs[0]?.text ?? '');
+    const firstPara = stripEmDashes(stripCitations(dedupedParagraphs[0]?.text ?? ''));
     const metaDescription = firstPara.length > 155
       ? firstPara.slice(0, 152).replace(/\s+\S*$/, '') + '...'
       : firstPara;
@@ -206,14 +243,34 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       monthly_anonymized_case: 'Case Studies',
     };
 
+    const LANE_TAGS: Record<string, Array<{ slug: string; title: string }>> = {
+      daily_seo: [
+        { slug: 'dealership-operations', title: 'Dealership Operations' },
+        { slug: 'service-drive', title: 'Service Drive' },
+        { slug: 'automation', title: 'Automation' },
+      ],
+      weekly_authority: [
+        { slug: 'leadership', title: 'Leadership' },
+        { slug: 'dealer-principal', title: 'Dealer Principal' },
+        { slug: 'dealership-operations', title: 'Dealership Operations' },
+      ],
+      monthly_anonymized_case: [
+        { slug: 'case-study', title: 'Case Study' },
+        { slug: 'dealership-operations', title: 'Dealership Operations' },
+        { slug: 'results', title: 'Results' },
+      ],
+    };
+
     const frontmatter = {
       title: stripEmDashes(outline.headline),
       slug,
       metaDescription,
       image: `/images/blog/${slug}/hero.webp`,
+      readingTime,
       publishedAt: new Date().toISOString().split('T')[0],
       published: true,
       category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
+      tags: LANE_TAGS[lane] ?? [],
       author: 'VisQuanta Team',
     };
 

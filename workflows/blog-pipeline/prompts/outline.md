@@ -82,20 +82,38 @@ If you cannot think of a non-AI way to phrase a heading, the topic is
 probably too technology-centric. Reframe it around the dealership problem
 the technology solves, not the technology itself.
 
+## SEO structure rules (CRITICAL for ranking)
+
+1. **Headline must be under 60 characters.** This is non-negotiable. Truncated
+   titles lose clicks. If your headline is 61+ characters, shorten it.
+2. **Every H2 section MUST have 2-3 H3 subsections.** Flat H2-only structure
+   fails SEO crawlers and LLM citation. Each H2 must contain subsection
+   headings that break the topic into scannable chunks.
+3. **At least 2 sections must contain a bullet or numbered list.** Walls of
+   text kill engagement and lose featured snippet eligibility. Lists should
+   contain 3-6 items with real data points, not filler.
+4. **Include a dedicated FAQ section as the second-to-last section.** Title it
+   "Frequently Asked Questions" with 4-6 H3 questions underneath. Each answer
+   should be 2-3 sentences citing data from the bundle. This enables FAQPage
+   schema and AI Overview inclusion.
+5. **Target keyword must appear in the headline AND in at least 2 section
+   headings** (naturally, not stuffed).
+
 ## Lane-specific hints
 
-- **daily_seo** (1000–1400 words): 4–5 sections, one trend-hijack headline
-  from clustered signal. Opening section is the statistical shock. Closing
-  section is a terse 3-sentence CTA. Reading time 5–7 minutes.
-- **weekly_authority** (1800–2400 words): 5–7 sections, one opinion headline.
-  Opening section names the misconception. Middle sections build the
-  contrarian argument from evidence. Closing section delivers the concrete
-  takeaway. Reading time 8–12 minutes.
-- **monthly_anonymized_case** (2200–3000 words): 6–8 sections following
-  three-act structure (problem, intervention, outcome). Opening sets the
-  anonymized scenario. Middle extracts the pattern. Closing generalizes to
-  the reader's context. Reading time 10–15 minutes. **NEVER** include a
-  client name — use `safe_patterns` from clients_blocklist.yaml.
+- **daily_seo** (1800–2200 words): 5–6 H2 sections + FAQ section, one
+  trend-hijack headline from clustered signal. Opening section is the
+  statistical shock. Each section has 2-3 H3 subsections. Closing section
+  is actionable steps. Reading time 8–10 minutes.
+- **weekly_authority** (2200–2800 words): 6–8 H2 sections + FAQ section, one
+  opinion headline. Opening section names the misconception. Middle sections
+  build the contrarian argument from evidence with H3 breakdowns. Closing
+  section delivers the concrete takeaway. Reading time 10–14 minutes.
+- **monthly_anonymized_case** (2500–3200 words): 7–9 H2 sections + FAQ section
+  following three-act structure (problem, intervention, outcome). Opening sets
+  the anonymized scenario. Middle extracts the pattern with H3 deep dives.
+  Closing generalizes to the reader's context. Reading time 12–16 minutes.
+  **NEVER** include a client name — use `safe_patterns` from clients_blocklist.yaml.
 
 ## What follows
 

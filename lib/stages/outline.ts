@@ -11,23 +11,11 @@ import { buildRejectionFeedbackBlock } from './rejection-feedback';
 // ---------------------------------------------------------------------------
 
 export interface OutlineSection {
-  /**
-   * Section heading as it will appear in the finished post (# Markdown level
-   * chosen later by the paragraph drafter).
-   */
   heading: string;
-
-  /**
-   * Non-empty array of quote_ids from the bundle. Every section must anchor
-   * to at least one quote. If this array is empty the parser throws.
-   */
   anchor_quotes: string[];
-
-  /**
-   * Verb phrase describing what the section does — "establish problem with
-   * stat", "refute common objection", "introduce formula", etc.
-   */
   intent: string;
+  /** H3 subsection headings within this section (2-3 per section for SEO depth) */
+  subsections?: string[];
 }
 
 export interface Outline {
@@ -69,6 +57,11 @@ const OUTLINE_SCHEMA = {
             items: { type: 'string', pattern: '^src_\\d{3}_q\\d+$' },
           },
           intent: { type: 'string' },
+          subsections: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'H3 subsection headings for SEO depth (2-3 per section)',
+          },
         },
       },
     },
