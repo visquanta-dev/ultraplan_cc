@@ -1,6 +1,7 @@
 import { searchForLane } from './search';
 import { clusterArticles, type TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
+import { scoreCluster, type ClusterScore } from './keyword-scorer';
 import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
@@ -63,11 +64,44 @@ export async function resolveSlot(
     throw new Error('[resolver] All clusters overlap with existing content. Try again tomorrow or expand search queries.');
   }
 
-  // Pick the strongest non-duplicate cluster
-  const winner = clusters[0];
+  // Step 2c: Score clusters with Ahrefs keyword data (volume, difficulty, traffic potential)
+  console.log(`[resolver] Scoring ${clusters.length} clusters with Ahrefs...`);
+  const scores: ClusterScore[] = [];
+  for (const cluster of clusters) {
+    const score = await scoreCluster(cluster.label, cluster.keywords);
+    scores.push(score);
+    const best = score.bestKeyword;
+    if (best && best.volume > 0) {
+      console.log(
+        `[resolver]   "${cluster.label}" → best keyword: "${best.keyword}" (vol: ${best.volume}, KD: ${best.difficulty}, TP: ${best.trafficPotential}) → score: ${score.score.toFixed(1)}`,
+      );
+    } else {
+      console.log(`[resolver]   "${cluster.label}" → no Ahrefs data (neutral score)`);
+    }
+  }
+
+  // Re-rank clusters: Ahrefs score > source diversity
+  // If Ahrefs data is available (score > 0), sort by Ahrefs score
+  // Otherwise fall back to source diversity (original ordering)
+  const hasAhrefsData = scores.some((s) => s.score > 0);
+  let rankedClusters: TopicCluster[];
+  if (hasAhrefsData) {
+    const clusterWithScores = clusters.map((c, i) => ({ cluster: c, score: scores[i] }));
+    clusterWithScores.sort((a, b) => b.score.score - a.score.score);
+    rankedClusters = clusterWithScores.map((cs) => cs.cluster);
+    console.log(`[resolver] Re-ranked by Ahrefs score (keyword-first selection)`);
+  } else {
+    rankedClusters = clusters;
+    console.log(`[resolver] No Ahrefs data — using source diversity ranking`);
+  }
+
+  // Pick the strongest cluster
+  const winner = rankedClusters[0];
+  const winnerScore = scores[clusters.indexOf(winner)];
   options.onCluster?.(winner);
   console.log(
-    `[resolver] Winning cluster: "${winner.label}" (${winner.sourceCount} sources, ${winner.articles.length} articles)`,
+    `[resolver] Winning cluster: "${winner.label}" (${winner.sourceCount} sources, ${winner.articles.length} articles)` +
+    (winnerScore?.bestKeyword ? ` — target keyword: "${winnerScore.bestKeyword.keyword}" (vol: ${winnerScore.bestKeyword.volume}, KD: ${winnerScore.bestKeyword.difficulty})` : ''),
   );
 
   // Step 3: Scrape the cluster's articles
