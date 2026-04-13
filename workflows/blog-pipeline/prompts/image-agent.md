@@ -64,12 +64,39 @@ Close-up of a phone screen showing a missed call notification
 Pen resting on a signed vehicle purchase contract
 Coffee cup next to a CRM-filled laptop on a sales desk
 
-Step 5 — Compose the Prompt
-Use this exact output structure:
-FORMAT: [Editorial Photo / Close-Up Detail]
-REASON: [One sentence explaining why this format fits this article]
+Step 5 — Compose a Literal Shot List (not a concept)
 
-PROMPT: [The image generation prompt, 40-80 words]
+This is the step most image prompts fail at. An image generation model CANNOT render an abstract concept like "pricing pressure," "supply chain tension," or "margin erosion" — it can only render literal, photographable objects arranged in literal, photographable space. Your prompt must read like a shot list a photographer would actually use on set.
+
+REQUIRED elements, every time:
+
+1. Camera position and angle — "overhead bird's-eye view" / "over-the-shoulder at eye level" / "low-angle 3/4 from 6 feet" / "tight macro, 12 inches from subject"
+2. 3–5 named, literal objects — each must be a real physical thing you can touch. "A DRAM memory chip" ✅. "Pricing pressure elements" ❌. "A steel parts tray" ✅. "Economic anxiety" ❌.
+3. Fixed spatial arrangement — where each object sits in the frame. "The chip sits on top of the price sticker, dead center. The tray is lower-left, out of focus." Not "various items related to the topic."
+4. Explicit lighting — "warm showroom overhead lighting" / "cool blue-white industrial fluorescents from above" / "golden hour natural light from camera left" / "soft window light from right, overcast sky outside."
+5. Depth of field and focal plane — "shallow DOF with the chip sharp and everything else soft" / "deep DOF, both foreground and background in focus" / "macro with only the front 2 inches in focus."
+6. Environment context — one short sentence anchoring the scene in a real place. "An empty section of a car assembly line" / "A dealer's desk with a wood grain finish" / "A service drive bay with a vehicle on a lift in the background."
+
+THE LITERAL TEST — apply before outputting:
+Read your prompt back. Is every noun something a camera could photograph? If any word describes a concept, feeling, abstraction, or business phenomenon (e.g. "margin pressure," "ROI impact," "trust erosion," "supply chain tension"), REPLACE it with a concrete object that symbolizes it. A memory chip symbolizes semiconductor cost. A ringing phone symbolizes a missed call. A stack of invoices symbolizes paperwork burden. A single key on an empty hook symbolizes lost sales. Objects, not ideas.
+
+Worked example — WEAK vs STRONG
+
+Article: "Memory Costs Are Spiking — and Your Lot Prices Will Follow"
+
+WEAK prompt (concept-level, will produce a vague irrelevant image):
+"A detail shot of a vehicle component alongside pricing elements that captures the tension between rising semiconductor costs and dealership margin pressure."
+↑ Fails the literal test. "Vehicle component," "pricing elements," "tension," and "margin pressure" are all abstractions the camera cannot see. The model will render a generic blur of car parts and no one will understand what the image means.
+
+STRONG prompt (shot list, produces a real scene that tells the story):
+"Overhead bird's-eye shot of an empty section of a car assembly line. A partially-assembled car chassis sits on steel rollers, stopped mid-assembly. Next to the chassis on a steel parts tray, a single green DRAM memory module with black chips sits alone where a full stack of electronics should be. The tray is mostly empty. Cool blue-white industrial overhead lighting from above. Long depth of field, both the DRAM module and the chassis sharp and in focus. Ultra-realistic editorial photograph. No readable text, no watermarks, no logos, no identifiable faces."
+↑ Every noun is a photographable object. The camera angle, lighting, spatial arrangement, and focal plane are all specified. This is exactly what the model needs to produce a hero image that matches the article.
+
+Output structure:
+FORMAT: [Editorial Photo / Close-Up Detail]
+REASON: [One sentence explaining why this format and shot fit this article's literal subject]
+
+PROMPT: [80-140 words, shot list style, all six required elements above, ending with the standard negative rules]
 
 Do NOT include text overlay specifications. The image must be purely photographic with no text rendered in it.
 
@@ -108,12 +135,14 @@ Dealership signage or lot elements
 
 Prompt Construction Rules
 
-Keep prompts between 40-80 words
-Always specify lighting: natural, warm showroom, fluorescent service bay, golden hour lot, overcast, etc.
-Always specify camera angle: wide establishing shot, over-the-shoulder, eye-level, overhead, close-up macro, etc.
-Always end the prompt with "No readable text, no watermarks, no logos, no identifiable faces."
-Use "ultra-realistic photograph" or "professional editorial photograph" as the style anchor
-Never describe screens showing specific UI text — say "CRM dashboard" or "blurred data on screen," not specific text content
+Keep prompts between 80-140 words — shot lists need room to specify objects, arrangement, lighting, and focal plane. Shorter prompts produce vague images.
+Always specify lighting: warm showroom, cool industrial fluorescent, natural daylight, golden hour, overcast, etc.
+Always specify camera angle: wide establishing, over-the-shoulder, eye-level, overhead bird's-eye, low 3/4, close-up macro.
+Always specify depth of field: shallow DOF with named focal plane, or deep DOF with everything sharp.
+Always end the prompt with "Ultra-realistic editorial photograph. No readable text, no watermarks, no logos, no identifiable faces."
+Use "ultra-realistic editorial photograph" or "professional documentary photograph" as the style anchor — NOT "cinematic," "dramatic," or "stylized," which push the model toward unreal aesthetics.
+Never describe screens showing specific UI text — say "a CRM dashboard, content blurred and out of focus," not specific text content.
+No abstract concepts allowed in the prompt — concepts must be replaced with concrete objects that symbolize them (apply the Literal Test from Step 5).
 
 Diversity and Variation
 
