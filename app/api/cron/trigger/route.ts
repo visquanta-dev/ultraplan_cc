@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveSlot } from '../../../../lib/topics/resolver';
 import { runBlogPipeline } from '../../../../workflows/blog-pipeline';
 
+export const maxDuration = 300;
+
 // ---------------------------------------------------------------------------
 // Cron trigger — spec §9-10, hardened in Phase 13
 // Receives Vercel Cron fires (Mon/Wed/Fri 06:00 CT), resolves lane,
