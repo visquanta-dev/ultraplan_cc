@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveSlot } from '../../../../lib/topics/resolver';
-import { runBlogPipeline } from '../../../../workflows/blog-pipeline';
 
 export const maxDuration = 300;
 
@@ -56,10 +54,17 @@ export async function GET(request: NextRequest) {
   console.log(`[cron] Triggered — lane: ${lane}, word count: ${wordCount.min}-${wordCount.max}`);
 
   // Run the full pipeline: topic discovery → scrape → bundle → draft → gates → PR
-  // This runs within the function's 300s timeout via Fluid Compute.
+  // Dynamic imports so module-load errors surface as JSON, not Next.js /500.
+  let stage = 'import:resolver';
   try {
+    const { resolveSlot } = await import('../../../../lib/topics/resolver');
+    stage = 'import:pipeline';
+    const { runBlogPipeline } = await import('../../../../workflows/blog-pipeline');
+
+    stage = 'resolveSlot';
     const { bundle } = await resolveSlot(lane);
 
+    stage = 'runBlogPipeline';
     const result = await runBlogPipeline({ bundle, wordCount });
 
     console.log(`[cron] Pipeline finished — verdict: ${result.verdict}, slug: ${result.slug}`);
@@ -76,14 +81,17 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`[cron] Pipeline failed: ${message}`);
+    const stack = err instanceof Error ? err.stack?.split('\n').slice(0, 8).join('\n') : undefined;
+    console.error(`[cron] Failed at stage=${stage}: ${message}`);
 
     return NextResponse.json(
       {
         triggered: true,
         lane,
         wordCount,
+        failedAt: stage,
         error: message,
+        stack,
         timestamp: new Date().toISOString(),
       },
       { status: 500 },
