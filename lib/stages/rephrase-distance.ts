@@ -1,60 +1,68 @@
-import { pipeline, env } from '@xenova/transformers';
 import type { DraftedParagraph } from './paragraph-draft';
 import type { Bundle } from '../bundle/types';
 
 // ---------------------------------------------------------------------------
 // Rephrase distance check — spec §5c
 // For every drafted paragraph, compute cosine similarity between its text
-// and the verbatim anchor quote. Allowed band: 0.40 ≤ similarity ≤ 0.85.
-//   > 0.85 → too close to source, plagiarism risk → regenerate
-//   < 0.40 → too far from source, LLM drifted → regenerate
+// and the verbatim anchor quote. Allowed band: MIN ≤ similarity ≤ MAX.
+//   > MAX → too close to source, plagiarism risk → regenerate
+//   < MIN → too far from source, LLM drifted → regenerate
 //
-// Uses @xenova/transformers (local, no API call) with the all-MiniLM-L6-v2
-// model (~23MB, already a de facto standard for sentence embeddings).
+// Uses Voyage AI's voyage-3-large model via HTTPS (no native deps, works
+// on Vercel Lambda). Previously used @xenova/transformers with a local
+// MiniLM model, but that required libonnxruntime.so which isn't available
+// in Vercel's Lambda runtime — crashes the pipeline at module load.
 // ---------------------------------------------------------------------------
 
-// Ship without remote model downloads in production — we bundle the model
-// locally so CI/CD and Vercel functions don't stall on first request.
-env.allowLocalModels = true;
+const MODEL_NAME = 'voyage-3-large';
+// Bands recalibrated for voyage-3-large (distribution differs from MiniLM).
+// Starting loose to avoid over-rejecting on the first real run; tighten
+// once we have observed similarities from ~20 paragraph/quote pairs.
+const MIN_DISTANCE = 0.35;
+const MAX_DISTANCE = 0.88;
 
-const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
-const MIN_DISTANCE = 0.4;
-const MAX_DISTANCE = 0.85;
-
-type FeatureExtractor = Awaited<ReturnType<typeof pipeline<'feature-extraction'>>>;
-
-let cachedPipeline: FeatureExtractor | null = null;
-
-async function getEmbedder(): Promise<FeatureExtractor> {
-  if (cachedPipeline) return cachedPipeline;
-  cachedPipeline = await pipeline('feature-extraction', MODEL_NAME);
-  return cachedPipeline;
+async function voyageEmbed(texts: string[]): Promise<Float32Array[]> {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) {
+    throw new Error('[rephrase-distance] VOYAGE_API_KEY not set');
+  }
+  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: MODEL_NAME,
+      input: texts,
+      input_type: 'document',
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`[rephrase-distance] Voyage API ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { data: Array<{ embedding: number[] }> };
+  return data.data.map((d) => new Float32Array(d.embedding));
 }
 
 /**
- * Embed a single string and return a pooled, normalized vector.
- */
-async function embed(text: string): Promise<Float32Array> {
-  const extractor = await getEmbedder();
-  const output = (await extractor(text, { pooling: 'mean', normalize: true })) as {
-    data: Float32Array;
-  };
-  return output.data;
-}
-
-/**
- * Cosine similarity of two normalized embeddings. Because both vectors are
- * already L2-normalized, this reduces to the dot product.
+ * Cosine similarity of two vectors. Voyage embeddings are not guaranteed
+ * to be L2-normalized, so we normalize in the denominator.
  */
 function cosineSimilarity(a: Float32Array, b: Float32Array): number {
   if (a.length !== b.length) {
     throw new Error(`[rephrase-distance] vector length mismatch: ${a.length} vs ${b.length}`);
   }
-  let sum = 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
   for (let i = 0; i < a.length; i += 1) {
-    sum += a[i] * b[i];
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
   }
-  return sum;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 export interface DistanceResult {
@@ -67,14 +75,13 @@ export interface DistanceResult {
 
 /**
  * Check every paragraph's rephrase distance against its anchor quote.
- * Returns one result per paragraph. Caller decides what to do with
- * out-of-band paragraphs (typically: regenerate just those paragraphs).
+ * Batches all paragraphs + quotes into a single Voyage API call for
+ * efficiency (one request instead of 2 per paragraph).
  */
 export async function checkRephraseDistances(
   paragraphs: DraftedParagraph[],
   bundle: Bundle,
 ): Promise<DistanceResult[]> {
-  // Build quote lookup
   const quoteText = new Map<string, string>();
   for (const source of bundle.sources) {
     for (const quote of source.quotes) {
@@ -82,19 +89,27 @@ export async function checkRephraseDistances(
     }
   }
 
-  const results: DistanceResult[] = [];
+  // Build the flat input array: [para_0, quote_0, para_1, quote_1, ...]
+  const batch: string[] = [];
   for (let i = 0; i < paragraphs.length; i += 1) {
     const para = paragraphs[i];
     const quote = quoteText.get(para.anchor_quote_id);
     if (!quote) {
-      // Should never happen — paragraph-draft stage validates this. But we
-      // surface it clearly if upstream ever drops the ball.
       throw new Error(
         `[rephrase-distance] paragraph ${i} references missing quote_id "${para.anchor_quote_id}"`,
       );
     }
+    batch.push(para.text, quote);
+  }
 
-    const [paraEmbed, quoteEmbed] = await Promise.all([embed(para.text), embed(quote)]);
+  if (batch.length === 0) return [];
+
+  const embeddings = await voyageEmbed(batch);
+
+  const results: DistanceResult[] = [];
+  for (let i = 0; i < paragraphs.length; i += 1) {
+    const paraEmbed = embeddings[i * 2];
+    const quoteEmbed = embeddings[i * 2 + 1];
     const similarity = cosineSimilarity(paraEmbed, quoteEmbed);
 
     let reason: DistanceResult['reason'] = 'ok';
@@ -109,20 +124,23 @@ export async function checkRephraseDistances(
 
     results.push({
       paragraph_index: i,
-      anchor_quote_id: para.anchor_quote_id,
+      anchor_quote_id: paragraphs[i].anchor_quote_id,
       similarity,
       in_band: inBand,
       reason,
     });
   }
 
+  console.log(
+    `[rephrase-distance] checked ${paragraphs.length} paragraphs, ` +
+      `similarities: ${results.map((r) => r.similarity.toFixed(2)).join(', ')}`,
+  );
+
   return results;
 }
 
 /**
  * Helper: partition paragraphs into in-band and out-of-band arrays.
- * Useful for the regenerate loop: feed the out-of-band set back to the
- * paragraph drafter with a "tighten/loosen" hint.
  */
 export function partitionByDistance(
   paragraphs: DraftedParagraph[],
