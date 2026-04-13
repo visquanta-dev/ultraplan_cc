@@ -274,13 +274,25 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       console.warn('[pipeline]   enrichment failed (non-fatal):', (err as Error).message);
     }
 
-    // Insert contextual calculator/tool embeds based on content keywords
-    console.log('[pipeline] Step 5d/7: Inserting tool embeds');
-    const embedResult = insertToolEmbeds(bodyParts);
+    // Insert contextual calculator/tool embed via topic classifier
+    console.log('[pipeline] Step 5d/7: Classifying + inserting tool embed');
+    const introText = dedupedParagraphs
+      .slice(0, 3)
+      .map((p) => stripEmDashes(stripCitations(p.text)))
+      .join(' ');
+    const embedResult = await insertToolEmbeds(bodyParts, {
+      headline: outline.headline,
+      sectionHeadings: outline.sections.map((s) => s.heading),
+      introText,
+    });
     bodyParts.length = 0;
     bodyParts.push(...embedResult.parts);
     if (embedResult.inserted.length > 0) {
       console.log(`[pipeline]   embedded: ${embedResult.inserted.join(', ')}`);
+    } else if (embedResult.skipped) {
+      console.log(
+        `[pipeline]   no embed: ${embedResult.skipped.reason} (slug=${embedResult.skipped.slug ?? 'null'}, conf=${embedResult.skipped.confidence.toFixed(2)})`,
+      );
     }
 
     // Append related posts section

@@ -1,0 +1,94 @@
+# ============================================================================
+# Calculator / tool embed catalog
+# Only list calculators that actually exist as React components on the live
+# site. Each entry is candidate-matched against a post's headline + intro by
+# lib/stages/classify-embed.ts. The classifier picks AT MOST ONE, or none.
+#
+# Fields:
+#   slug        — matches the {{calculator:SLUG}} marker emitted into MD
+#   component   — source file on visquanta-dev-site (for reference / audit)
+#   url         — live page where users can try the full calculator
+#   label       — human-readable name used in logs + PR body
+#   description — one-sentence summary of WHAT THE CALCULATOR COMPUTES
+#                 (this is what the classifier reasons against — write it
+#                 the way you'd explain the tool to a dealer principal)
+#   topics      — 2–4 short topic tags describing what a post must be
+#                 ABOUT for this calc to fit. Used as secondary signal.
+# ============================================================================
+
+calculators:
+  - slug: lead-reactivation
+    component: src/components/lead-reactivation/ProfitCalculator.tsx
+    url: /lead-reactivation
+    label: Lead Reactivation Profit Calculator
+    description: >-
+      Estimates revenue recovered by re-engaging dormant or aged CRM leads
+      that were never sold, based on dealer lead volume and close rate.
+    topics:
+      - dormant leads
+      - aged CRM leads
+      - lead reactivation
+      - lost opportunities
+
+  - slug: speed-to-lead
+    component: src/components/speed-to-lead/SpeedLossCalculator.tsx
+    url: /speed-to-lead
+    label: Speed-to-Lead Loss Calculator
+    description: >-
+      Quantifies revenue lost when inbound internet leads are not contacted
+      within the first few minutes, based on response-time SLA and lead flow.
+    topics:
+      - lead response time
+      - 5-minute rule
+      - internet lead follow-up
+      - BDC response SLA
+
+  - slug: service-drive
+    component: src/components/service-drive/ServiceCalculator.tsx
+    url: /service-drive
+    label: Service Drive Revenue Calculator
+    description: >-
+      Calculates fixed-ops upside from improved service retention, repair
+      order count, and missed service appointment recovery.
+    topics:
+      - fixed ops
+      - service retention
+      - repair orders
+      - service drive revenue
+
+  - slug: powersports-profit
+    component: src/components/powersports/ProfitCalculatorPowersports.tsx
+    url: /powersports
+    label: Powersports Profit Calculator
+    description: >-
+      Powersports-specific profit model covering unit sales, F&I, and
+      service for motorsports dealerships. Do NOT use on automotive posts.
+    topics:
+      - powersports dealers
+      - motorsports retail
+      - ATV/UTV/motorcycle sales
+
+  - slug: dealer-roi
+    component: src/components/dealers/shared/ROICalculator.tsx
+    url: /dealers
+    label: Dealer ROI Calculator
+    description: >-
+      Generic dealership ROI model — use ONLY when a post is broadly about
+      return on investment / payback across multiple dealer ops areas and
+      no more specific calculator fits.
+    topics:
+      - dealer ROI
+      - technology payback
+      - cost-benefit analysis
+
+  - slug: independent-dealer
+    component: src/components/dealers/independent/IndependentCalculator.tsx
+    url: /dealers/independent
+    label: Independent Dealer Economics Calculator
+    description: >-
+      Economics model tuned for independent (non-franchise) used-car dealers.
+      Do NOT use on franchise-dealer or OEM-focused posts.
+    topics:
+      - independent dealers
+      - used car dealers
+      - BHPH operations
