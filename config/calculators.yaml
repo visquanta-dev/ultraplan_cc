@@ -43,7 +43,7 @@ calculators:
       - internet lead follow-up
       - BDC response SLA
 
-  - slug: service-drive
+  - slug: service-roi
     component: src/components/service-drive/ServiceCalculator.tsx
     url: /service-drive
     label: Service Drive Voice Agent ROI Calculator
