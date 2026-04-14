@@ -354,14 +354,33 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     // Resolve the hero image path from the actual file the image pipeline
     // wrote to disk (which now uses the real format's extension, not a
-    // hardcoded .webp). Falls back to .webp only if the pipeline didn't
-    // produce a hero at all — in which case the frontmatter will point
-    // at a 404, but the alternative is pretending we have an image we
-    // don't.
+    // hardcoded .webp).
+    //
+    // If the image pipeline couldn't produce a hero (all retries failed
+    // the image gates), fall back to an EXISTING site image rather than
+    // pointing at a slug-specific path that was never written. Previously
+    // the fallback was /images/blog/${slug}/hero.webp — which looks right
+    // but points at a file that doesn't exist, resulting in a broken img
+    // tag on the live post. Using a known-good existing image means the
+    // post still ships with something visible instead of a 404'd hero.
+    //
+    // The fallback path below MUST exist on the site repo. Currently
+    // using /images/wireframes/6.jpeg because it's already referenced
+    // by getPostFeaturedImage() as a category fallback and is present on
+    // disk. If that image moves, update this fallback too.
+    const FALLBACK_HERO_PATH = '/images/wireframes/6.jpeg';
     const heroRelPath = imageResult.paths.find((p) => p.includes('hero.'));
-    const heroFrontmatterPath = heroRelPath
-      ? '/' + heroRelPath.replace(/^public[/\\]/, '').replace(/\\/g, '/')
-      : `/images/blog/${slug}/hero.webp`;
+    let heroFrontmatterPath: string;
+    let usedHeroFallback = false;
+    if (heroRelPath) {
+      heroFrontmatterPath = '/' + heroRelPath.replace(/^public[/\\]/, '').replace(/\\/g, '/');
+    } else {
+      heroFrontmatterPath = FALLBACK_HERO_PATH;
+      usedHeroFallback = true;
+      console.warn(
+        `[pipeline]   WARNING: no hero image generated (all ${imageResult.blockedImages.length} attempts blocked by image gates). Falling back to ${FALLBACK_HERO_PATH}. Replace manually before merge.`,
+      );
+    }
 
     const frontmatter = {
       title: stripEmDashes(outline.headline),
@@ -395,11 +414,13 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
           images,
           gateReport: report,
           bundle,
+          heroFallbackUsed: usedHeroFallback,
           metadata: {
             gate_scores: extractGateScores(report),
             retries,
             image_count: imageResult.paths.length,
             blocked_images: imageResult.blockedImages,
+            hero_fallback_used: usedHeroFallback,
           },
         }),
       {

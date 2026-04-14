@@ -122,6 +122,13 @@ export interface CreateDraftPRInput {
   gateReport: GateReport;
   bundle: Bundle;
   metadata?: Record<string, unknown>;
+  /**
+   * Set to true when the hero image pipeline failed all retries and
+   * the post is shipping with a fallback placeholder image. Adds a
+   * hero-missing label and a prominent warning to the PR body so the
+   * reviewer knows to replace the hero before merging.
+   */
+  heroFallbackUsed?: boolean;
 }
 
 export interface CreateDraftPRResult {
@@ -187,9 +194,19 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
     .map((r) => `| ${r.gate} | ${r.passed ? 'PASS' : 'FAIL'} | ${r.aggregate_score ?? '-'} | ${r.summary.slice(0, 80)} |`)
     .join('\n');
 
+  const heroWarning = input.heroFallbackUsed
+    ? [
+        '> ⚠️ **HERO IMAGE MISSING — REPLACE BEFORE MERGE**',
+        '> ',
+        '> The image pipeline failed all retries for this post. The frontmatter currently points at a generic fallback image so the post is not broken, but a real custom hero should be generated or uploaded before merging. See the `hero-missing` label.',
+        '',
+      ].join('\n')
+    : '';
+
   const body = [
     '## UltraPlan Draft',
     '',
+    heroWarning,
     `**Lane:** ${input.lane}`,
     `**Slug:** ${input.slug}`,
     `**Verdict:** ${input.gateReport.verdict}`,
@@ -226,6 +243,9 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
 
   // 6. Add labels (best-effort, don't fail if labels don't exist)
   const labels = [laneLabel, funnelLabel, 'ultraplan-draft', 'ready-for-review'];
+  if (input.heroFallbackUsed) {
+    labels.push('hero-missing');
+  }
   await ghFetch(`/repos/${TARGET_REPO}/issues/${pr.number}/labels`, {
     method: 'POST',
     body: JSON.stringify({ labels }),
