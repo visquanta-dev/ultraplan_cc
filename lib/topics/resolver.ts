@@ -5,6 +5,7 @@ import { scoreCluster, type ClusterScore } from './keyword-scorer';
 import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
+import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
 
 // ---------------------------------------------------------------------------
 // Slot resolver — spec §4
@@ -34,8 +35,56 @@ export async function resolveSlot(
     onSearch?: (count: number) => void;
     onCluster?: (cluster: TopicCluster) => void;
     onScrape?: (total: number, succeeded: number) => void;
+    /** Optional: force the resolver to use a specific curated bucket */
+    curatedBucket?: string;
+    /** Default: true — try curated sources before Firecrawl keyword search */
+    preferCurated?: boolean;
   } = {},
 ): Promise<ResolvedSlot> {
+  const preferCurated = options.preferCurated !== false;
+
+  // Step 0: Try curated sources path first (if enabled and buckets exist).
+  // Iterates through all buckets for the lane and picks the first one that
+  // hasn't been shipped recently (per dedup). Falls back to Firecrawl search
+  // if every curated bucket is a duplicate or none exist.
+  if (preferCurated) {
+    const allBuckets = loadCuratedSources();
+    const excluded = new Set<string>();
+    let picked = null;
+    while (true) {
+      const candidate = pickCuratedBucket(lane, {
+        requestedTopic: options.curatedBucket,
+        excludeTopics: excluded,
+      });
+      if (!candidate) break;
+      // Run the candidate through dedup
+      const tempCluster = bucketToCluster(candidate);
+      const { filtered } = await filterDuplicateClusters([tempCluster]);
+      if (filtered.length > 0) {
+        picked = candidate;
+        break;
+      }
+      console.log(
+        `[resolver] Curated bucket "${candidate.topic}" already shipped — trying next`,
+      );
+      excluded.add(candidate.topic);
+      // If the user explicitly requested a topic, don't rotate — bail out
+      if (options.curatedBucket) break;
+    }
+
+    if (picked) {
+      console.log(`[resolver] Using curated bucket "${picked.topic}" — skipping Firecrawl keyword search`);
+      options.onCluster?.(bucketToCluster(picked));
+      return resolveFromCurated(picked, lane, { onScrape: options.onScrape });
+    }
+
+    if (allBuckets.size > 0) {
+      console.log(`[resolver] All curated buckets for lane "${lane}" are duplicates — falling back to Firecrawl keyword search`);
+    } else {
+      console.log(`[resolver] No curated buckets defined — falling back to Firecrawl keyword search`);
+    }
+  }
+
   // Step 1: Search
   console.log(`[resolver] Searching for ${lane} topics...`);
   const searchResults = await searchForLane(lane, { limit: 20 });
