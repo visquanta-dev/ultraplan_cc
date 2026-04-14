@@ -78,24 +78,39 @@ const FACT_CHECK_SCHEMA = {
 };
 
 /**
- * Ask GPT-5 whether the re-scraped source text supports the claim made
- * in a single paragraph. Returns structured verdict.
+ * Ask GPT-5 whether any of the re-scraped source texts support the claim
+ * made in a single paragraph. Returns structured verdict.
+ *
+ * Key design decision: the judge sees ALL bundle sources, not just the
+ * one the paragraph is anchored to. The drafter routinely synthesizes
+ * claims across multiple sources (e.g. headline stat from source A,
+ * supporting detail from source B), and matching against a single
+ * anchor quote was rejecting valid synthesis. Matching against the full
+ * bundle lets the judge find the claim wherever in the research it was
+ * grounded, which is how a human fact-checker would actually work.
  */
 async function judgeParagraphClaim(
   paragraphText: string,
   originalQuote: string,
-  rescrapedSourceText: string,
+  bundleSourceBlocks: string[],
   systemPrompt: string,
 ): Promise<FactCheckJudgeResponse> {
+  // Cap total context to ~8000 chars shared across sources to avoid token
+  // blow-up. If we have 5 sources, each gets ~1600 chars — enough for
+  // stats, too short for deep-context verification.
+  const MAX_TOTAL_CHARS = 8000;
+  const perSource = Math.floor(MAX_TOTAL_CHARS / Math.max(bundleSourceBlocks.length, 1));
+  const trimmed = bundleSourceBlocks.map((block) => block.slice(0, perSource));
+
   const user = [
-    '## Original quote from bundle',
+    '## Anchor quote from bundle (original context)',
     `"${originalQuote}"`,
     '',
-    '## Paragraph that cites this quote',
+    '## Paragraph being fact-checked',
     paragraphText,
     '',
-    '## Re-scraped source text (current)',
-    rescrapedSourceText.slice(0, 8000), // cap to avoid token explosion
+    '## All re-scraped bundle sources (the claim must be supported by AT LEAST ONE)',
+    trimmed.join('\n\n---\n\n'),
   ].join('\n');
 
   return await callLLMStructured<FactCheckJudgeResponse>({
@@ -137,12 +152,24 @@ export async function runFactRecheckGate(
   // Build source lookup
   const sourceMap = new Map(bundle.sources.map((s) => [s.source_id, s]));
 
-  // Re-scrape all cited sources (each URL hit only once)
-  const citedSources = paragraphs
-    .map((p) => sourceMap.get(p.source_id))
-    .filter((s): s is Source => s !== undefined);
-  const uniqueSources = [...new Map(citedSources.map((s) => [s.source_id, s])).values()];
-  const rescraped = await rescrapeSourcesOnce(uniqueSources);
+  // Re-scrape ALL bundle sources — not just the ones individual paragraphs
+  // anchor to. The judge evaluates each paragraph against the full bundle
+  // so cross-source synthesis stays valid. (Previously we only re-scraped
+  // cited sources, but that meant a paragraph could be rejected because
+  // its supporting stat lived in a source no paragraph in this draft
+  // happened to anchor to.)
+  const rescraped = await rescrapeSourcesOnce(bundle.sources);
+
+  // Pre-build the list of labeled source text blocks that will be passed
+  // to the judge for every paragraph. Each block names its source so the
+  // judge can cite which one matched in its reason.
+  const bundleSourceBlocks: string[] = [];
+  for (const source of bundle.sources) {
+    const cached = rescraped.get(source.source_id);
+    if (cached && !('error' in cached)) {
+      bundleSourceBlocks.push(`SOURCE: ${source.source_id} (${source.url})\n${cached.text}`);
+    }
+  }
 
   // Load the judge prompt
   const systemPrompt = fs.readFileSync(FACT_CHECK_PROMPT_PATH, 'utf-8');
@@ -167,26 +194,24 @@ export async function runFactRecheckGate(
       continue;
     }
 
-    const cached = rescraped.get(para.source_id);
-
-    // If re-scrape failed, we can't verify — pass with a warning.
-    // The original scrape already confirmed the source existed; a
-    // transient failure or 404 shouldn't block a draft that was built
-    // from legitimate content.
-    if (!cached || 'error' in cached) {
+    // If every bundle source failed to re-scrape, we can't verify anything
+    // — pass with a warning. The original scrape already confirmed the
+    // sources existed; a transient batch failure shouldn't block an
+    // otherwise-legitimate draft.
+    if (bundleSourceBlocks.length === 0) {
       findings.push({
         paragraph_index: i,
         passed: true,
-        reason: `re-scrape unavailable (${cached && 'error' in cached ? cached.error : 'unknown'}) — trusting original scrape`,
+        reason: 'all bundle sources unavailable for re-scrape — trusting original scrape',
       });
       continue;
     }
 
-    // Ask GPT-5 if the claim is supported
+    // Ask GPT-5 if the claim is supported by ANY of the bundle's sources
     const verdict = await judgeParagraphClaim(
       para.text,
       quote.text,
-      cached.text,
+      bundleSourceBlocks,
       systemPrompt,
     );
 
