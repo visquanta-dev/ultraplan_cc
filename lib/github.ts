@@ -129,6 +129,17 @@ export interface CreateDraftPRInput {
    * reviewer knows to replace the hero before merging.
    */
   heroFallbackUsed?: boolean;
+  /**
+   * SEO + AEO rubric score (0-100). Rendered in the PR body and stored
+   * in the metadata file for admin dashboard tracking.
+   */
+  seoAeoScore?: number;
+  /**
+   * True when score is in the 70-84% warning band (passes the gate but
+   * below the target 85% threshold). Adds an `seo-aeo-warning` label
+   * so humans can easily find and fix borderline posts.
+   */
+  seoAeoWarning?: boolean;
 }
 
 export interface CreateDraftPRResult {
@@ -203,14 +214,29 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
       ].join('\n')
     : '';
 
+  const seoAeoWarning = input.seoAeoWarning
+    ? [
+        `> 📉 **SEO+AEO score ${input.seoAeoScore ?? '?'}% — below 85% target**`,
+        '> ',
+        '> The post passed the minimum gate (70%) but is in the warning band. Review the gate findings in the metadata JSON and fix any obvious weaknesses (missing TL;DR, non-question H2s, keyword density) before merging.',
+        '',
+      ].join('\n')
+    : '';
+
+  const seoAeoLine = typeof input.seoAeoScore === 'number'
+    ? `**SEO+AEO score:** ${input.seoAeoScore}/100`
+    : '';
+
   const body = [
     '## UltraPlan Draft',
     '',
     heroWarning,
+    seoAeoWarning,
     `**Lane:** ${input.lane}`,
     `**Slug:** ${input.slug}`,
     `**Verdict:** ${input.gateReport.verdict}`,
     `**Attempt:** ${input.gateReport.attempt}`,
+    seoAeoLine,
     '',
     '### Sources',
     sourceSummary,
@@ -245,6 +271,9 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
   const labels = [laneLabel, funnelLabel, 'ultraplan-draft', 'ready-for-review'];
   if (input.heroFallbackUsed) {
     labels.push('hero-missing');
+  }
+  if (input.seoAeoWarning) {
+    labels.push('seo-aeo-warning');
   }
   await ghFetch(`/repos/${TARGET_REPO}/issues/${pr.number}/labels`, {
     method: 'POST',

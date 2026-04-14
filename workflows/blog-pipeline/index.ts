@@ -14,6 +14,7 @@ import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, ins
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
 import { runPreflight } from '../../lib/preflight/validate-config';
+import { runSeoAeoGate } from '../../lib/gates/seo-aeo';
 import { callLLMStructured } from '../../lib/llm/openrouter';
 import matter from 'gray-matter';
 import fs from 'node:fs';
@@ -400,6 +401,58 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     const markdownContent = matter.stringify(body, frontmatter);
 
+    // Step 5e/7: SEO + AEO gate
+    // Runs a deterministic rubric against the finished markdown. Tiered
+    // enforcement: >=85% passes silently, 70-84% adds a warning label,
+    // <70% demotes verdict to blocked. This is the layer that makes
+    // "10/10 going forward" actually enforceable.
+    console.log('[pipeline] Step 5e/7: Running SEO + AEO gate');
+    const seoAeoResult = await runSeoAeoGate({
+      markdown: markdownContent,
+      outline,
+      paragraphs: finalParagraphs,
+      frontmatter: {
+        title: frontmatter.title,
+        slug: frontmatter.slug,
+        metaDescription: frontmatter.metaDescription,
+        image: frontmatter.image,
+      },
+    });
+    const seoAeoScore = seoAeoResult.aggregate_score ?? 0;
+    console.log(`[pipeline]   SEO+AEO: ${seoAeoResult.summary}`);
+    for (const f of seoAeoResult.paragraph_findings) {
+      if (!f.passed) console.log(`[pipeline]     x  ${f.reason}`);
+    }
+
+    const seoAeoBlocked = seoAeoScore < 70;
+    const seoAeoWarning = seoAeoScore >= 70 && seoAeoScore < 85;
+
+    if (seoAeoBlocked) {
+      console.error(
+        `[pipeline]   SEO+AEO score ${seoAeoScore}% is below blocking threshold (70%). Refusing to ship.`,
+      );
+      const blockRecord: RunRecord = {
+        slug,
+        lane,
+        status: 'blocked',
+        verdict: 'blocked',
+        created_at: new Date().toISOString(),
+        gate_scores: { ...extractGateScores(report), 'seo-aeo': seoAeoScore },
+        gate_report: report,
+        duration_ms: Date.now() - startTime,
+        error: `SEO+AEO score ${seoAeoScore}% below blocking threshold`,
+      };
+      await logBlocked(blockRecord);
+      await notifyPipelineBlocked(slug, lane, `SEO+AEO score ${seoAeoScore}% below blocking threshold`);
+      return {
+        slug,
+        lane,
+        verdict: 'blocked',
+        error: `SEO+AEO score ${seoAeoScore}% below blocking threshold`,
+        durationMs: Date.now() - startTime,
+      };
+    }
+
     // Collect image files for PR
     const images = imageResult.paths.map((relPath) => ({
       relativePath: relPath.replace(/\\/g, '/'),
@@ -417,12 +470,15 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
           gateReport: report,
           bundle,
           heroFallbackUsed: usedHeroFallback,
+          seoAeoScore,
+          seoAeoWarning,
           metadata: {
-            gate_scores: extractGateScores(report),
+            gate_scores: { ...extractGateScores(report), 'seo-aeo': seoAeoScore },
             retries,
             image_count: imageResult.paths.length,
             blocked_images: imageResult.blockedImages,
             hero_fallback_used: usedHeroFallback,
+            seo_aeo_score: seoAeoScore,
           },
         }),
       {
