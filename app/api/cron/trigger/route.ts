@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 // ---------------------------------------------------------------------------
 // Cron trigger — spec §9-10, hardened in Phase 13
