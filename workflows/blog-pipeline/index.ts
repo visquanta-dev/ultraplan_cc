@@ -13,6 +13,7 @@ import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRela
 import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
+import { runPreflight } from '../../lib/preflight/validate-config';
 import { callLLMStructured } from '../../lib/llm/openrouter';
 import matter from 'gray-matter';
 import fs from 'node:fs';
@@ -97,6 +98,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
   const clusterSlug = bundle.topic_slug; // working ID until the headline exists
   let slug = clusterSlug; // reassigned from headline after Step 1
   const lane = bundle.lane;
+
+  // Preflight integrity check — throws loudly if any scaffolded surface
+  // is still empty. Fails BEFORE we spend any LLM tokens so a broken
+  // config can't waste money or ship garbage. See lib/preflight for
+  // the current list of checks.
+  runPreflight();
 
   console.log(`[pipeline] Starting: ${clusterSlug} (${lane})`);
 
