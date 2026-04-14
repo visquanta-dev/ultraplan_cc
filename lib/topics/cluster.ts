@@ -71,6 +71,39 @@ function toSlug(label: string): string {
     .slice(0, 60);
 }
 
+const SLUG_STOPWORDS = new Set([
+  'a', 'an', 'the', 'of', 'in', 'on', 'at', 'for', 'to', 'and', 'or', 'but',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+  'do', 'does', 'did', 'will', 'would', 'could', 'should', 'this', 'that',
+  'these', 'those', 'with', 'from', 'as', 'by', 'your', 'you', 'our', 'we',
+  'its', 'it', 'their', 'they', 'how', 'why', 'what', 'when', 'which',
+]);
+
+/**
+ * Build a URL-safe slug from a blog post headline. Unlike toSlug (which is
+ * used for cluster keyword labels), this strips common English stopwords so
+ * the resulting URL is keyword-dense and SEO-friendly, and clamps to 60 chars.
+ *
+ * Example: "74% of Dealers Are Buying Voice Agents in 2026"
+ *       →  "74-dealers-buying-voice-agents-2026"
+ */
+export function slugifyHeadline(headline: string): string {
+  const tokens = headline
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 0 && !SLUG_STOPWORDS.has(t));
+
+  // Assemble, then clamp to 60 chars without cutting a word in half.
+  let slug = '';
+  for (const token of tokens) {
+    const next = slug ? `${slug}-${token}` : token;
+    if (next.length > 60) break;
+    slug = next;
+  }
+  return slug || toSlug(headline); // fallback if stopword filter emptied everything
+}
+
 /**
  * Cluster search results by keyword overlap. Returns clusters sorted by
  * signal strength (most sources first).

@@ -12,6 +12,7 @@ import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
 import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
+import { slugifyHeadline } from '../../lib/topics/cluster';
 import { callLLMStructured } from '../../lib/llm/openrouter';
 import matter from 'gray-matter';
 import fs from 'node:fs';
@@ -93,16 +94,25 @@ export interface PipelineResult {
 export async function runBlogPipeline(input: PipelineInput): Promise<PipelineResult> {
   const startTime = Date.now();
   const { bundle } = input;
-  const slug = bundle.topic_slug;
+  const clusterSlug = bundle.topic_slug; // working ID until the headline exists
+  let slug = clusterSlug; // reassigned from headline after Step 1
   const lane = bundle.lane;
 
-  console.log(`[pipeline] Starting: ${slug} (${lane})`);
+  console.log(`[pipeline] Starting: ${clusterSlug} (${lane})`);
 
   try {
     // Step 1: Generate outline
     console.log('[pipeline] Step 1/7: Generating outline');
     const outline = await generateOutline(bundle, input.wordCount);
     console.log(`[pipeline]   headline: "${outline.headline}"`);
+
+    // Re-derive the post slug from the headline. The cluster slug (e.g.
+    // "dealerships-dealership-2026") is a keyword bag from the resolver and
+    // makes for ugly URLs; a headline slug is keyword-dense and readable.
+    // Every downstream consumer (images, frontmatter, PR, dedup record)
+    // uses this from here on.
+    slug = slugifyHeadline(outline.headline);
+    console.log(`[pipeline]   post slug: ${slug} (was cluster slug: ${clusterSlug})`);
 
     // Step 2: Draft paragraphs
     console.log('[pipeline] Step 2/7: Drafting paragraphs');
