@@ -168,15 +168,43 @@ export async function resolveSlot(
     );
   }
 
+  // Step 3b: Source-freshness filter. Drop any scraped article whose
+  // publishedAt is older than FRESHNESS_CUTOFF_MONTHS, so a 2021 Cars.com
+  // survey can never leak into a 2026 daily_seo post again. Articles with
+  // no publishedAt metadata are kept (we can't filter on unknown data).
+  // If every article is stale, throw — the bundle is unsalvageable for
+  // a current-events lane.
+  const FRESHNESS_CUTOFF_MONTHS = lane === 'daily_seo' ? 18 : 36;
+  const cutoffMs = Date.now() - FRESHNESS_CUTOFF_MONTHS * 30 * 24 * 60 * 60 * 1000;
+  const freshResults = scrapeResults.filter((r) => {
+    if (!r.article) return false;
+    const pub = r.article.publishedAt;
+    if (!pub) return true; // unknown date → keep, rather than drop
+    const pubMs = Date.parse(pub);
+    if (Number.isNaN(pubMs)) return true;
+    const isFresh = pubMs >= cutoffMs;
+    if (!isFresh) {
+      console.log(
+        `[resolver] Dropping stale source: ${r.url} (published ${pub}, cutoff ${FRESHNESS_CUTOFF_MONTHS} months)`,
+      );
+    }
+    return isFresh;
+  });
+  const freshCount = freshResults.length;
+  console.log(`[resolver] After freshness filter: ${freshCount}/${succeeded} sources kept`);
+  if (freshCount === 0) {
+    throw new Error(
+      `[resolver] Every source in cluster "${winner.label}" is older than ${FRESHNESS_CUTOFF_MONTHS} months. Bundle unusable.`,
+    );
+  }
+
   // Step 4: Convert to ScrapedInputs and assemble bundle
-  const inputs: ScrapedInput[] = scrapeResults
-    .filter((r) => r.article)
-    .map((r) => ({
-      url: r.url,
-      title: r.article!.title,
-      publishedAt: r.article!.publishedAt,
-      rawText: r.article!.rawText,
-    }));
+  const inputs: ScrapedInput[] = freshResults.map((r) => ({
+    url: r.url,
+    title: r.article!.title,
+    publishedAt: r.article!.publishedAt,
+    rawText: r.article!.rawText,
+  }));
 
   const bundle = assembleBundle(inputs, {
     lane,
