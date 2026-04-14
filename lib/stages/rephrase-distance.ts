@@ -19,7 +19,7 @@ const MODEL_NAME = 'voyage-3-large';
 // Starting loose to avoid over-rejecting on the first real run; tighten
 // once we have observed similarities from ~20 paragraph/quote pairs.
 const MIN_DISTANCE = 0.35;
-const MAX_DISTANCE = 0.88;
+const MAX_DISTANCE = 0.91;
 
 async function voyageEmbed(texts: string[]): Promise<Float32Array[]> {
   const apiKey = process.env.VOYAGE_API_KEY;

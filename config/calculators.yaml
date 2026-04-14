@@ -46,15 +46,24 @@ calculators:
   - slug: service-drive
     component: src/components/service-drive/ServiceCalculator.tsx
     url: /service-drive
-    label: Service Drive Revenue Calculator
+    label: Service Drive Voice Agent ROI Calculator
     description: >-
-      Calculates fixed-ops upside from improved service retention, repair
-      order count, and missed service appointment recovery.
+      Models service-drive revenue recovered by an AI voice agent answering
+      missed calls, booking after-hours appointments, and preventing service
+      work from leaking to competitors — based on call volume, miss rate,
+      and average repair order value. This is the voice-agent ROI tool for
+      the dealership service department.
     topics:
+      - voice agents
+      - AI voice for service
+      - AI receptionist
+      - missed service calls
+      - after-hours answering
+      - 24/7 call coverage
+      - service drive revenue
       - fixed ops
       - service retention
       - repair orders
-      - service drive revenue
 
   - slug: powersports-profit
     component: src/components/powersports/ProfitCalculatorPowersports.tsx

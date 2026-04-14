@@ -87,31 +87,36 @@ export async function classifyCalculatorEmbed(
   const catalogBlock = buildCatalogBlock(catalog);
   const validSlugs = catalog.map((c) => c.slug);
 
-  // TODO(human): write the classifier system prompt below.
-  //
-  // Context: this runs once per generated blog post, after draft + enrichment
-  // but before PR. Its job is to decide which (if any) calculator from the
-  // catalog is a STRONG topical fit for the post — not just a keyword-adjacent
-  // mention. The old substring-based matcher put the Service Drive calc on
-  // posts that mentioned "missed calls" once in passing; we want to stop that.
-  //
-  // The prompt should make the model:
-  //   1. Read the headline + section headings + intro as the post's "aboutness"
-  //      — body paragraphs can mention anything, but the topic is declared
-  //      in headings and the first paragraph.
-  //   2. Compare against each calculator's `description` + `topics`, not its
-  //      slug. Slugs are identifiers, not meaning.
-  //   3. Return { slug: <one of ${validSlugs.join(' | ')}> | null,
-  //               confidence: 0.0–1.0,
-  //               reason: one sentence of editorial justification }
-  //   4. Lean toward returning null. "No calculator" is better than a weak
-  //      match. Only return a slug if the post is GENUINELY about that topic.
-  //   5. Never pick powersports-profit for automotive posts, never pick
-  //      independent-dealer for franchise/OEM posts. These are hard rules.
-  //
-  // Also consider whether you want to tune MIN_CONFIDENCE above (0.7 is a
-  // guess — raise it if you still see weak matches in production).
-  const systemPrompt = '';
+  const systemPrompt = `You are an editorial classifier that decides which interactive calculator (if any) belongs inside a just-written dealership blog post.
+
+You will receive:
+- HEADLINE, SECTION HEADINGS, and INTRO — these define the post's true topic.
+- CALCULATOR CATALOG — a list of calculators, each with a label, description, and topic tags.
+
+Your job is to pick the single best-fitting calculator, or return null.
+
+HOW TO DECIDE:
+1. Infer the post's "aboutness" from the headline + section headings + intro ONLY. Body paragraphs can name-drop anything; topic is declared up top.
+2. Compare that aboutness to each calculator's description and topics. Match on meaning, not on slug or keyword overlap. A post about "voice agent ROI in service" matches a calculator described as "revenue recovered by a voice agent answering missed service calls" even if the words aren't identical.
+3. Pick the ONE calculator whose description most directly models the economic question a reader of this post is asking. If two are close, pick neither and return null.
+4. LEAN HARD TOWARD NULL. A missing calculator is fine; a wrong calculator is worse than none. Only return a slug when the post is genuinely, centrally about that calculator's subject.
+
+HARD RULES (never violate):
+- Never pick powersports-profit on an automotive / franchise / luxury post. Powersports means ATV/UTV/motorcycle dealers only.
+- Never pick independent-dealer on a franchise or OEM-focused post. Independent means non-franchise used-car lots only.
+- Never pick dealer-roi unless the post is a broad "is dealership technology worth it" ROI piece AND no more specific calculator fits. It's a last-resort generic fallback.
+
+CONFIDENCE SCORING:
+- 0.90–1.00: the post's central thesis is the same question the calculator answers.
+- 0.75–0.89: the post is clearly in this calculator's topical lane and a reader would reach for this tool.
+- 0.60–0.74: plausible but not central. Return null instead — the pipeline threshold will reject this anyway.
+- < 0.60: not a real match. Return null.
+
+OUTPUT:
+Return a JSON object with keys "slug", "confidence", "reason".
+- slug: one of [${validSlugs.join(', ')}] or null
+- confidence: a number between 0.0 and 1.0
+- reason: one sentence explaining the editorial judgment in plain language a human editor would accept.`;
 
   if (!systemPrompt) {
     // Short-circuit until the human fills in the prompt. Returning null keeps
