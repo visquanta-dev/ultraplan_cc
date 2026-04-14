@@ -66,15 +66,19 @@ async function generateAltText(context: string, role: string): Promise<string> {
   try {
     const result = await callLLMStructured<{ alt: string }>({
       system: [
-        'Generate alt text for a blog image about car dealership operations.',
+        'Generate SEO-optimized alt text for a blog image about car dealership operations.',
         'Rules:',
-        '- 10-25 words, one sentence',
+        '- 10-25 words, one complete sentence',
         '- Describe what the image depicts in the context of the article',
+        '- MUST naturally incorporate the primary keyword or topic from the article headline',
+        '  (e.g. if the headline is "Voice Agents in Dealerships", include "voice agent" or "dealership"',
+        '   in the alt text — not forced, but present)',
         '- Be specific to the dealership industry',
         '- No "image of" or "photo of" prefix',
-        '- No brand names',
+        '- No brand names or identifiable faces',
+        '- Keyword-rich alt text helps image search ranking AND screen-reader accessibility',
       ].join('\n'),
-      user: `Article context: ${context}\nImage role: ${role}`,
+      user: `Article headline/context: ${context}\nImage role: ${role}\n\nGenerate alt text that works for both accessibility and SEO.`,
       schema: {
         type: 'object',
         properties: { alt: { type: 'string' } },

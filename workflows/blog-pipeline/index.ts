@@ -258,13 +258,15 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const articleText = bodyParts.join('\n');
       const enriched = await enrichContent(articleText, bundle, outline.headline);
 
-      // Insert TL;DR after first section's content (heading + paragraphs)
+      // Insert TL;DR at the very top of the body, BEFORE the first H2.
+      // LLMs (Google AI Overviews, ChatGPT, Perplexity, Claude) extract the
+      // first block of prose under an article headline as the primary answer
+      // candidate for AI search queries, so the summary needs to live above
+      // any section heading. Formatted as a markdown blockquote with an
+      // explicit "TL;DR:" label — the label is a convention LLMs recognize
+      // and the blockquote marks it visually distinct from body prose.
       if (enriched.tldr) {
-        // bodyParts structure: [heading, paragraphs, "", heading, paragraphs, "", ...]
-        // Find the first empty string (section separator) and insert before it
-        const firstBreak = bodyParts.findIndex((p, i) => i > 0 && p.trim() === '');
-        const insertAt = firstBreak > 0 ? firstBreak : 2;
-        bodyParts.splice(insertAt, 0, `\n**Key Takeaway:** ${stripEmDashes(enriched.tldr)}\n`);
+        bodyParts.unshift(`> **TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
       }
 
       // Insert tables at target positions

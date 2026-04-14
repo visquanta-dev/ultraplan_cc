@@ -12,8 +12,12 @@ import type { Bundle } from '../bundle/types';
 // CTAs: injected at mid-article and end-of-article positions
 // ---------------------------------------------------------------------------
 
-const MAX_INTERNAL_LINKS = 15;
-const MAX_EXTERNAL_LINKS_PER_POST = 20;
+// SEO best practice: 3-8 contextual internal links for a 2000-word post.
+// More than 8 dilutes link equity per target and triggers "over-optimization"
+// heuristics. Previous value of 15 was producing posts with 17 internal links
+// (PR #14). Lowered to 8. Increase only with good reason.
+const MAX_INTERNAL_LINKS = 8;
+const MAX_EXTERNAL_LINKS_PER_POST = 10;
 
 interface LinkEntry {
   url: string;

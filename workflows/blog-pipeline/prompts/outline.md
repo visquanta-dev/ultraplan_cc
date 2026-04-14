@@ -106,6 +106,36 @@ the technology solves, not the technology itself.
 5. **Target keyword must appear in the headline AND in at least 2 section
    headings** (naturally, not stuffed).
 
+## AEO structure rules (CRITICAL for LLM citation)
+
+Blog posts on visquanta.com are explicitly optimized for citation by AI
+answer engines (Google AI Overviews, ChatGPT, Perplexity, Claude). LLMs
+match user queries against H2/H3 headings to decide which section to quote.
+Declarative headings are weaker for this than question-phrased ones.
+
+1. **At least 4 of your H2 section headings MUST be phrased as questions.**
+   A question heading uses an interrogative lead word (What, Why, How,
+   When, Where, Which, Is, Does, Can, Should, Will) and ends with a
+   question mark. Example conversions:
+   - Weak: "The Stat That Should Worry Every Manual-Process Store"
+   - Strong: "Why Are 74% of Dealers Buying Voice Agents in 2026?"
+   - Weak: "Amazon Tried Selling Cars — Here's What Broke"
+   - Strong: "Why Did Amazon's Attempt to Sell Cars Actually Fail?"
+   - Weak: "Subscription Upsells Are Training Buyers to Distrust"
+   - Strong: "How Do Subscription Upsells Erode Buyer Trust?"
+2. **The question headings should match likely search queries.** If a
+   dealer principal would ask it out loud to ChatGPT, you should make it
+   a section heading. Think: "How much does a voice agent cost?" "What is
+   the ROI of service-drive automation?" "Why do dealerships lose fixed-ops
+   revenue?"
+3. **Every section must answer a specific question directly in its first
+   sentence.** LLMs preferentially extract the first 1-2 sentences under a
+   heading. Make those sentences self-contained answers, not setup prose.
+4. **Include at least one explicit "What is [key term]?" section** that
+   defines the core concept of the post in 2-3 sentences. LLMs cite these
+   definitional sections very often because they're short, clear, and
+   standalone.
+
 ## Lane-specific hints
 
 - **daily_seo** (1800–2200 words): 5–6 H2 sections + FAQ section, one

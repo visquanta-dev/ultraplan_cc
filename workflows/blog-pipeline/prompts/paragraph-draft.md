@@ -75,6 +75,43 @@ JSON object with:
 10. **Never use em dashes.** Use hyphens (-) for parenthetical statements.
     No -- or --- characters in the output.
 
+## SEO + AEO content rules (CRITICAL for ranking and LLM citation)
+
+11. **Primary keyword in the first 100 words.** The primary keyword from the
+    outline's headline MUST appear naturally in the first paragraph of the
+    first section, within the first 100 words of body copy. Google, Bing,
+    and LLM retrievers weight early-body keyword presence heavily. If the
+    headline is "Why Buying a Car Online Still Hits a Wall in 2026," the
+    phrase "buying a car online" (or a tight variant like "online car
+    buying") must appear in paragraph 1.
+
+12. **First sentence of each section answers the section's question.** If
+    the section heading is a question (e.g. "Why Are 74% of Dealers Buying
+    Voice Agents in 2026?"), the first sentence of the first paragraph must
+    be a direct, standalone answer. LLMs preferentially extract the first
+    1-2 sentences under a heading when building AI answer surfaces. Setup
+    prose kills that extraction — put the answer first, then the supporting
+    detail.
+
+13. **Short, quotable sentences are AEO gold.** Aim for a mix: punchy
+    declarative sentences (8-15 words) that LLMs can quote verbatim, plus
+    longer explanatory sentences (20-30 words). Avoid sentences over 35
+    words — they're hard to extract and get dropped by answer-engine
+    snippet generators.
+
+14. **Definitional sections are standalone.** If the outline includes a
+    "What is [key term]?" section, the first paragraph of that section
+    must be a complete 2-3 sentence definition that works out of context.
+    A reader landing on just that paragraph from a Perplexity citation
+    should fully understand what the term means. No "as we discussed
+    above" or "this is why" references to other parts of the post.
+
+15. **Stats with explicit attribution and date.** When citing a statistic,
+    name the source AND the year in the paragraph: "a 2026 Digital Dealer
+    survey of 1,200 dealership leaders found that 74%..." The year is
+    critical — LLMs drop stats they can't date, and current-year stats
+    are cited far more often than undated ones.
+
 ## Output format
 
 Return a JSON object with one field: `paragraphs`. It is an array of
