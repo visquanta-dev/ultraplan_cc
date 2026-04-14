@@ -1,0 +1,107 @@
+# =============================================================================
+# Curated source list for the blog pipeline resolver
+#
+# STATUS: NOT YET WIRED UP — tomorrow's Phase 2 work adds resolver support
+# for reading from this file. Listed here so we can iterate on the URL set
+# in parallel with the code change.
+#
+# Philosophy:
+#   - Every URL is a real, verified article from an authoritative dealership
+#     industry publication or a vendor blog that publishes serious analysis.
+#   - Only 2025–2026 publication dates (older than 18 months = stale for
+#     daily_seo lane). If you add something, check the date.
+#   - ~6–8 URLs per topic bucket is the sweet spot. More = slower scrape;
+#     fewer = bundle too thin for the drafter to synthesize across sources.
+#   - Tier-1 sources lead (autonews, autoremarketing, cbtnews, nada,
+#     coxautoinc, wardsauto, cdkglobal, digitaldealer, dealershipguy);
+#     Tier-2 sources (vendor blogs with industry-grade analysis) follow.
+#
+# Rotation discipline:
+#   - Every quarter, re-verify URLs still resolve and are still fresh.
+#   - Remove any URL older than 18 months unless it's evergreen reference.
+#   - When a post on a topic ships, that topic bucket is "spent" for ~30
+#     days (dedup handles this — the cluster slug gets blocked).
+# =============================================================================
+
+daily_seo:
+  # ---------------------------------------------------------------------------
+  # Topic: Voice AI / voice agents in dealerships
+  # Fits calculator: service-roi
+  # Fits link: /service-drive
+  # ---------------------------------------------------------------------------
+  voice_ai_dealerships:
+    - https://digitaldealer.com/news/2026-could-be-the-first-ai-operations-year-as-dealerships-focus-on-tech-overhaul/168666/
+    - https://news.dealershipguy.com/p/76-of-u-s-dealers-plan-to-increase-ai-spending-in-the-coming-year-survey-2025-12-08
+    - https://www.nada.org/nada-show/nada-headlines/podiums-ross-tinkham-presents-ai-strategies-dealers-2026
+    - https://www.coxautoinc.com/insights-hub/the-ai-revolution-is-here-how-ai-is-reshaping-dealerships-and-reimagining-automotives-future/
+    - https://www.madrona.com/voice-is-going-vertical-how-verticalized-voice-ai-is-becoming-the-next-killer-app/
+    - https://www.autoremarketing.com/ar/analysis/spyne-report-says-2026-will-be-first-true-ai-operations-year/
+    - https://www.autonews.com/sponsored/an-a-people-first-playbook-putting-ai-to-work-in-your-dealership/
+
+  # ---------------------------------------------------------------------------
+  # Topic: Service drive automation / fixed ops revenue
+  # Fits calculator: service-roi
+  # Fits link: /service-drive
+  # ---------------------------------------------------------------------------
+  service_drive_fixed_ops:
+    - https://www.coxautoinc.com/wp-content/uploads/2026/04/MEDIA-DECK_2026-Cox-Automotive-Fixed-Ops-and-Ownership-Study_FINAL.pdf
+    - https://www.autoremarketing.com/ar/analysis/commentary-fixed-ops-check-predictions-for-2026/
+    - https://www.cbtnews.com/how-fixed-ops-can-skyrocket-profits-for-dealerships-in-2026-shon-kingrey-kayers-automotive-group/
+    - https://www.wardsauto.com/news/group-1-automotives-record-2025-revenues-driven-by-fixed-ops-fi/811022/
+    - https://www.autonews.com/retail/service-and-parts/an-guest-commentary-roumeliotis-1202/
+    - https://news.dealershipguy.com/p/why-fixed-ops-profits-aren-t-keeping-pace-with-demand-and-how-to-earn-more-in-2026-2025-10-14
+    - https://www.cbtnews.com/fixed-ops-remain-key-to-dealership-profitability-yet-potential-is-often-undervalued/
+    - https://www.nada.org/nada/nada-headlines/why-service-largest-single-influence-publics-perception-your-dealership
+    - https://chriscollinsinc.com/sdr/fixed-ops-metrics-your-dealership-needs-for-2026/
+
+  # ---------------------------------------------------------------------------
+  # Topic: Digital retail friction / online car buying obstacles
+  # Fits link: /service-drive (for phone-screen friction angle) or none
+  # ---------------------------------------------------------------------------
+  digital_retail_friction:
+    - https://www.autonews.com/opinion/guest-commentary/an-guest-commentary-ali-raza-digital-retail-0225/
+    - https://www.cdkglobal.com/insights/fi-experience-bolsters-purchase-process-march
+    - https://www.coxautoinc.com/insights-hub/cox-automotive-unveils-accelerate-my-deal-elite-the-only-complete-online-vehicle-buying-solution-for-both-dealers-car-buyers/
+    - https://news.dealershipguy.com/p/dealership-transactions-are-quicker-than-ever-yet-customer-satisfaction-is-falling-2026-02-04
+    - https://www.autonews.com/sponsored/an-car-buyer-trust-surges-as-digital-and-in-person-shopping-experiences-converge/
+    - https://www.cbtnews.com/carnow-launches-search-by-payment-to-turn-affordability-into-qualified-leads/
+    - https://news.dealershipguy.com/p/dealers-are-entering-a-new-era-of-competition-and-carvana-is-quietly-setting-the-pace-2025-11-26
+
+  # ---------------------------------------------------------------------------
+  # Topic: Speed to lead / lead response time
+  # Fits calculator: speed-to-lead
+  # Fits link: /speed-to-lead
+  # ---------------------------------------------------------------------------
+  speed_to_lead:
+    - https://news.dealershipguy.com/p/dealers-are-responding-faster-than-ever-to-web-leads-but-automation-risks-linger-2026-02-24
+    - https://www.cdkglobal.com/insights/car-salespeople-step-q1-2026-0
+    - https://www.autoremarketing.com/ar/analysis/study-finds-ai-raises-dealerships-internet-lead-responsiveness-but-creates-added-risks/
+    - https://www.cbtnews.com/shift-digital-websites-outperform-3rd-parties/
+    - https://finance.yahoo.com/news/kubota-ranked-highest-2026-lead-050100906.html
+    - https://www.fullpath.com/blog/the-dealership-marketing-playbook-for-2026/
+    - https://www.motorcyclepowersportsnews.com/why-dealer-follow-up-defines-customer-experience/
+
+  # ---------------------------------------------------------------------------
+  # Topic: Dealership reputation / online reviews
+  # Fits link: /reputation-management
+  # ---------------------------------------------------------------------------
+  reputation_reviews:
+    - https://www.autonews.com/retail/service-and-parts/an-widewail-dealership-customer-reviews-0721/
+    - https://www.autoremarketing.com/ar/technology/widewail-founder-murray-steps-aside-as-new-ceo-begins-new-era-of-reputation-management/
+    - https://www.carscommerce.inc/car-dealer-online-reputation-best-practices/
+    - https://www.callrevu.com/2025/05/08/why-online-reviews-are-the-front-line-of-dealership-reputation/
+    - https://birdeye.com/blog/reputation-management-automotive/
+    - https://www.stocktitan.net/news/CARS/cars-com-announces-its-2026-dealer-of-the-year-g1oc10sr2wpa.html
+    - https://www.thedrive.com/news/add-ai-to-the-list-of-reasons-you-cant-trust-online-car-dealer-reviews
+
+weekly_authority:
+  # Placeholder — the weekly lane needs evergreen leadership / strategy
+  # pieces rather than news. Fill in after the daily lane is proven.
+  leadership_lessons:
+    - []
+
+monthly_anonymized_case:
+  # Placeholder — monthly case-study lane pulls from VisQuanta's own
+  # client wins, not external sources. Populated from the case studies repo.
+  client_wins:
+    - []

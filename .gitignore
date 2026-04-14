@@ -49,3 +49,4 @@ data/slot_resolutions/
 
 .vercel
 .env*.local
+.firecrawl/
