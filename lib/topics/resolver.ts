@@ -56,7 +56,7 @@ export async function resolveSlot(
   }
 
   // Step 2b: Filter out topics that overlap with existing published content
-  const { filtered: clusters, removed } = filterDuplicateClusters(rawClusters);
+  const { filtered: clusters, removed } = await filterDuplicateClusters(rawClusters);
   for (const r of removed) {
     console.log(`[resolver] Skipped cluster "${r.cluster.label}" — ${r.reason}`);
   }

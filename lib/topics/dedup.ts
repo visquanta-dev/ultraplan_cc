@@ -9,19 +9,53 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { TopicCluster } from './cluster';
+import { listRuns } from '../admin/run-logger';
 
 // Minimum word overlap ratio to consider two topics as duplicates
 const OVERLAP_THRESHOLD = 0.5;
 
 /**
- * Load all known published slugs from the main site repo (if cloned locally)
- * and from recent local drafts.
+ * Load all known slugs that should block a candidate cluster. Pulls from
+ * three sources and unions them:
+ *   1. Vercel Blob "runs/" — the canonical record of every successful
+ *      pipeline run that shipped a PR. This works on both local and cron
+ *      environments (blob storage is remote), and is the source of truth
+ *      for "has this cluster already been published or drafted".
+ *   2. Local site repo content/blog/*.md — catches posts that merged to
+ *      main before the blob storage existed, or were hand-authored.
+ *      Gracefully falls back to empty on environments without the checkout.
+ *   3. Local tmp/drafts/*.md — catches in-flight drafts from the same
+ *      local session that haven't hit blob yet.
+ *
+ * Failure to read any one source logs a warning and returns the partial
+ * union rather than throwing — dedup is advisory, not load-bearing, and
+ * we'd rather pick a mild duplicate than crash the pipeline on a transient
+ * blob read failure.
  */
-function loadExistingSlugs(): Set<string> {
+async function loadExistingSlugs(): Promise<Set<string>> {
   const slugs = new Set<string>();
 
-  // Check main site content/blog/ directory
-  const siteBlogDir = path.join(process.env.HOME ?? process.env.USERPROFILE ?? '', 'Desktop', 'site', 'content', 'blog');
+  // 1. Vercel Blob — every successful run ever shipped
+  try {
+    const runs = await listRuns(500);
+    for (const run of runs) {
+      if (run.slug) slugs.add(run.slug);
+    }
+  } catch (err) {
+    console.warn(
+      '[dedup] could not list runs from blob storage — continuing with local sources only:',
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+
+  // 2. Local site checkout (optional, for dev environments)
+  const siteBlogDir = path.join(
+    process.env.HOME ?? process.env.USERPROFILE ?? '',
+    'Desktop',
+    'site',
+    'content',
+    'blog',
+  );
   if (fs.existsSync(siteBlogDir)) {
     for (const file of fs.readdirSync(siteBlogDir)) {
       if (file.endsWith('.md')) {
@@ -30,7 +64,7 @@ function loadExistingSlugs(): Set<string> {
     }
   }
 
-  // Check local drafts
+  // 3. Local drafts
   const draftsDir = path.join(process.cwd(), 'tmp', 'drafts');
   if (fs.existsSync(draftsDir)) {
     for (const file of fs.readdirSync(draftsDir)) {
@@ -68,10 +102,10 @@ function keywordOverlap(a: Set<string>, b: Set<string>): number {
  * Check if a candidate cluster overlaps too much with existing content.
  * Returns { isDuplicate, reason, existingSlug } if overlap > threshold.
  */
-export function checkTopicOverlap(
+export async function checkTopicOverlap(
   cluster: TopicCluster,
-): { isDuplicate: boolean; reason?: string; existingSlug?: string } {
-  const existingSlugs = loadExistingSlugs();
+): Promise<{ isDuplicate: boolean; reason?: string; existingSlug?: string }> {
+  const existingSlugs = await loadExistingSlugs();
   const candidateKeywords = new Set(cluster.keywords);
 
   // Direct slug match
@@ -104,14 +138,14 @@ export function checkTopicOverlap(
  * Filter an array of clusters, removing any that overlap with existing content.
  * Returns the filtered list and a log of what was removed.
  */
-export function filterDuplicateClusters(
+export async function filterDuplicateClusters(
   clusters: TopicCluster[],
-): { filtered: TopicCluster[]; removed: Array<{ cluster: TopicCluster; reason: string }> } {
+): Promise<{ filtered: TopicCluster[]; removed: Array<{ cluster: TopicCluster; reason: string }> }> {
   const filtered: TopicCluster[] = [];
   const removed: Array<{ cluster: TopicCluster; reason: string }> = [];
 
   for (const cluster of clusters) {
-    const check = checkTopicOverlap(cluster);
+    const check = await checkTopicOverlap(cluster);
     if (check.isDuplicate) {
       removed.push({ cluster, reason: check.reason! });
     } else {
