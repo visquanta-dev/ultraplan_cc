@@ -14,6 +14,51 @@ import { callLLMStructured } from '../llm/openrouter';
 const MAX_IMAGE_RETRIES = 2;
 
 /**
+ * Detect the actual image format from the raw bytes by reading the magic
+ * number at the start of the buffer. Returns the matching file extension
+ * (without leading dot). We do this instead of trusting whatever extension
+ * the model's response metadata claims, because a mismatched extension is
+ * silently broken by Next.js Image optimization (sharp validates by magic
+ * bytes, not by filename) — and that exact bug has already cost us time
+ * in production, where every hero.webp shipped by this pipeline was
+ * actually PNG data, causing broken <img> tags on every post.
+ */
+function detectImageExtension(buf: Buffer): 'png' | 'webp' | 'jpg' {
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf.length >= 8 &&
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  ) {
+    return 'png';
+  }
+  // WEBP: "RIFF" at 0-3, "WEBP" at 8-11
+  if (
+    buf.length >= 12 &&
+    buf[0] === 0x52 && // R
+    buf[1] === 0x49 && // I
+    buf[2] === 0x46 && // F
+    buf[3] === 0x46 && // F
+    buf[8] === 0x57 && // W
+    buf[9] === 0x45 && // E
+    buf[10] === 0x42 && // B
+    buf[11] === 0x50 // P
+  ) {
+    return 'webp';
+  }
+  // JPEG: FF D8 FF
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+    return 'jpg';
+  }
+  // Unknown format — default to png because that's empirically what the
+  // model returns most often, and at least png is a valid fallback extension.
+  console.warn('[image] unknown magic bytes, defaulting to .png extension');
+  return 'png';
+}
+
+/**
  * Generate descriptive alt text for an image based on its context.
  * Used for accessibility and image search SEO.
  */
@@ -146,14 +191,31 @@ async function generateAndValidate(
     lastGateResult = gateResult;
 
     if (gateResult.passed) {
-      // Convert to WebP by saving as-is (the model outputs PNG/WebP)
-      // In production we'd use sharp for conversion; for now save raw
-      const outputDir = path.dirname(outputPath);
+      // Detect the actual image format from the raw bytes and save with
+      // the matching extension. Do NOT trust the hardcoded extension the
+      // caller passed in — the model often returns PNG regardless of what
+      // we requested, and a mismatched extension silently breaks Next.js
+      // Image optimization downstream.
+      const buf = Buffer.from(image.base64, 'base64');
+      const actualExt = detectImageExtension(buf);
+      const requestedExt = path.extname(outputPath).slice(1).toLowerCase();
+      const finalPath =
+        actualExt === requestedExt
+          ? outputPath
+          : outputPath.replace(/\.[^.]+$/, `.${actualExt}`);
+
+      if (finalPath !== outputPath) {
+        console.warn(
+          `[image] detected ${actualExt} bytes but caller requested .${requestedExt}; writing to ${path.basename(finalPath)} instead`,
+        );
+      }
+
+      const outputDir = path.dirname(finalPath);
       fs.mkdirSync(outputDir, { recursive: true });
-      fs.writeFileSync(outputPath, Buffer.from(image.base64, 'base64'));
+      fs.writeFileSync(finalPath, buf);
 
       options.onImageResult?.(imageType, imageIndex, true, attempt);
-      return { path: outputPath, gateResult, attempts: attempt };
+      return { path: finalPath, gateResult, attempts: attempt };
     }
 
     options.onImageResult?.(imageType, imageIndex, false, attempt);

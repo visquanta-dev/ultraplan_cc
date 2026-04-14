@@ -345,11 +345,22 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       ],
     };
 
+    // Resolve the hero image path from the actual file the image pipeline
+    // wrote to disk (which now uses the real format's extension, not a
+    // hardcoded .webp). Falls back to .webp only if the pipeline didn't
+    // produce a hero at all — in which case the frontmatter will point
+    // at a 404, but the alternative is pretending we have an image we
+    // don't.
+    const heroRelPath = imageResult.paths.find((p) => p.includes('hero.'));
+    const heroFrontmatterPath = heroRelPath
+      ? '/' + heroRelPath.replace(/^public[/\\]/, '').replace(/\\/g, '/')
+      : `/images/blog/${slug}/hero.webp`;
+
     const frontmatter = {
       title: stripEmDashes(outline.headline),
       slug,
       metaDescription,
-      image: `/images/blog/${slug}/hero.webp`,
+      image: heroFrontmatterPath,
       readingTime,
       publishedAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
