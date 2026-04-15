@@ -36,6 +36,10 @@ export interface FeedArticle {
   sourceKey: string;
   sourceName: string;
   discoveredAt: string;
+  /** Optional title from Firecrawl /v2/map metadata — richer than slug tokens */
+  title?: string;
+  /** Optional description from Firecrawl /v2/map metadata */
+  description?: string;
 }
 
 interface FeedSourcesConfig {
@@ -206,14 +210,33 @@ export function looksLikeArticle(url: string): boolean {
 // (common on CDN-heavy vendor blogs).
 // ---------------------------------------------------------------------------
 
-interface FirecrawlMapResponse {
-  success: boolean;
-  links?: string[];
-  data?: { links?: string[] };
-  error?: string;
+// Firecrawl /v2/map returns an array of objects with optional metadata —
+// NOT a flat string array. The object shape gives us title + description
+// for free, which we use in the relevance filter.
+interface FirecrawlMapLink {
+  url: string;
+  title?: string;
+  description?: string;
 }
 
-async function mapIndex(indexUrl: string, limit: number): Promise<string[]> {
+interface FirecrawlMapResponse {
+  success: boolean;
+  links?: Array<FirecrawlMapLink | string>;
+  data?: { links?: Array<FirecrawlMapLink | string> };
+  error?: string;
+  warning?: string;
+}
+
+function normalizeMapLinks(raw: Array<FirecrawlMapLink | string> | undefined): FirecrawlMapLink[] {
+  if (!raw) return [];
+  return raw.map((entry) =>
+    typeof entry === 'string'
+      ? { url: entry }
+      : { url: entry.url, title: entry.title, description: entry.description },
+  );
+}
+
+async function mapIndex(indexUrl: string, limit: number): Promise<FirecrawlMapLink[]> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) throw new Error('[crawl-index] FIRECRAWL_API_KEY not set');
 
@@ -225,7 +248,7 @@ async function mapIndex(indexUrl: string, limit: number): Promise<string[]> {
     },
     body: JSON.stringify({
       url: indexUrl,
-      limit: Math.min(limit * 5, 100), // over-request, filter aggressively after
+      limit: Math.min(limit * 5, 100),
       includeSubdomains: false,
     }),
   });
@@ -239,7 +262,44 @@ async function mapIndex(indexUrl: string, limit: number): Promise<string[]> {
   if (!body.success) {
     throw new Error(`[crawl-index] map unsuccessful: ${body.error ?? 'unknown'}`);
   }
-  return body.links ?? body.data?.links ?? [];
+  return normalizeMapLinks(body.links ?? body.data?.links);
+}
+
+/**
+ * Firecrawl's /v2/map is designed to walk a whole domain from the apex, not
+ * to enumerate a deep category path. Requests like /category/dealership/
+ * return 0 links with a "try mapping the base domain" warning. This helper
+ * maps the apex + filters results to URLs that contain the original deep
+ * path as a prefix, so we get the intended scoping without the zero-result
+ * penalty.
+ */
+async function mapIndexWithFallback(indexUrl: string, limit: number): Promise<FirecrawlMapLink[]> {
+  // First attempt: the deep URL as configured
+  const direct = await mapIndex(indexUrl, limit);
+  if (direct.length > 0) return direct;
+
+  // Second attempt: the apex domain, filtered to the original path prefix
+  let parsed: URL;
+  try {
+    parsed = new URL(indexUrl);
+  } catch {
+    return [];
+  }
+  const apex = `${parsed.protocol}//${parsed.hostname}/`;
+  // If the deep path was already the apex, don't infinite-loop
+  if (parsed.pathname === '/' || parsed.pathname === '') return [];
+
+  console.log(`[crawl-index] ${parsed.hostname}: deep path empty, retrying with apex + path prefix "${parsed.pathname}"`);
+  const apexLinks = await mapIndex(apex, limit * 2);
+  const prefix = parsed.pathname.replace(/\/$/, '');
+  return apexLinks.filter((link) => {
+    try {
+      const linkPath = new URL(link.url).pathname;
+      return linkPath.startsWith(prefix);
+    } catch {
+      return false;
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -318,14 +378,15 @@ export async function crawlFeed(sourceKey: string): Promise<FeedArticle[]> {
   const discoveredAt = new Date().toISOString();
 
   for (const indexUrl of source.indexUrls) {
-    let links: string[] = [];
+    let links: FirecrawlMapLink[] = [];
     try {
-      links = await mapIndex(indexUrl, source.maxArticlesPerCrawl);
+      links = await mapIndexWithFallback(indexUrl, source.maxArticlesPerCrawl);
     } catch (mapErr) {
       const msg = mapErr instanceof Error ? mapErr.message : String(mapErr);
       console.warn(`[crawl-index] ${source.key}: map failed (${msg.slice(0, 120)}) — falling back to HTML scrape`);
       try {
-        links = await scrapeIndexHtml(indexUrl);
+        const stringLinks = await scrapeIndexHtml(indexUrl);
+        links = stringLinks.map((url) => ({ url }));
       } catch (scrapeErr) {
         const msg2 = scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr);
         console.warn(`[crawl-index] ${source.key}: fallback scrape also failed (${msg2.slice(0, 120)}) — skipping index`);
@@ -334,15 +395,17 @@ export async function crawlFeed(sourceKey: string): Promise<FeedArticle[]> {
     }
 
     for (const link of links) {
-      if (seen.has(link)) continue;
-      seen.add(link);
-      if (!looksLikeArticle(link)) continue;
-      if (!isAllowed(link)) continue;
+      if (seen.has(link.url)) continue;
+      seen.add(link.url);
+      if (!looksLikeArticle(link.url)) continue;
+      if (!isAllowed(link.url)) continue;
       articles.push({
-        url: link,
+        url: link.url,
         sourceKey: source.key,
         sourceName: source.name,
         discoveredAt,
+        title: link.title,
+        description: link.description,
       });
       if (articles.length >= source.maxArticlesPerCrawl) break;
     }

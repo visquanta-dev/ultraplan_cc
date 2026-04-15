@@ -52,17 +52,18 @@ function tokenize(str: string): string[] {
 }
 
 /**
- * Extract scoring tokens from a URL. Uses the hostname (as a brand signal)
- * and every path segment, combined into a single token set. Query strings
- * and fragments are dropped — they're usually tracking or anchors, not
- * topical content.
+ * Extract scoring tokens from a URL + optional title + optional description.
+ * Hostname gives brand signal, path segments give slug tokens, and when
+ * Firecrawl /v2/map provides title/description we blend those in too —
+ * they're much richer than a slug for matching lane keywords.
  */
-function urlTokens(url: string): Set<string> {
+function articleTokens(article: { url: string; title?: string; description?: string }): Set<string> {
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(article.url);
     const host = parsed.hostname.replace(/^www\./, '');
     const pathSegments = parsed.pathname.split('/').filter(Boolean);
-    return new Set(tokenize([host, ...pathSegments].join(' ')));
+    const parts = [host, ...pathSegments, article.title ?? '', article.description ?? ''];
+    return new Set(tokenize(parts.join(' ')));
   } catch {
     return new Set();
   }
@@ -71,18 +72,19 @@ function urlTokens(url: string): Set<string> {
 /**
  * Score a single article against a keyword bank. Each keyword match adds
  * 1 point; multi-word keywords like "follow-up" count when any sub-token
- * matches. Max theoretical score = keyword bank size, but realistic scores
- * cluster around 2-6 for on-topic articles and 0-1 for off-topic ones.
+ * matches. Uses URL + title + description when available — an article with
+ * a rich title "Why BDCs are shifting to voice agents" scores much higher
+ * than one with a cryptic slug like "/2026/04/15/post-1234".
  */
-export function scoreArticle(url: string, keywords: string[]): number {
-  const tokens = urlTokens(url);
+export function scoreArticle(article: { url: string; title?: string; description?: string }, keywords: string[]): number {
+  const tokens = articleTokens(article);
   let score = 0;
   for (const kw of keywords) {
     const kwTokens = tokenize(kw);
     for (const kt of kwTokens) {
       if (tokens.has(kt)) {
         score++;
-        break; // don't double-count a multi-word keyword
+        break;
       }
     }
   }
@@ -114,7 +116,7 @@ export function filterByRelevance(
   ];
 
   const scored = articles
-    .map((article) => ({ article, score: scoreArticle(article.url, keywords) }))
+    .map((article) => ({ article, score: scoreArticle(article, keywords) }))
     .filter((s) => s.score > 0) // drop zero-relevance articles entirely
     .sort((a, b) => b.score - a.score);
 
@@ -131,6 +133,6 @@ export function scoreAndRank(
 ): Array<{ article: FeedArticle; score: number }> {
   const keywords = LANE_KEYWORDS[lane] ?? LANE_KEYWORDS.daily_seo;
   return articles
-    .map((article) => ({ article, score: scoreArticle(article.url, keywords) }))
+    .map((article) => ({ article, score: scoreArticle(article, keywords) }))
     .sort((a, b) => b.score - a.score);
 }
