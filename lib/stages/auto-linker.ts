@@ -215,13 +215,26 @@ export function insertInternalLinks(
 
 /**
  * Generate a mid-article CTA block.
+ *
+ * Points every post at Speed to Lead, which is the actual VisQuanta
+ * product being sold: sub-60-second SMS response to inbound web leads.
+ * The pitch anchors on the "78% of buyers choose the first responder"
+ * stat from the product page and the industry-average 1:38 response
+ * time that Speed to Lead replaces.
+ *
+ * The CTA intentionally does NOT mention phone calls, voice AI, or
+ * after-hours call auditing — those are a different product category
+ * and conflating them confuses readers about what VisQuanta actually
+ * sells. If a post's body focuses on voice/call pain points, the CTA
+ * here bridges to the underlying lead-response gap (which is the
+ * same problem viewed from a different channel).
  */
 export function buildMidArticleCTA(): string {
   return [
     '',
     '---',
     '',
-    '**Ready to stop losing revenue to missed calls?** [Schedule a strategy call](https://www.visquanta.com/book-demo) with the VisQuanta team - we\'ll audit your after-hours coverage and show you exactly where the gaps are.',
+    '**78% of car buyers choose the first dealer to respond — and the industry average response time is 1 hour 38 minutes.** [See how Speed to Lead replies in under 60 seconds](https://www.visquanta.com/speed-to-lead): AI-powered SMS response that captures inbound leads 24/7 before your competitors can pick up the phone.',
     '',
     '---',
     '',

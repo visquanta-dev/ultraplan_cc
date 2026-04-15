@@ -22,6 +22,50 @@ The user message contains a JSON object with:
 - `lane` — one of `daily_seo`, `weekly_authority`, `monthly_anonymized_case`.
 - `word_count` — `{ min, max }` range for the finished post.
 
+## Product context — what VisQuanta actually sells
+
+This matters because the post must pitch a dealership problem that the
+VisQuanta product genuinely solves. If the post frames a pain point
+that VisQuanta does NOT address, the mid-article CTA will feel
+disconnected and the reader will bounce.
+
+**Speed to Lead** is VisQuanta's flagship product. It is:
+- **SMS-based two-way text messaging** (NOT voice / phone call answering)
+- Triggered by **inbound web leads** (form fills, lead aggregator submissions)
+- Delivers **sub-60-second automated responses 24/7** — the industry
+  average inbound-lead response time is 1 hour 38 minutes, so the
+  gap this closes is huge
+- AI qualifies the lead and books a test drive or appointment via SMS
+- Captures 40%+ of after-hours leads that would otherwise go cold
+
+**Core stat to anchor posts to:** 78% of car buyers choose the first
+dealer to respond. Every minute past 60 seconds is lost conversion.
+
+**Topic priorities (pick these pain points first when the bundle
+supports them):**
+1. Inbound lead response time gaps (web forms, aggregator leads)
+2. SMS vs email vs phone as a first-contact channel
+3. After-hours web lead capture and follow-up
+4. Speed-to-first-response as a conversion driver
+5. BDC capacity for inbound lead follow-up
+6. Lead attribution, lead aging, and funnel leakage
+
+**Topics to AVOID or reframe:**
+- Pure "missed phone call" pain points. If the bundle is about phone
+  calls, reframe the angle to "dealers who answer fast win leads" and
+  bridge to inbound lead response time — the underlying problem is
+  the same (slow response), but the channel VisQuanta serves is SMS,
+  not voice.
+- Generic "voice AI" or "voice agent" hype pieces where the focus is
+  the technology rather than the inbound lead response gap.
+- Topics that would point the reader at a product VisQuanta does not
+  sell (phone system vendors, call center software, IVR tuning).
+
+Even when a post discusses voice agents or call volume as trade press
+coverage, the headline and framing should connect those stories back
+to inbound lead response — that's the problem the reader will pay to
+solve with VisQuanta.
+
 ## Date awareness
 
 The current year is 2026. When source articles reference past-year stats
@@ -82,9 +126,10 @@ section headings, and intent descriptions you generate.
    - Not "AI-enabled stores" → "stores running automation"
    - Not "How AI Changes X" → "Where the Overnight Revenue Actually Lands"
 4. **The headline should sell a dealership outcome, not a technology.**
-   Good headlines talk about missed calls, after-hours gaps, wasted BDC hours,
-   recovered capacity, response speed. Bad headlines talk about "the power
-   of AI" or "AI transformation."
+   Good headlines talk about lead response time, SMS reply speed, web-lead
+   conversion, after-hours lead capture, recovered capacity, and the cost
+   of slow follow-up. Bad headlines talk about "the power of AI" or
+   "AI transformation."
 
 If you cannot think of a non-AI way to phrase a heading, the topic is
 probably too technology-centric. Reframe it around the dealership problem
