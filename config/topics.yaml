@@ -14,7 +14,7 @@ global_constraints:
 
 lanes:
   daily_seo:
-    cadence: "MON,FRI 06:00"
+    cadence: "MON,TUE,THU,FRI,SUN 06:00"  # 5 of 7 days — authoritative schedule
     funnel_target: ToFu
     # source_strategy controls the resolver's discovery order.
     #   feed_first    — crawl feed_sources.yaml indices, then curated, then search
@@ -22,8 +22,8 @@ lanes:
     #   search_first  — Firecrawl keyword search only (legacy pre-curated path)
     source_strategy: feed_first
     word_count:
-      min: 1000
-      max: 1400
+      min: 1800
+      max: 2200
     sources:
       - trade_press
       - regulatory
@@ -39,12 +39,12 @@ lanes:
       image: google/gemini-2.5-flash-image-preview-pro
 
   weekly_authority:
-    cadence: "WED 06:00"
+    cadence: "WED,SAT 06:00"  # 2 of 7 days
     funnel_target: MoFu
     source_strategy: feed_first
     word_count:
-      min: 1800
-      max: 2400
+      min: 2200
+      max: 2800
     sources:
       - linkedin_dealer_principals
       - trade_press
@@ -68,8 +68,8 @@ lanes:
     # blog index that week.
     source_strategy: curated_first
     word_count:
-      min: 2200
-      max: 3000
+      min: 2500
+      max: 3200
     sources:
       - trade_press
       - regulatory

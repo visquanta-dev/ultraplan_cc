@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getLaneWordCount, type Lane } from '../../../../lib/config/topics-config';
 
 export const maxDuration = 800;
 
 // ---------------------------------------------------------------------------
-// Cron trigger — spec §9-10, hardened in Phase 13
-// Receives Vercel Cron fires (Mon/Wed/Fri 06:00 CT), resolves lane,
-// discovers a topic, and dispatches the blog pipeline end-to-end.
+// Cron trigger — fires daily at 06:00 CT via Vercel Cron.
+// resolveLane() maps the current weekday to one of three editorial lanes.
+// Word counts come from config/topics.yaml (single source of truth) via
+// lib/config/topics-config.ts — do not hardcode them here.
 //
-// Full flow: cron → search → cluster → scrape → bundle → pipeline → PR
+// Cadence (7 posts/week):
+//   Mon, Tue, Thu, Fri, Sun → daily_seo
+//   Wed, Sat                → weekly_authority
+//   1st Fri of month        → monthly_anonymized_case (displaces Fri daily)
 // ---------------------------------------------------------------------------
-
-type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
-
-const WORD_COUNTS: Record<Lane, { min: number; max: number }> = {
-  daily_seo: { min: 1800, max: 2200 },
-  weekly_authority: { min: 2200, max: 2800 },
-  monthly_anonymized_case: { min: 2500, max: 3200 },
-};
 
 function resolveLane(): Lane {
   const now = new Date();
@@ -49,7 +46,7 @@ export async function GET(request: NextRequest) {
   }
 
   const lane = resolveLane();
-  const wordCount = WORD_COUNTS[lane];
+  const wordCount = getLaneWordCount(lane);
 
   console.log(`[cron] Triggered — lane: ${lane}, word count: ${wordCount.min}-${wordCount.max}`);
 

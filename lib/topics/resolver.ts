@@ -1,6 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import YAML from 'yaml';
 import { searchForLane, type SearchResult } from './search';
 import { clusterArticles, type TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
@@ -11,6 +8,7 @@ import type { Bundle, ScrapedInput } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
 import { crawlAllFeeds, type FeedArticle } from '../sources/crawl-index';
 import { filterByRelevance } from '../sources/relevance-filter';
+import { getLaneStrategy as loadLaneStrategy, type SourceStrategy } from '../config/topics-config';
 
 // ---------------------------------------------------------------------------
 // Slot resolver — spec §4
@@ -24,28 +22,10 @@ export interface ResolvedSlot {
   cluster: TopicCluster;
 }
 
-export type SourceStrategy = 'feed_first' | 'curated_first' | 'search_first';
+export type { SourceStrategy };
 
-interface TopicsConfig {
-  lanes?: Record<string, { source_strategy?: SourceStrategy }>;
-}
-
-let cachedTopicsConfig: TopicsConfig | null = null;
-
-function loadTopicsConfig(): TopicsConfig {
-  if (cachedTopicsConfig) return cachedTopicsConfig;
-  try {
-    const raw = fs.readFileSync(path.join(process.cwd(), 'config', 'topics.yaml'), 'utf-8');
-    cachedTopicsConfig = YAML.parse(raw) as TopicsConfig;
-  } catch {
-    cachedTopicsConfig = {};
-  }
-  return cachedTopicsConfig;
-}
-
-function getLaneStrategy(lane: string): SourceStrategy {
-  const cfg = loadTopicsConfig();
-  return cfg.lanes?.[lane]?.source_strategy ?? 'curated_first';
+function getLaneStrategy(lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case'): SourceStrategy {
+  return loadLaneStrategy(lane);
 }
 
 /**
