@@ -135,6 +135,40 @@ export async function checkTopicOverlap(
 }
 
 /**
+ * Check if a final post slug (derived from the headline, not the cluster)
+ * already exists in any published / drafted source. Used mid-pipeline after
+ * slug re-derivation to catch headline-slug collisions that cluster-level
+ * dedup missed — e.g. two different clusters ("voice-ai-dealerships" and
+ * "dealerships-dealership-2026") whose LLM-written headlines both reduce
+ * to "74-dealers-buying-voice-agents-2026" and would clobber each other
+ * on main if merged blindly.
+ */
+export async function findAvailableSlug(candidate: string): Promise<{
+  slug: string;
+  collided: boolean;
+  original: string;
+}> {
+  const existing = await loadExistingSlugs();
+  if (!existing.has(candidate)) {
+    return { slug: candidate, collided: false, original: candidate };
+  }
+  for (let i = 2; i <= 20; i++) {
+    const suffixed = `${candidate}-v${i}`;
+    if (!existing.has(suffixed)) {
+      return { slug: suffixed, collided: true, original: candidate };
+    }
+  }
+  // Ran out of sane numeric suffixes — fall back to a timestamp, which is
+  // guaranteed unique and keeps the pipeline from wedging on a pathological
+  // repeated-topic day.
+  return {
+    slug: `${candidate}-v${Date.now().toString(36)}`,
+    collided: true,
+    original: candidate,
+  };
+}
+
+/**
  * Filter an array of clusters, removing any that overlap with existing content.
  * Returns the filtered list and a log of what was removed.
  */

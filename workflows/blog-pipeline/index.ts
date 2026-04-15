@@ -13,6 +13,7 @@ import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRela
 import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
+import { findAvailableSlug } from '../../lib/topics/dedup';
 import { runPreflight } from '../../lib/preflight/validate-config';
 import { runSeoAeoGate } from '../../lib/gates/seo-aeo';
 import { callLLMStructured } from '../../lib/llm/openrouter';
@@ -121,6 +122,19 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // uses this from here on.
     slug = slugifyHeadline(outline.headline);
     console.log(`[pipeline]   post slug: ${slug} (was cluster slug: ${clusterSlug})`);
+
+    // Headline-slug collision guard. Cluster-level dedup runs before the
+    // outline exists, so it can't catch the case where two different clusters
+    // produce the same headline-derived slug. Without this, the pipeline
+    // silently overwrites an already-published post at the same URL. Uniquify
+    // by appending -v{N} if a collision is detected.
+    const resolved = await findAvailableSlug(slug);
+    if (resolved.collided) {
+      console.warn(
+        `[pipeline]   slug collision: "${resolved.original}" already exists — using "${resolved.slug}" instead`,
+      );
+      slug = resolved.slug;
+    }
 
     // Step 2: Draft paragraphs
     console.log('[pipeline] Step 2/7: Drafting paragraphs');
