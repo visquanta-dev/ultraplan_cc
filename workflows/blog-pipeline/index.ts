@@ -4,7 +4,7 @@ import { draftParagraphs } from '../../lib/stages/paragraph-draft';
 import { checkRephraseDistances } from '../../lib/stages/rephrase-distance';
 import { voiceTransform } from '../../lib/stages/voice-transform';
 import { runWithRetry } from '../../lib/gates/retry-loop';
-import { runImagePipeline } from '../../lib/image/pipeline';
+import { runImagePipeline, type ImagePipelineResult } from '../../lib/image/pipeline';
 import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
@@ -175,11 +175,18 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // Step 6: Generate images
     console.log('[pipeline] Step 6/7: Generating images');
     const sectionHeadings = outline.sections.map((s) => s.heading);
-    const imageResult = await runImagePipeline(slug, lane, outline.headline, sectionHeadings, {
-      onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
-      onImageResult: (type, idx, passed, attempt) =>
-        console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
-    }, finalParagraphs.map(p => p.text).join('\n\n'));
+    let imageResult: ImagePipelineResult;
+    try {
+      imageResult = await runImagePipeline(slug, lane, outline.headline, sectionHeadings, {
+        onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
+        onImageResult: (type, idx, passed, attempt) =>
+          console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
+      }, finalParagraphs.map(p => p.text).join('\n\n'));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[pipeline]   image pipeline threw (${msg}) — degrading to empty result, hero will fall back`);
+      imageResult = { paths: [], altTexts: {}, gateResults: [], allPassed: false, blockedImages: ['hero.webp'] };
+    }
 
     if (!imageResult.allPassed) {
       console.warn(`[pipeline]   ${imageResult.blockedImages.length} images blocked — continuing with available`);
@@ -232,10 +239,25 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       bodyBySection.set(sIdx, arr);
     }
 
-    // Internal links: scan rendered paragraphs and insert contextual links
+    // Internal links: scan rendered paragraphs and insert contextual links.
+    // One call over the flat paragraph list so the 8-link cap applies per-post,
+    // not per-section (which is how posts were shipping with 14+ internal links).
+    const flatTexts: string[] = [];
+    const flatSections: number[] = [];
     for (const [sIdx, paras] of bodyBySection.entries()) {
-      bodyBySection.set(sIdx, insertInternalLinks(paras));
+      for (const p of paras) {
+        flatTexts.push(p);
+        flatSections.push(sIdx);
+      }
     }
+    const linkedTexts = insertInternalLinks(flatTexts);
+    bodyBySection.clear();
+    linkedTexts.forEach((text, i) => {
+      const sIdx = flatSections[i];
+      const arr = bodyBySection.get(sIdx) ?? [];
+      arr.push(text);
+      bodyBySection.set(sIdx, arr);
+    });
 
     const sectionCount = outline.sections.length;
     const midPoint = Math.floor(sectionCount / 2);
