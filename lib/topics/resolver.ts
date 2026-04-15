@@ -1,4 +1,7 @@
-import { searchForLane } from './search';
+import fs from 'node:fs';
+import path from 'node:path';
+import YAML from 'yaml';
+import { searchForLane, type SearchResult } from './search';
 import { clusterArticles, type TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
 import { scoreCluster, type ClusterScore } from './keyword-scorer';
@@ -6,6 +9,8 @@ import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
+import { crawlAllFeeds, type FeedArticle } from '../sources/crawl-index';
+import { filterByRelevance } from '../sources/relevance-filter';
 
 // ---------------------------------------------------------------------------
 // Slot resolver — spec §4
@@ -17,6 +22,85 @@ import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToClus
 export interface ResolvedSlot {
   bundle: Bundle;
   cluster: TopicCluster;
+}
+
+export type SourceStrategy = 'feed_first' | 'curated_first' | 'search_first';
+
+interface TopicsConfig {
+  lanes?: Record<string, { source_strategy?: SourceStrategy }>;
+}
+
+let cachedTopicsConfig: TopicsConfig | null = null;
+
+function loadTopicsConfig(): TopicsConfig {
+  if (cachedTopicsConfig) return cachedTopicsConfig;
+  try {
+    const raw = fs.readFileSync(path.join(process.cwd(), 'config', 'topics.yaml'), 'utf-8');
+    cachedTopicsConfig = YAML.parse(raw) as TopicsConfig;
+  } catch {
+    cachedTopicsConfig = {};
+  }
+  return cachedTopicsConfig;
+}
+
+function getLaneStrategy(lane: string): SourceStrategy {
+  const cfg = loadTopicsConfig();
+  return cfg.lanes?.[lane]?.source_strategy ?? 'curated_first';
+}
+
+/**
+ * Convert a FeedArticle into a SearchResult-compatible shape for the
+ * existing clustering pipeline. Since the feed crawler only discovers URLs
+ * (no title or description), we synthesize a "title" from the URL slug —
+ * most vendor/trade blogs slugify the headline, so the slug tokens are a
+ * reasonable proxy for the real title on a clustering-weight budget.
+ */
+function feedArticleToSearchResult(article: FeedArticle): SearchResult {
+  let slugText = '';
+  try {
+    const parsed = new URL(article.url);
+    const lastSegment = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
+    slugText = lastSegment.replace(/[-_]+/g, ' ').replace(/\.(html?|php|aspx?)$/i, '');
+  } catch {
+    slugText = article.url;
+  }
+  return {
+    url: article.url,
+    title: slugText,
+    description: `${article.sourceName}: ${slugText}`,
+    publishedAt: null,
+  };
+}
+
+/**
+ * Feed discovery path — crawls every index in config/feed_sources.yaml via
+ * Firecrawl /v2/map (cheap), filters to article-looking URLs on allowlisted
+ * domains, runs the relevance filter to drop off-topic links, converts the
+ * survivors into SearchResult shape, and returns them for clustering.
+ *
+ * Returns an empty array on any failure so the caller can fall through to
+ * the next strategy (curated or search) without blowing up the pipeline.
+ */
+async function discoverFromFeeds(lane: string): Promise<SearchResult[]> {
+  try {
+    console.log(`[resolver] Feed discovery: crawling index pages...`);
+    const { articles, stats } = await crawlAllFeeds({ concurrency: 4 });
+    console.log(
+      `[resolver] Feed discovery stats: ${stats.sourcesSucceeded}/${stats.sourcesAttempted} sources, ` +
+      `${articles.length} articles found`,
+    );
+    if (articles.length === 0) return [];
+
+    const relevant = filterByRelevance(articles, lane);
+    console.log(`[resolver] Feed relevance filter: ${relevant.length} kept from ${articles.length}`);
+    if (relevant.length === 0) return [];
+
+    return relevant.map(feedArticleToSearchResult);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[resolver] Feed discovery failed (${msg.slice(0, 160)}) — falling through`);
+    return [];
+  }
 }
 
 /**
@@ -37,17 +121,46 @@ export async function resolveSlot(
     onScrape?: (total: number, succeeded: number) => void;
     /** Optional: force the resolver to use a specific curated bucket */
     curatedBucket?: string;
-    /** Default: true — try curated sources before Firecrawl keyword search */
+    /** Legacy: if false, skip the curated path. Overrides source_strategy. */
     preferCurated?: boolean;
+    /** Override config/topics.yaml source_strategy for this call. */
+    forcedStrategy?: SourceStrategy;
   } = {},
 ): Promise<ResolvedSlot> {
-  const preferCurated = options.preferCurated !== false;
+  // Resolve strategy: explicit override > legacy preferCurated=false > topics.yaml
+  let strategy: SourceStrategy;
+  if (options.forcedStrategy) {
+    strategy = options.forcedStrategy;
+  } else if (options.preferCurated === false) {
+    strategy = 'search_first';
+  } else {
+    strategy = getLaneStrategy(lane);
+  }
+  console.log(`[resolver] Source strategy: ${strategy} (lane: ${lane})`);
 
-  // Step 0: Try curated sources path first (if enabled and buckets exist).
-  // Iterates through all buckets for the lane and picks the first one that
-  // hasn't been shipped recently (per dedup). Falls back to Firecrawl search
-  // if every curated bucket is a duplicate or none exist.
-  if (preferCurated) {
+  // Buffer for whichever strategy populates it first. Clustering (Step 2+)
+  // runs against this list regardless of where it came from.
+  let searchResults: SearchResult[] = [];
+
+  // ------------------------------------------------------------------
+  // Strategy A: feed_first — crawl feed_sources.yaml indices first
+  // ------------------------------------------------------------------
+  if (strategy === 'feed_first') {
+    searchResults = await discoverFromFeeds(lane);
+    if (searchResults.length > 0) {
+      console.log(`[resolver] Feed path: ${searchResults.length} articles discovered`);
+      options.onSearch?.(searchResults.length);
+    } else {
+      console.log('[resolver] Feed path: empty — falling through to curated');
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Strategy B: curated_first (or feed_first fallback) — curated_sources.yaml
+  // ------------------------------------------------------------------
+  const tryCurated = searchResults.length === 0
+    && (strategy === 'curated_first' || strategy === 'feed_first');
+  if (tryCurated) {
     const allBuckets = loadCuratedSources();
     const excluded = new Set<string>();
     let picked = null;
@@ -57,46 +170,46 @@ export async function resolveSlot(
         excludeTopics: excluded,
       });
       if (!candidate) break;
-      // Run the candidate through dedup
       const tempCluster = bucketToCluster(candidate);
       const { filtered } = await filterDuplicateClusters([tempCluster]);
       if (filtered.length > 0) {
         picked = candidate;
         break;
       }
-      console.log(
-        `[resolver] Curated bucket "${candidate.topic}" already shipped — trying next`,
-      );
+      console.log(`[resolver] Curated bucket "${candidate.topic}" already shipped — trying next`);
       excluded.add(candidate.topic);
-      // If the user explicitly requested a topic, don't rotate — bail out
       if (options.curatedBucket) break;
     }
 
     if (picked) {
-      console.log(`[resolver] Using curated bucket "${picked.topic}" — skipping Firecrawl keyword search`);
+      console.log(`[resolver] Using curated bucket "${picked.topic}"`);
       options.onCluster?.(bucketToCluster(picked));
       return resolveFromCurated(picked, lane, { onScrape: options.onScrape });
     }
 
     if (allBuckets.size > 0) {
-      console.log(`[resolver] All curated buckets for lane "${lane}" are duplicates — falling back to Firecrawl keyword search`);
+      console.log(`[resolver] All curated buckets for lane "${lane}" are duplicates — falling back to search`);
     } else {
-      console.log(`[resolver] No curated buckets defined — falling back to Firecrawl keyword search`);
+      console.log(`[resolver] No curated buckets defined — falling back to search`);
     }
   }
 
-  // Step 1: Search
-  console.log(`[resolver] Searching for ${lane} topics...`);
-  const searchResults = await searchForLane(lane, { limit: 20 });
-  options.onSearch?.(searchResults.length);
+  // ------------------------------------------------------------------
+  // Strategy C: search — Firecrawl keyword search (always the final fallback)
+  // ------------------------------------------------------------------
+  if (searchResults.length === 0) {
+    console.log(`[resolver] Searching for ${lane} topics via Firecrawl...`);
+    searchResults = await searchForLane(lane, { limit: 20 });
+    options.onSearch?.(searchResults.length);
+  }
 
   if (searchResults.length === 0) {
     throw new Error(
-      `[resolver] No articles found for lane "${lane}". Check FIRECRAWL_API_KEY and source allowlist.`,
+      `[resolver] No articles found for lane "${lane}" via any strategy. Check FIRECRAWL_API_KEY and source allowlist.`,
     );
   }
 
-  console.log(`[resolver] Found ${searchResults.length} articles`);
+  console.log(`[resolver] Proceeding to clustering with ${searchResults.length} articles`);
 
   // Step 2: Cluster
   const rawClusters = clusterArticles(searchResults, { maxClusters: 5 });
