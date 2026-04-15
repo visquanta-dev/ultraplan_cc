@@ -194,6 +194,24 @@ async function generateAndValidate(
     const gateResult = await runImageGates(image, style, imageType);
     lastGateResult = gateResult;
 
+    if (!gateResult.passed) {
+      // Build a concise reason string from whichever gate failed. Previously
+      // we only logged PASS/FAIL which made image retries impossible to
+      // diagnose from the log alone — 3 attempts with "FAIL" gives you
+      // nothing to act on.
+      const reasons: string[] = [];
+      if (!gateResult.sanityCheck.passed) {
+        reasons.push(`sanity: ${gateResult.sanityCheck.reason ?? 'unknown'}`);
+      }
+      if (!gateResult.bannedContent.passed) {
+        reasons.push(`banned: [${gateResult.bannedContent.violations.join(', ')}]`);
+      }
+      if (!gateResult.brandFit.passed) {
+        reasons.push(`brand-fit: ${gateResult.brandFit.score}/10 — ${gateResult.brandFit.reasons.slice(0, 2).join('; ')}`);
+      }
+      console.log(`[image]   ${imageType} ${imageIndex} attempt ${attempt} failed: ${reasons.join(' | ')}`);
+    }
+
     if (gateResult.passed) {
       // Detect the actual image format from the raw bytes and save with
       // the matching extension. Do NOT trust the hardcoded extension the
