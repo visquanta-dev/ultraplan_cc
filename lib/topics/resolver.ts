@@ -6,7 +6,7 @@ import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
-import { crawlAllFeeds, type FeedArticle } from '../sources/crawl-index';
+import { crawlAllFeeds, getFreshnessDaysForUrl, type FeedArticle } from '../sources/crawl-index';
 import { filterByRelevance } from '../sources/relevance-filter';
 import { getLaneStrategy as loadLaneStrategy, type SourceStrategy } from '../config/topics-config';
 
@@ -261,24 +261,38 @@ export async function resolveSlot(
     );
   }
 
-  // Step 3b: Source-freshness filter. Drop any scraped article whose
-  // publishedAt is older than FRESHNESS_CUTOFF_MONTHS, so a 2021 Cars.com
-  // survey can never leak into a 2026 daily_seo post again. Articles with
-  // no publishedAt metadata are kept (we can't filter on unknown data).
-  // If every article is stale, throw — the bundle is unsalvageable for
-  // a current-events lane.
-  const FRESHNESS_CUTOFF_MONTHS = lane === 'daily_seo' ? 18 : 36;
-  const cutoffMs = Date.now() - FRESHNESS_CUTOFF_MONTHS * 30 * 24 * 60 * 60 * 1000;
+  // Step 3b: Source-freshness filter.
+  //
+  // Two cutoffs stacked: a lane-level ceiling (18 months for daily_seo,
+  // 36 for weekly/monthly — no current-events post should cite a 2-year-old
+  // article), AND a per-source override from feed_sources.yaml freshness_days
+  // (30/45/60 days). When a URL belongs to a feed source, we use
+  // min(lane_cutoff, source_cutoff). This makes the feed sources tighter
+  // than the lane default instead of looser — a CBT News article must be
+  // less than 30 days old even though the lane would have allowed 18 months.
+  //
+  // Articles with no publishedAt metadata are kept (we can't filter on
+  // unknown data). If every article is stale, throw.
+  const LANE_CUTOFF_DAYS = lane === 'daily_seo' ? 18 * 30 : 36 * 30;
+  const now = Date.now();
   const freshResults = scrapeResults.filter((r) => {
     if (!r.article) return false;
     const pub = r.article.publishedAt;
     if (!pub) return true; // unknown date → keep, rather than drop
     const pubMs = Date.parse(pub);
     if (Number.isNaN(pubMs)) return true;
+
+    const sourceCutoff = getFreshnessDaysForUrl(r.url);
+    const effectiveDays = sourceCutoff != null
+      ? Math.min(LANE_CUTOFF_DAYS, sourceCutoff)
+      : LANE_CUTOFF_DAYS;
+    const cutoffMs = now - effectiveDays * 24 * 60 * 60 * 1000;
+
     const isFresh = pubMs >= cutoffMs;
     if (!isFresh) {
+      const ageDays = Math.round((now - pubMs) / (24 * 60 * 60 * 1000));
       console.log(
-        `[resolver] Dropping stale source: ${r.url} (published ${pub}, cutoff ${FRESHNESS_CUTOFF_MONTHS} months)`,
+        `[resolver] Dropping stale source: ${r.url} (age ${ageDays}d, cutoff ${effectiveDays}d${sourceCutoff != null ? ' from feed_sources' : ''})`,
       );
     }
     return isFresh;
@@ -287,7 +301,7 @@ export async function resolveSlot(
   console.log(`[resolver] After freshness filter: ${freshCount}/${succeeded} sources kept`);
   if (freshCount === 0) {
     throw new Error(
-      `[resolver] Every source in cluster "${winner.label}" is older than ${FRESHNESS_CUTOFF_MONTHS} months. Bundle unusable.`,
+      `[resolver] Every source in cluster "${winner.label}" failed the freshness filter (lane cutoff ${LANE_CUTOFF_DAYS}d + per-source overrides). Bundle unusable.`,
     );
   }
 

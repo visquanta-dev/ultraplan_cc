@@ -50,6 +50,7 @@ interface FeedSourcesConfig {
 }
 
 let cachedSources: FeedSource[] | null = null;
+let cachedHostnameToFreshness: Map<string, number> | null = null;
 
 /**
  * Load and parse config/feed_sources.yaml into the internal shape. Cached
@@ -70,6 +71,42 @@ export function loadFeedSources(): FeedSource[] {
     freshnessDays: value.freshness_days,
   }));
   return cachedSources;
+}
+
+/**
+ * Look up the per-source freshness_days window for a given article URL by
+ * matching the URL's hostname against the index_urls in feed_sources.yaml.
+ * Returns null if the URL doesn't belong to any feed source — callers
+ * should fall back to the lane-level default in that case.
+ *
+ * The match uses apex-domain comparison (www. stripped on both sides),
+ * so https://www.callrevu.com/blog/foo matches a source whose index_urls
+ * include https://www.callrevu.com/blog/.
+ */
+export function getFreshnessDaysForUrl(url: string): number | null {
+  if (!cachedHostnameToFreshness) {
+    cachedHostnameToFreshness = new Map();
+    for (const source of loadFeedSources()) {
+      for (const indexUrl of source.indexUrls) {
+        try {
+          const host = new URL(indexUrl).hostname.replace(/^www\./, '');
+          // First definition wins if two sources share a hostname (shouldn't
+          // happen in practice, but be deterministic anyway).
+          if (!cachedHostnameToFreshness.has(host)) {
+            cachedHostnameToFreshness.set(host, source.freshnessDays);
+          }
+        } catch {
+          // Skip malformed index URLs silently
+        }
+      }
+    }
+  }
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return cachedHostnameToFreshness.get(host) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
