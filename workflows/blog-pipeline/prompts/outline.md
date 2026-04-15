@@ -56,21 +56,34 @@ supports them):**
 5. BDC capacity for inbound lead follow-up
 6. Lead attribution, lead aging, and funnel leakage
 
-**Topics to AVOID or reframe:**
-- Pure "missed phone call" pain points. If the bundle is about phone
-  calls, reframe the angle to "dealers who answer fast win leads" and
-  bridge to inbound lead response time — the underlying problem is
-  the same (slow response), but the channel VisQuanta serves is SMS,
-  not voice.
-- Generic "voice AI" or "voice agent" hype pieces where the focus is
-  the technology rather than the inbound lead response gap.
-- Topics that would point the reader at a product VisQuanta does not
-  sell (phone system vendors, call center software, IVR tuning).
+**Bundle-aware angle selection:**
 
-Even when a post discusses voice agents or call volume as trade press
-coverage, the headline and framing should connect those stories back
-to inbound lead response — that's the problem the reader will pay to
-solve with VisQuanta.
+The trade press bundle will often cover voice AI, missed calls, or
+phone automation as the main story. You have two valid options:
+
+1. **Reframe (preferred when the bundle supports it).** If the bundle
+   has any quote that mentions response time, SMS, web leads, lead
+   aging, or follow-up speed, build the angle around that and let
+   voice/call coverage be secondary color. This is ideal.
+
+2. **Honest coverage (fallback when the bundle is voice-dominant).**
+   If every quote is phone-call-centric and there is no supporting
+   data point for an SMS reframe, write the honest voice/call story.
+   Do NOT invent bridge stats. Do NOT stretch quotes to say something
+   they do not say. The mid-article CTA (inserted automatically) will
+   carry the Speed to Lead product bridge regardless of body topic —
+   trust the CTA to do its job and write the post the sources actually
+   support.
+
+**Never do:**
+- Invent statistics to force an SMS angle onto voice-centric quotes.
+- Imply that VisQuanta sells phone systems, voice agents for inbound
+  calls, IVR software, or call answering services.
+- Point the reader at products VisQuanta does not sell.
+
+The principle: brand alignment at the CTA level is non-negotiable;
+brand alignment at the body level is preferred but must never come
+at the cost of honest sourcing.
 
 ## Date awareness
 

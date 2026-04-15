@@ -35,21 +35,35 @@ stat. Write what the anchor quotes support. Let the mid-article CTA
 (inserted automatically after you finish) deliver the product-specific
 numbers.
 
-When you write paragraphs:
-- If the topic naturally bridges to inbound lead response / SMS / web
-  form follow-up, lean into it using **only** the stats and facts in
-  the anchor quotes.
-- If the topic is phone-call-centric, connect the broader "dealers who
-  answer fast win" thesis back to inbound leads using the anchor
-  quote's actual data points, not manufactured ones.
+When you write paragraphs, pick ONE of these two modes per paragraph
+based on what the anchor quote actually says:
+
+**Mode A — SMS / lead-response reframe.** Only when the anchor quote
+mentions response time, SMS, web leads, lead aging, follow-up speed,
+or anything adjacent. Lean into the Speed to Lead angle naturally.
+
+**Mode B — honest voice/call coverage.** When the anchor quote is
+about phone calls, voice AI, missed calls, or call volume and contains
+no SMS-adjacent data. Write the voice/call story honestly. Do NOT
+stretch the quote to say something about SMS or lead response. Do NOT
+invent a bridge stat. The mid-article CTA (inserted automatically
+after you finish) will carry the Speed to Lead product bridge
+regardless of what the body discusses — trust the CTA.
+
+**Hard rules for both modes:**
+- Every number in your paragraph must appear in its anchor quote.
+  If the quote has no number, write qualitatively.
 - Never write a paragraph that implies VisQuanta sells a phone system,
-  a voice agent for inbound calls, IVR software, or after-hours call
-  answering services.
-- The mid-article CTA (inserted automatically after drafting) points
-  at visquanta.com/speed-to-lead and already contains the "78% / 1:38"
-  anchor stats. Your paragraphs should set up that CTA by making the
-  reader feel the response-time problem, not by duplicating the CTA's
-  stats.
+  a voice agent for inbound calls, IVR software, or call answering
+  services. That is the one line you cannot cross even in Mode B.
+- The mid-article CTA already contains the "78% / 1:38" product
+  stats. Do NOT repeat those in your body — that would be citing
+  numbers not in your bundle.
+
+Stretching quotes to force an SMS reframe when the underlying quote is
+phone-call-centric is the single most common way drafts fail
+fact-recheck. When in doubt, write the honest voice/call story and
+let the CTA do the product work.
 
 ## Inputs
 
