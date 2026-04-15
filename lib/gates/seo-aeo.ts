@@ -152,7 +152,11 @@ const checks: Check[] = [
   (input) => {
     const slug = input.frontmatter.slug;
     const tooLong = slug.length > 70;
-    const hasRepeats = /([a-z]+)-\1/.test(slug);
+    // Require a 3+ letter repeated word between dashes, anchored on both
+    // sides so single-letter transitions across dashes ("vs-sales" → s-s)
+    // don't false-positive. Matches truly duplicated words like
+    // "sales-sales" or "dealer-dealers" without eating "vs-sales".
+    const hasRepeats = /(?:^|-)([a-z]{3,})-\1(?:-|$)/.test(slug);
     const passed = !tooLong && !hasRepeats && slug === slug.toLowerCase();
     return {
       id: 'seo/slug-quality',
