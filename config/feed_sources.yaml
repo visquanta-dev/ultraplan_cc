@@ -28,7 +28,7 @@ sources:
       - https://www.cbtnews.com/category/fixed-ops/
       - https://www.cbtnews.com/category/auto-news/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   digitaldealer:
     name: "Digital Dealer"
@@ -36,7 +36,7 @@ sources:
     index_urls:
       - https://digitaldealer.com/news/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   autoremarketing:
     name: "Auto Remarketing"
@@ -45,7 +45,7 @@ sources:
       - https://www.autoremarketing.com/ar/analysis/
       - https://www.autoremarketing.com/ar/technology/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   autonews:
     name: "Automotive News"
@@ -55,7 +55,7 @@ sources:
       - https://www.autonews.com/retail/service-and-parts/
       - https://www.autonews.com/opinion/guest-commentary/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   wardsauto:
     name: "Wards Auto"
@@ -63,7 +63,7 @@ sources:
     index_urls:
       - https://www.wardsauto.com/news/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   thedrive:
     name: "The Drive"
@@ -71,7 +71,7 @@ sources:
     index_urls:
       - https://www.thedrive.com/news/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   autosuccessonline:
     name: "AutoSuccess Online"
@@ -79,7 +79,7 @@ sources:
     index_urls:
       - https://www.autosuccessonline.com/
     max_articles_per_crawl: 8
-    freshness_days: 90
+    freshness_days: 365
 
   fi_magazine:
     name: "F&I Magazine"
@@ -135,7 +135,7 @@ sources:
     index_urls:
       - https://news.dealershipguy.com/
     max_articles_per_crawl: 10
-    freshness_days: 90
+    freshness_days: 365
 
   fullpath:
     name: "Fullpath Blog"

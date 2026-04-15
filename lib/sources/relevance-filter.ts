@@ -104,9 +104,9 @@ export function filterByRelevance(
   options: { topN?: number; extraKeywords?: string[] } = {},
 ): FeedArticle[] {
   const defaultTopN: Record<string, number> = {
-    daily_seo: 8,
-    weekly_authority: 12,
-    monthly_anonymized_case: 6,
+    daily_seo: 12,
+    weekly_authority: 16,
+    monthly_anonymized_case: 8,
   };
   const topN = options.topN ?? defaultTopN[lane] ?? 8;
 
