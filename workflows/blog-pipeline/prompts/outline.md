@@ -38,8 +38,14 @@ disconnected and the reader will bounce.
 - AI qualifies the lead and books a test drive or appointment via SMS
 - Captures 40%+ of after-hours leads that would otherwise go cold
 
-**Core stat to anchor posts to:** 78% of car buyers choose the first
-dealer to respond. Every minute past 60 seconds is lost conversion.
+**Core framing stat (BACKGROUND ONLY — NOT for inclusion in the
+outline unless the bundle quotes also contain it):** 78% of car
+buyers choose the first dealer to respond, against an industry
+average response time of 1 hour 38 minutes. Use this to shape the
+angle of the outline, NOT as a stat to put in section headings or
+intent descriptions. Any number that lands in the finished draft
+must come from an anchor quote in the bundle — fact-recheck will
+reject anything else.
 
 **Topic priorities (pick these pain points first when the bundle
 supports them):**
