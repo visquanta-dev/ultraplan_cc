@@ -1,0 +1,234 @@
+# ============================================================================
+# UltraPlan — feed sources
+#
+# Root blog/news INDEX URLs per publication. The pipeline crawls these index
+# pages cheaply (via Firecrawl /v2/map) to discover fresh article URLs, then
+# only full-scrapes the 4-6 articles that survive relevance filtering and
+# clustering. This is a big cost win over maintaining hardcoded article
+# URLs in curated_sources.yaml (which go stale and "burn" per dedup).
+#
+# Every source listed here MUST have its apex domain in sources.yaml
+# trade_press.domains, or the allowlist will refuse the URLs silently.
+#
+# Tier 1 = established trade press.
+# Tier 2 = major vendor / analyst blogs with real industry analysis.
+# ============================================================================
+
+version: 1
+
+sources:
+  # ---------------------------------------------------------------------------
+  # TIER 1 — trade press
+  # ---------------------------------------------------------------------------
+  cbtnews:
+    name: "CBT News"
+    tier: 1
+    index_urls:
+      - https://www.cbtnews.com/category/dealership/
+      - https://www.cbtnews.com/category/fixed-ops/
+      - https://www.cbtnews.com/category/auto-news/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  digitaldealer:
+    name: "Digital Dealer"
+    tier: 1
+    index_urls:
+      - https://digitaldealer.com/news/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  autoremarketing:
+    name: "Auto Remarketing"
+    tier: 1
+    index_urls:
+      - https://www.autoremarketing.com/ar/analysis/
+      - https://www.autoremarketing.com/ar/technology/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  autonews:
+    name: "Automotive News"
+    tier: 1
+    index_urls:
+      - https://www.autonews.com/retail/
+      - https://www.autonews.com/retail/service-and-parts/
+      - https://www.autonews.com/opinion/guest-commentary/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  wardsauto:
+    name: "Wards Auto"
+    tier: 1
+    index_urls:
+      - https://www.wardsauto.com/news/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  thedrive:
+    name: "The Drive"
+    tier: 1
+    index_urls:
+      - https://www.thedrive.com/news/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  autosuccessonline:
+    name: "AutoSuccess Online"
+    tier: 1
+    index_urls:
+      - https://www.autosuccessonline.com/
+    max_articles_per_crawl: 8
+    freshness_days: 30
+
+  fi_magazine:
+    name: "F&I Magazine"
+    tier: 1
+    index_urls:
+      - https://www.f-i-magazine.com/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  # ---------------------------------------------------------------------------
+  # TIER 1 — regulatory / industry bodies
+  # NOTE: these live under sources.yaml regulatory.domains, not trade_press.
+  # The allowlist unions both categories, so index crawling works either way.
+  # ---------------------------------------------------------------------------
+  nada:
+    name: "NADA"
+    tier: 1
+    index_urls:
+      - https://www.nada.org/nada-show/nada-headlines/
+    max_articles_per_crawl: 5
+    freshness_days: 60
+
+  niada:
+    name: "NIADA"
+    tier: 1
+    index_urls:
+      - https://www.niada.com/
+    max_articles_per_crawl: 5
+    freshness_days: 60
+
+  # ---------------------------------------------------------------------------
+  # TIER 2 — vendor/analyst blogs (added to sources.yaml allowlist 2026-04-15)
+  # ---------------------------------------------------------------------------
+  coxautoinc:
+    name: "Cox Automotive Insights"
+    tier: 2
+    index_urls:
+      - https://www.coxautoinc.com/insights-hub/
+    max_articles_per_crawl: 10
+    freshness_days: 45
+
+  cdkglobal:
+    name: "CDK Global Insights"
+    tier: 2
+    index_urls:
+      - https://www.cdkglobal.com/insights/
+    max_articles_per_crawl: 10
+    freshness_days: 45
+
+  dealershipguy:
+    name: "DealershipGuy Newsletter"
+    tier: 2
+    index_urls:
+      - https://news.dealershipguy.com/
+    max_articles_per_crawl: 10
+    freshness_days: 30
+
+  fullpath:
+    name: "Fullpath Blog"
+    tier: 2
+    index_urls:
+      - https://www.fullpath.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  callrevu:
+    name: "CallRevu Blog"
+    tier: 2
+    index_urls:
+      - https://www.callrevu.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  stellaautomotive:
+    name: "STELLA Automotive AI Blog"
+    tier: 2
+    index_urls:
+      - https://stellaautomotive.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  carscommerce:
+    name: "Cars Commerce Insights"
+    tier: 2
+    index_urls:
+      - https://www.carscommerce.inc/insights/
+    max_articles_per_crawl: 5
+    freshness_days: 45
+
+  catalystiq:
+    name: "Catalyst IQ Blog"
+    tier: 2
+    index_urls:
+      - https://www.catalystiq.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  dealerclick:
+    name: "DealerClick Blog"
+    tier: 2
+    index_urls:
+      - https://dealerclick.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  chriscollinsinc:
+    name: "Chris Collins Inc (Fixed Ops)"
+    tier: 2
+    index_urls:
+      - https://chriscollinsinc.com/sdr/
+    max_articles_per_crawl: 5
+    freshness_days: 60
+
+  fladco:
+    name: "FLADCO / Dealer One Stop"
+    tier: 2
+    index_urls:
+      - https://fladco.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  widewail:
+    name: "Widewail Blog (Reputation)"
+    tier: 2
+    index_urls:
+      - https://www.widewail.com/blog
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  numa:
+    name: "Numa Blog (AI BDC)"
+    tier: 2
+    index_urls:
+      - https://www.numa.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  bdcai:
+    name: "BDC.AI Research"
+    tier: 2
+    index_urls:
+      - https://www.bdc.ai/research
+    max_articles_per_crawl: 8
+    freshness_days: 45
+
+  flai:
+    name: "Flai Blog (AI BDC)"
+    tier: 2
+    index_urls:
+      - https://www.useflai.com/blog/
+    max_articles_per_crawl: 5
+    freshness_days: 45

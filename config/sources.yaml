@@ -25,6 +25,22 @@ trade_press:
     - digitaldealer.com
     - autodealertodaymagazine.com
     - thedrive.com
+    # Tier-2 vendor/analyst blogs (added for feed_sources.yaml index crawling)
+    - coxautoinc.com
+    - cdkglobal.com
+    - dealershipguy.com
+    - fullpath.com
+    - callrevu.com
+    - stellaautomotive.com
+    - carscommerce.inc
+    - catalystiq.com
+    - dealerclick.com
+    - chriscollinsinc.com
+    - fladco.com
+    - widewail.com
+    - numa.com
+    - bdc.ai
+    - useflai.com
   notes: |
     Primary domains for the daily_seo trend_hijack strategy. These are the
     publications dealer principals actually read. Expand with editorial
