@@ -128,52 +128,60 @@ const ATTRIBUTION_PHRASES = [
 
 /**
  * Insert external source links into paragraphs.
- * Each unique source URL is linked only ONCE (first mention).
- * Subsequent mentions of the same source just use the name, no link.
- * Attribution phrasing is varied to avoid repetition.
+ *
+ * NEW behavior (replaced the broken legacy marker-based version):
+ *
+ * Each paragraph carries a `source_id` in its metadata (guaranteed by the
+ * paragraph-draft stage's JSON schema). For every paragraph whose source
+ * hasn't been linked yet, append a natural attribution link at the END of
+ * the paragraph text ("per Autonews", "according to CBT News", etc.). Each
+ * unique source URL is linked only ONCE per post — subsequent paragraphs
+ * citing the same source get no link (cleaner prose, avoids spam). The
+ * whole post is capped at MAX_EXTERNAL_LINKS_PER_POST total.
+ *
+ * Why the rewrite: the old implementation scanned text for `(src_NNN)`
+ * inline markers that neither the drafter nor the voice transform ever
+ * produces, so it was a silent no-op — every post shipped with zero
+ * external links despite having a bundle of real source URLs to cite.
+ * The new implementation uses the source_id metadata that's already on
+ * every paragraph, so it works regardless of whether the drafter ever
+ * writes inline attributions.
  */
-export function insertExternalLinks<T extends { text: string }>(
-  paragraphs: T[],
-  bundle: Bundle,
-): T[] {
+export function insertExternalLinks<
+  T extends { text: string; source_id?: string },
+>(paragraphs: T[], bundle: Bundle): T[] {
   const sourceMap = buildSourceMap(bundle);
-  const linkedUrls = new Set<string>(); // track which URLs have been linked
+  const linkedUrls = new Set<string>();
   let phraseIdx = 0;
+  let linksAdded = 0;
 
   return paragraphs.map((para) => {
-    const srcPattern = /\(src_(\d+)\)/g;
-    let match: RegExpExecArray | null;
-    let newText = para.text;
-    const replacements: Array<{ marker: string; replacement: string }> = [];
+    // First: strip any legacy markers that may still be in old drafts
+    let newText = para.text.replace(/\s*\(src_\d+\)/g, '');
 
-    while ((match = srcPattern.exec(para.text)) !== null) {
-      const srcId = `src_${match[1]}`;
-      const source = sourceMap.get(srcId);
-      if (!source) continue;
-
-      if (!linkedUrls.has(source.url)) {
-        // First time seeing this source - create a linked attribution
-        const phrase = ATTRIBUTION_PHRASES[phraseIdx % ATTRIBUTION_PHRASES.length];
-        replacements.push({
-          marker: match[0],
-          replacement: `, ${phrase(source.siteName, source.url)}`,
-        });
-        linkedUrls.add(source.url);
-        phraseIdx++;
-      } else {
-        // Already linked this source - just strip the marker
-        replacements.push({
-          marker: match[0],
-          replacement: '',
-        });
-      }
+    // Skip if no source_id metadata or cap already hit
+    if (!para.source_id || linksAdded >= MAX_EXTERNAL_LINKS_PER_POST) {
+      return { ...para, text: newText };
     }
 
-    for (const rep of replacements) {
-      newText = newText.replace(rep.marker, rep.replacement);
+    const source = sourceMap.get(para.source_id);
+    if (!source || linkedUrls.has(source.url)) {
+      return { ...para, text: newText };
     }
-    // Strip any remaining unresolved markers
-    newText = newText.replace(/\s*\(src_\d+\)/g, '');
+
+    // Append a natural attribution link at the end of the paragraph.
+    // Use varied phrases to avoid "according to X" repetition across
+    // paragraphs. The trailing-period detection keeps punctuation clean.
+    const phrase = ATTRIBUTION_PHRASES[phraseIdx % ATTRIBUTION_PHRASES.length];
+    phraseIdx++;
+    const attribution = phrase(source.siteName, source.url);
+
+    // Drop any trailing period, append attribution phrase in parens, replace period
+    const trimmed = newText.replace(/\.\s*$/, '');
+    newText = `${trimmed} (${attribution}).`;
+
+    linkedUrls.add(source.url);
+    linksAdded++;
 
     return { ...para, text: newText };
   });

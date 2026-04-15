@@ -212,30 +212,37 @@ const checks: Check[] = [
   (input) => {
     const body = extractBody(input.markdown);
     const wc = countWords(body);
-    const passed = wc >= 1500 && wc <= 2800;
+    // Target 1500-3000 — tighter would be 1500-2500 but the enrichment
+    // stage (TL;DR + tables + FAQ + Related Reading) adds ~200-400 words
+    // on top of the drafter's target, so 3000 is realistic.
+    const passed = wc >= 1500 && wc <= 3000;
     return {
       id: 'seo/word-count',
       category: 'seo',
       weight: 1,
-      score: passed ? 1 : wc >= 1200 && wc <= 3200 ? 0.5 : 0,
+      score: passed ? 1 : wc >= 1200 && wc <= 3500 ? 0.5 : 0,
       passed,
-      reason: `${wc} words (target 1500-2800)`,
+      reason: `${wc} words (target 1500-3000)`,
     };
   },
 
-  // -------------------- SEO 7: internal links 3-8 --------------------
+  // -------------------- SEO 7: internal links (body + structural) --------------------
   (input) => {
     const body = extractBody(input.markdown);
     const internal = [...body.matchAll(/\]\(https?:\/\/[^)]*visquanta\.com[^)]*\)/g)];
     const count = internal.length;
-    const passed = count >= 3 && count <= 8;
+    // Target 3-12 — the inline auto-linker caps at 8, but Related Reading
+    // adds 2-3, mid-article CTA adds 1, and FAQ/body might include 1-2
+    // more via keyword matching. Hard ceiling at 15 flags excessive
+    // linking; 3-12 is the healthy range.
+    const passed = count >= 3 && count <= 12;
     return {
       id: 'seo/internal-link-count',
       category: 'seo',
       weight: 1,
-      score: passed ? 1 : count >= 2 && count <= 12 ? 0.5 : 0,
+      score: passed ? 1 : count >= 2 && count <= 18 ? 0.5 : 0,
       passed,
-      reason: `${count} internal links (target 3-8)`,
+      reason: `${count} internal links (target 3-12)`,
     };
   },
 
