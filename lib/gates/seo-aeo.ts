@@ -549,23 +549,38 @@ const checks: Check[] = [
   (input) => {
     const body = extractBody(input.markdown);
     const currentYear = new Date().getFullYear();
-    // Count references to years 2020-currentYear-3 (these are "old" for a current post)
+    // Count distinct stale years (2019 through currentYear - 3). One
+    // historical reference is legitimate framing ("since 2022, dealers
+    // have..."); three or more distinct old years means the post is
+    // rooted in outdated data and should be rewritten. The old rule
+    // treated any stale reference as a failure, which punished honest
+    // historical comparison writing.
     const staleYears: number[] = [];
     for (let y = 2019; y < currentYear - 2; y++) {
       const re = new RegExp(`\\b${y}\\b`, 'g');
       const matches = (body.match(re) || []).length;
       if (matches > 0) staleYears.push(y);
     }
-    const passed = staleYears.length === 0;
+    const passed = staleYears.length <= 1;
     return {
       id: 'aeo/no-stale-years',
       category: 'aeo',
       weight: 1,
-      score: passed ? 1 : staleYears.length <= 1 ? 0.5 : 0,
+      score:
+        staleYears.length === 0
+          ? 1
+          : staleYears.length === 1
+          ? 1 // one historical reference is healthy context
+          : staleYears.length === 2
+          ? 0.5
+          : 0,
       passed,
-      reason: passed
-        ? 'no stale year references'
-        : `references to stale years: ${staleYears.join(', ')}`,
+      reason:
+        staleYears.length === 0
+          ? 'no stale year references'
+          : staleYears.length === 1
+          ? `one stale year reference (${staleYears[0]}) — treated as historical context`
+          : `references to stale years: ${staleYears.join(', ')}`,
     };
   },
 
