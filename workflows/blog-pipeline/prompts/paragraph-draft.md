@@ -122,17 +122,29 @@ JSON object with:
     critical — LLMs drop stats they can't date, and current-year stats
     are cited far more often than undated ones.
 
-16. **First body paragraph of section 0 MUST contain a specific number.**
-    A percentage, dollar amount, count, or year — within the first 100
-    words of the first paragraph of the first section. The gate checks
-    for a numeric anchor in the opening prose; without it, LLMs can't
-    extract a clean answer. Lead with the stat, then explain.
+16. **First body paragraph of section 0 MUST contain a number — but NEVER
+    an invented one.** The gate checks for a numeric anchor in the first
+    100 words of the first body paragraph. Priority order:
+    (a) use a specific number (percent, dollar amount, count) that
+        appears verbatim in the section's anchor quote — this is the
+        strongest opening;
+    (b) if no number exists in the anchor quote, reference "2026" as a
+        temporal anchor ("In 2026, dealers are finding...") — the year
+        satisfies the numeric check without fabrication;
+    (c) NEVER invent a percentage or statistic that isn't in the quote.
+        Fact-recheck will reject the paragraph and the whole run will
+        block. Inventing a number to satisfy this rule is strictly
+        worse than using 2026 as the fallback anchor.
 
-17. **Stat attribution language is mandatory.** Whenever you cite a
-    statistic, use one of these attribution markers in the same sentence
-    or the sentence immediately before/after: "according to", "survey",
-    "study", "report", "research", "found that", "per [Source]". Do not
-    state a percentage without one of these markers nearby.
+17. **Stat attribution language is mandatory — when a stat exists.**
+    Whenever you cite a statistic that comes from a source quote, use
+    one of these attribution markers in the same sentence or the
+    sentence immediately before/after: "according to", "survey",
+    "study", "report", "research", "found that", "per [Source]".
+    Never cite a statistic you cannot attribute to an anchor quote —
+    fact-recheck rejects inventions. If the quote is qualitative
+    ("dealers are shifting to AI"), write qualitatively; do not
+    manufacture a percentage to make the paragraph feel more concrete.
 
 18. **Never cite stats from 2019-2023 without re-anchoring to 2026.** The
     gate flags stale year references. If a source quote is from 2022,
