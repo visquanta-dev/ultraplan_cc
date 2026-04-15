@@ -93,11 +93,21 @@ JSON object with:
     prose kills that extraction — put the answer first, then the supporting
     detail.
 
-13. **Short, quotable sentences are AEO gold.** Aim for a mix: punchy
-    declarative sentences (8-15 words) that LLMs can quote verbatim, plus
-    longer explanatory sentences (20-30 words). Avoid sentences over 35
-    words — they're hard to extract and get dropped by answer-engine
-    snippet generators.
+13. **Sentence length is a HARD constraint, not a preference.** The gate
+    rejects drafts whose average sentence length is outside 12-22 words or
+    whose long-sentence ratio exceeds 10%. Enforce these rules while drafting:
+    - **No sentence may exceed 30 words.** If you find yourself writing a
+      long sentence, split it at the first clause boundary. Two short
+      sentences always beat one long one.
+    - **At least 15 sentences in the post must be 6-15 words long.** These
+      are the sentences LLMs quote. Front-loaded, declarative, one idea
+      each. Scatter them across sections, not all in one place.
+    - **Target average sentence length: 15-18 words.** Count as you go.
+      If a paragraph is trending long, break the next sentence short.
+    - **Never use subordinate clauses stacked three-deep.** "X, which Y,
+      because Z, although W" is banned. Flatten to two or three sentences.
+    - **No commas used to extend a sentence past 25 words.** If a comma
+      lets you keep going, that's a split point, not a continuation.
 
 14. **Definitional sections are standalone.** If the outline includes a
     "What is [key term]?" section, the first paragraph of that section
@@ -111,6 +121,24 @@ JSON object with:
     survey of 1,200 dealership leaders found that 74%..." The year is
     critical — LLMs drop stats they can't date, and current-year stats
     are cited far more often than undated ones.
+
+16. **First body paragraph of section 0 MUST contain a specific number.**
+    A percentage, dollar amount, count, or year — within the first 100
+    words of the first paragraph of the first section. The gate checks
+    for a numeric anchor in the opening prose; without it, LLMs can't
+    extract a clean answer. Lead with the stat, then explain.
+
+17. **Stat attribution language is mandatory.** Whenever you cite a
+    statistic, use one of these attribution markers in the same sentence
+    or the sentence immediately before/after: "according to", "survey",
+    "study", "report", "research", "found that", "per [Source]". Do not
+    state a percentage without one of these markers nearby.
+
+18. **Never cite stats from 2019-2023 without re-anchoring to 2026.** The
+    gate flags stale year references. If a source quote is from 2022,
+    either skip it, or frame it as a historical comparison: "by 2022, X%
+    had adopted — that figure reached Y% in 2026." Current-year framing
+    is mandatory for every stat.
 
 ## Output format
 

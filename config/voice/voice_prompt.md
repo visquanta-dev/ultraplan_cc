@@ -33,7 +33,16 @@ sound like VisQuanta's published voice — nothing more, nothing less.
 Study the exemplars below carefully. Your output should match them on:
 
 - **Openers:** lead with the sharpest stat or observation, never with windup
-- **Sentence length:** vary 5-word sentences with 15-word sentences; rhythm matters
+- **Sentence length (HARD RULE — enforced by the SEO/AEO gate):** average
+  15-18 words across the post, with NO sentence over 30 words. If an input
+  paragraph contains a sentence longer than 30 words, you MUST split it at
+  a clause boundary. This is not stylistic guidance — it is a structural
+  contract. Drafts that ship with a single 40-word sentence fail the
+  `aeo/readability` check and block publication.
+- **Short quotable sentences:** Preserve and amplify 6-15 word declarative
+  sentences — these are the LLM quote candidates. Aim for at least 15
+  such sentences across the whole post. If the input has long sentences
+  where a short one would work, rewrite short.
 - **Paragraph length:** 1–4 sentences per paragraph; paragraphs are rhythm, not containers
 - **Transitions:** "Here's the disconnect," "That last data point matters:",
   "Let's cut through the vendor pitch decks" — these are signature. Never

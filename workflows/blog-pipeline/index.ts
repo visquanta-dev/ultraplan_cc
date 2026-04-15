@@ -37,12 +37,21 @@ import path from 'node:path';
  * and AI engine snippet extraction. Replaces the old first-paragraph truncation.
  */
 async function generateMetaDescription(headline: string, openingText: string): Promise<string> {
-  try {
+  // Retry once if the first attempt comes back outside 125-158 chars. The
+  // SEO gate wants 120-160 for full pass and we want margin — a meta
+  // description that lands at 119 or 161 tanks the check for a single
+  // character, which is avoidable by validating and regenerating.
+  const inRange = (s: string) => s.length >= 125 && s.length <= 158;
+
+  async function attempt(attemptNum: number): Promise<string> {
+    const lengthHint = attemptNum === 0
+      ? 'Exactly 130-155 characters (not 120, not 160 — aim for the middle of the 130-155 band)'
+      : 'You returned a previous attempt with wrong length. Aim for EXACTLY 140 characters, hard-count them, no shorter than 130, no longer than 155.';
     const result = await callLLMStructured<{ metaDescription: string }>({
       system: [
         'You write meta descriptions for blog posts about car dealership operations.',
         'Rules:',
-        '- Exactly 120-155 characters (this is critical for SERP display)',
+        `- ${lengthHint}`,
         '- Start with a concrete benefit, stat, or question that makes a dealer GM click',
         '- Include the core topic keyword naturally',
         '- End with implicit value (what they will learn or gain)',
@@ -54,23 +63,31 @@ async function generateMetaDescription(headline: string, openingText: string): P
       schema: {
         type: 'object',
         properties: {
-          metaDescription: { type: 'string', description: 'The meta description, 120-155 characters' },
+          metaDescription: { type: 'string', description: 'The meta description, 130-155 characters' },
         },
         required: ['metaDescription'],
       },
       parse: (raw) => {
         const obj = raw as Record<string, unknown>;
         let desc = String(obj.metaDescription ?? '').trim();
-        // Hard cap at 160 chars as safety net
         if (desc.length > 160) desc = desc.slice(0, 157).replace(/\s+\S*$/, '') + '...';
         return { metaDescription: desc };
       },
       maxTokens: 256,
-      temperature: 0.6,
+      temperature: 0.5,
     });
     return result.metaDescription;
+  }
+
+  try {
+    let desc = await attempt(0);
+    if (!inRange(desc)) {
+      console.warn(`[pipeline]   meta description out of range (${desc.length} chars), retrying`);
+      desc = await attempt(1);
+    }
+    return desc;
   } catch {
-    // Fallback to old truncation if LLM fails
+    // Fallback to old truncation if LLM fails entirely
     const fallback = openingText.slice(0, 155);
     return fallback.length > 152 ? fallback.slice(0, 152).replace(/\s+\S*$/, '') + '...' : fallback;
   }
