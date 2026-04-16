@@ -94,6 +94,22 @@ daily_seo:
     - https://www.stocktitan.net/news/CARS/cars-com-announces-its-2026-dealer-of-the-year-g1oc10sr2wpa.html
     - https://www.thedrive.com/news/add-ai-to-the-list-of-reasons-you-cant-trust-online-car-dealer-reviews
 
+  # ---------------------------------------------------------------------------
+  # Topic: Used car prices spiking — tariffs, Manheim index, wholesale surge
+  # Fits calculator: none
+  # Fits link: none (general industry insight)
+  # ---------------------------------------------------------------------------
+  used_car_price_spike:
+    - https://news.dealershipguy.com/p/used-vehicle-prices-surge-1-500-from-mid-march
+    - https://digitaldealer.com/news/carfax-used-car-prices-spike-after-hitting-12-month-low/170080/
+    - https://www.prnewswire.com/news-releases/carfax-used-car-prices-spike-after-hitting-12-month-low-302741213.html
+    - https://collisionweek.com/2026/04/08/manheim-used-vehicle-value-index-hits-two-half-year-high-march/
+    - https://www.coxautoinc.com/insights/q1-2026-muvvi/
+    - https://www.foxbusiness.com/economy/used-car-prices-hit-highest-level-nearly-3-years-wholesale-demand-stays-strong
+    - https://www.cnbc.com/2026/04/07/used-car-prices.html
+    - https://www.autobodynews.com/regionalnewsalias/midwest-regional-news/wholesale-used-vehicle-prices-rose-6-2-in-march-with-implications-for-total-loss-decisions
+    - https://www.kbb.com/car-news/wholesale-used-car-prices-climbing-in-early-tariff-price-sign/
+
 weekly_authority:
   # Placeholder — the weekly lane needs evergreen leadership / strategy
   # pieces rather than news. Fill in after the daily lane is proven.

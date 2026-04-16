@@ -362,11 +362,11 @@ const checks: Check[] = [
     };
   },
 
-  // -------------------- AEO 1: TL;DR block at top --------------------
+  // -------------------- AEO 1: Key Takeaway block at top --------------------
   (input) => {
     const body = extractBody(input.markdown).trimStart();
     const firstBlock = body.split('\n')[0] ?? '';
-    const passed = /^>\s+\*\*TL;DR/i.test(firstBlock);
+    const passed = /^>\s+\*\*(The Bottom Line|TL;DR)/i.test(firstBlock);
     return {
       id: 'aeo/tldr-block-at-top',
       category: 'aeo',
@@ -374,8 +374,8 @@ const checks: Check[] = [
       score: passed ? 2 : 0,
       passed,
       reason: passed
-        ? 'TL;DR blockquote present at top of body'
-        : 'no TL;DR blockquote at top of body — LLMs will not reliably extract a summary',
+        ? 'The Bottom Line blockquote present at top of body'
+        : 'no Bottom Line blockquote at top of body - LLMs will not reliably extract a summary',
     };
   },
 

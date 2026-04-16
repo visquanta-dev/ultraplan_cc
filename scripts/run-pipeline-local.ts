@@ -2,8 +2,9 @@
  * Run the full blog pipeline locally — same code path as the cron route,
  * but free from serverless timeouts. Opens a real PR on success.
  *
- * Usage: npx tsx scripts/run-pipeline-local.ts [lane]
+ * Usage: npx tsx scripts/run-pipeline-local.ts [lane] [curatedBucket]
  *   lane defaults to daily_seo
+ *   curatedBucket forces a specific curated_sources.yaml bucket (e.g. service_drive_fixed_ops)
  */
 import { config } from 'dotenv';
 config({ path: '.env.cron.tmp' });
@@ -14,6 +15,7 @@ import { getLaneWordCount, type Lane } from '../lib/config/topics-config';
 
 const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case'];
 const lane = (process.argv[2] as Lane) ?? 'daily_seo';
+const curatedBucket = process.argv[3] ?? undefined;
 
 if (!VALID_LANES.includes(lane)) {
   console.error(`Unknown lane: ${lane}. Valid: ${VALID_LANES.join(', ')}`);
@@ -29,13 +31,14 @@ function stamp(label: string) {
 }
 
 async function main() {
-  stamp(`Starting pipeline — lane: ${lane}, word count: ${wordCount.min}-${wordCount.max}`);
+  stamp(`Starting pipeline — lane: ${lane}, word count: ${wordCount.min}-${wordCount.max}${curatedBucket ? `, bucket: ${curatedBucket}` : ''}`);
 
   stamp('resolveSlot: begin');
   const { bundle } = await resolveSlot(lane, {
     onSearch: (n) => stamp(`resolveSlot.onSearch: ${n} articles`),
     onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
     onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
+    ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
   });
   stamp(`resolveSlot: done — bundle slug "${bundle.topic_slug}", ${bundle.sources.length} sources`);
 

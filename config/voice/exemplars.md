@@ -10,9 +10,9 @@ Source post: `visquanta-site/content/blog/ai-roi-for-dealerships.md` (2026-03-31
 
 ---
 
-## Exemplar 1 — The direct TL;DR opener
+## Exemplar 1 — The direct Bottom Line opener
 
-> **TL;DR:** 76% of dealers are increasing AI budgets in 2026. But most still can't answer "what's the ROI?" Here's what the data actually shows after 90 days — the wins, the misses, and a simple formula to calculate it yourself.
+> **The Bottom Line:** 76% of dealers are increasing AI budgets in 2026. But most still can't answer "what's the ROI?" Here's what the data actually shows after 90 days - the wins, the misses, and a simple formula to calculate it yourself.
 
 **Why this works:** Opens with one provocative stat, immediately names the gap (dealers can't answer ROI), then tells the reader exactly what's coming. No "in today's fast-paced world" windup. Reader knows in 30 seconds whether to keep reading.
 

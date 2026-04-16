@@ -164,12 +164,12 @@ export function renderFAQ(
 }
 
 /**
- * Render TL;DR box.
+ * Render "The Bottom Line" summary box.
  */
 export function renderTLDR(tldr: string): string {
   return [
     '',
-    `**TL;DR:** ${tldr}`,
+    `**The Bottom Line:** ${tldr}`,
     '',
   ].join('\n');
 }

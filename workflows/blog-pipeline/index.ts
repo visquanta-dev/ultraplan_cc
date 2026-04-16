@@ -312,15 +312,14 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const articleText = bodyParts.join('\n');
       const enriched = await enrichContent(articleText, bundle, outline.headline);
 
-      // Insert TL;DR at the very top of the body, BEFORE the first H2.
-      // LLMs (Google AI Overviews, ChatGPT, Perplexity, Claude) extract the
-      // first block of prose under an article headline as the primary answer
-      // candidate for AI search queries, so the summary needs to live above
-      // any section heading. Formatted as a markdown blockquote with an
-      // explicit "TL;DR:" label — the label is a convention LLMs recognize
-      // and the blockquote marks it visually distinct from body prose.
+      // Insert "The Bottom Line" summary at the very top of the body, BEFORE
+      // the first H2. LLMs (Google AI Overviews, ChatGPT, Perplexity, Claude)
+      // extract the first block of prose under an article headline as the
+      // primary answer candidate for AI search queries, so the summary needs
+      // to live above any section heading. Formatted as a markdown blockquote
+      // — professional tone that matches how dealer principals talk.
       if (enriched.tldr) {
-        bodyParts.unshift(`> **TL;DR:** ${stripEmDashes(enriched.tldr)}\n`);
+        bodyParts.unshift(`> **The Bottom Line:** ${stripEmDashes(enriched.tldr)}\n`);
       }
 
       // Insert tables at target positions

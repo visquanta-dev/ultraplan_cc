@@ -41,6 +41,13 @@ trade_press:
     - numa.com
     - bdc.ai
     - useflai.com
+    # Added for used-car-price coverage (Apr 2026)
+    - kbb.com
+    - cnbc.com
+    - foxbusiness.com
+    - collisionweek.com
+    - autobodynews.com
+    - prnewswire.com
   notes: |
     Primary domains for the daily_seo trend_hijack strategy. These are the
     publications dealer principals actually read. Expand with editorial
