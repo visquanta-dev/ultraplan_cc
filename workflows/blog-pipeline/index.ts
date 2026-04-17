@@ -4,7 +4,7 @@ import { draftParagraphs } from '../../lib/stages/paragraph-draft';
 import { checkRephraseDistances } from '../../lib/stages/rephrase-distance';
 import { voiceTransform } from '../../lib/stages/voice-transform';
 import { runWithRetry } from '../../lib/gates/retry-loop';
-import { runImagePipeline, type ImagePipelineResult } from '../../lib/image/pipeline';
+import { runImagePipeline, runMultiOptionImagePipeline, type ImagePipelineResult, type MultiOptionImageResult } from '../../lib/image/pipeline';
 import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
@@ -203,19 +203,44 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       };
     }
 
-    // Step 6: Generate images
+    // Step 6: Generate images (multi-option)
     console.log('[pipeline] Step 6/7: Generating images');
     const sectionHeadings = outline.sections.map((s) => s.heading);
+    const articleText = finalParagraphs.map(p => p.text).join('\n\n');
+
+    // Use headline as overlay text — enrichment (TL;DR) happens in Step 5c
+    // which runs AFTER this step, so enriched.tldr is not available here.
+    const overlayText = outline.headline;
+
     let imageResult: ImagePipelineResult;
+    let multiImageResult: MultiOptionImageResult | null = null;
+
     try {
-      imageResult = await runImagePipeline(slug, lane, outline.headline, sectionHeadings, {
-        onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
-        onImageResult: (type, idx, passed, attempt) =>
-          console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
-      }, finalParagraphs.map(p => p.text).join('\n\n'));
+      multiImageResult = await runMultiOptionImagePipeline(
+        slug, lane, outline.headline, sectionHeadings,
+        overlayText,
+        undefined,
+        {
+          onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
+          onImageResult: (type, idx, passed, attempt) =>
+            console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
+        },
+        articleText,
+      );
+
+      // Build a compatible ImagePipelineResult from the first successful option
+      // so the rest of the pipeline (hero path in frontmatter) still works
+      const firstOption = multiImageResult.options[0];
+      imageResult = {
+        paths: firstOption ? [firstOption.path] : [],
+        altTexts: firstOption ? { [firstOption.path]: firstOption.altText } : {},
+        gateResults: [],
+        allPassed: multiImageResult.options.length > 0,
+        blockedImages: multiImageResult.options.length === 0 ? ['hero.webp'] : [],
+      };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[pipeline]   image pipeline threw (${msg}) — degrading to empty result, hero will fall back`);
+      console.warn(`[pipeline]   image pipeline threw (${msg}) — degrading to empty result`);
       imageResult = { paths: [], altTexts: {}, gateResults: [], allPassed: false, blockedImages: ['hero.webp'] };
     }
 
@@ -505,8 +530,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       };
     }
 
-    // Collect image files for PR
-    const images = imageResult.paths.map((relPath) => ({
+    // Collect image files for PR — include all multi-option paths so every
+    // candidate (base + overlay variants) gets uploaded to the PR branch.
+    const allImagePaths = multiImageResult
+      ? multiImageResult.allPaths
+      : imageResult.paths;
+    const images = allImagePaths.map((relPath) => ({
       relativePath: relPath.replace(/\\/g, '/'),
       absolutePath: path.join(process.cwd(), relPath),
     }));
@@ -524,6 +553,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
           heroFallbackUsed: usedHeroFallback,
           seoAeoScore,
           seoAeoWarning,
+          imageOptions: multiImageResult?.options,
           metadata: {
             gate_scores: { ...extractGateScores(report), 'seo-aeo': seoAeoScore },
             retries,
