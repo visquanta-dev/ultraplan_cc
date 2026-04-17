@@ -2,6 +2,11 @@ import { callLLMStructured } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  renderAllowedEntitiesMarkdown,
+  filterToAllowed,
+  type TopicalEntity,
+} from '../entities';
 
 // ---------------------------------------------------------------------------
 // Content enrichment — adds tables, TL;DR, and FAQ to drafted posts
@@ -26,6 +31,7 @@ export interface EnrichResult {
   tldr: string;
   key_takeaways: string[];
   bottom_line: EnrichBottomLine;
+  entities: TopicalEntity[];
   tables: Array<{
     title: string;
     insert_after_heading: string;
@@ -46,7 +52,9 @@ export async function enrichContent(
   bundle: Bundle,
   headline: string,
 ): Promise<EnrichResult> {
-  const promptTemplate = fs.readFileSync(ENRICH_PROMPT_PATH, 'utf-8');
+  const promptTemplate = fs
+    .readFileSync(ENRICH_PROMPT_PATH, 'utf-8')
+    .replace('{{ALLOWED_ENTITIES}}', renderAllowedEntitiesMarkdown());
 
   const sourceList = bundle.sources
     .map((s) => `- ${s.domain}: "${s.title ?? s.url}" (${s.quotes.length} quotes)`)
@@ -133,8 +141,22 @@ export async function enrichContent(
         minItems: 4,
         maxItems: 6,
       },
+      entities: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            sameAs: { type: 'string' },
+          },
+          required: ['name', 'sameAs'],
+        },
+        minItems: 2,
+        maxItems: 3,
+        description: '2-3 topical entities picked from the allow-list in the system prompt',
+      },
     },
-    required: ['tldr', 'key_takeaways', 'bottom_line', 'tables', 'faqs'],
+    required: ['tldr', 'key_takeaways', 'bottom_line', 'tables', 'faqs', 'entities'],
   };
 
   const result = await callLLMStructured<EnrichResult>({
@@ -144,6 +166,9 @@ export async function enrichContent(
     parse: (raw) => {
       const obj = raw as Record<string, unknown>;
       const bl = (obj.bottom_line ?? {}) as Record<string, unknown>;
+      const emittedEntities = Array.isArray(obj.entities)
+        ? (obj.entities as Array<{ name?: unknown; sameAs?: unknown }>)
+        : [];
       return {
         tldr: String(obj.tldr ?? ''),
         key_takeaways: Array.isArray(obj.key_takeaways)
@@ -156,6 +181,9 @@ export async function enrichContent(
             : [],
           closer: String(bl.closer ?? ''),
         },
+        // Silently drop any entity whose sameAs URL isn't in the allow-list;
+        // the LLM occasionally emits plausible-but-nonexistent Wikipedia URLs.
+        entities: filterToAllowed(emittedEntities),
         tables: Array.isArray(obj.tables) ? obj.tables : [],
         faqs: Array.isArray(obj.faqs) ? obj.faqs : [],
       };

@@ -52,4 +52,17 @@ Write questions a dealer principal or GM would actually ask after reading this a
 
 Do not use em dashes anywhere. Use hyphens (-) instead.
 
-Return JSON with: tldr (the Key Takeaway paragraph from section 1), key_takeaways (array of bullet strings from section 2), bottom_line (object with synthesis/what_this_means[]/closer from section 3), tables[], faqs[].
+## 6. Topical Entities (exactly 2-3 entries)
+Pick 2-3 entities from the allow-list below that best capture what this article is actually about. These populate the BlogPosting `about` and `mentions` schema on the site — they tell Google and LLM crawlers which Wikipedia entities the post maps onto. Picking relevant entities improves topical classification and citation accuracy.
+
+**Hard rules:**
+- You MUST pick only from the list below. Do not invent names. Do not invent sameAs URLs.
+- Return each entity with both `name` and `sameAs` verbatim from the list.
+- Pick 2-3 — no more, no fewer.
+- The entities should be the ones most central to the post's actual subject. `Car dealership` is almost always one of them, but the second and third should be specific (e.g. a reputation post picks `Customer review` + `Reputation management`, an inventory post picks `Inventory management`, a voice-agent post picks `Voice user interface` + `Chatbot`).
+
+### Allow-list (pick from these, do not invent):
+
+{{ALLOWED_ENTITIES}}
+
+Return JSON with: tldr (the Key Takeaway paragraph from section 1), key_takeaways (array of bullet strings from section 2), bottom_line (object with synthesis/what_this_means[]/closer from section 3), tables[], faqs[], entities[] (array of {name, sameAs} objects, 2-3 entries from the allow-list).

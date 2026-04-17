@@ -332,11 +332,15 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       bodyParts.push('');
     });
 
-    // Enrichment: TL;DR, tables, FAQ
-    console.log('[pipeline] Step 5c/7: Enriching content (TL;DR + tables + FAQ)');
+    // Enrichment: TL;DR, tables, FAQ, entities
+    // Entities hoisted out of try{} so the frontmatter builder below can
+    // embed them even if (non-fatal) downstream enrichment steps throw.
+    let postEntities: Array<{ name: string; sameAs: string }> = [];
+    console.log('[pipeline] Step 5c/7: Enriching content (TL;DR + tables + FAQ + entities)');
     try {
       const articleText = bodyParts.join('\n');
       const enriched = await enrichContent(articleText, bundle, outline.headline);
+      postEntities = enriched.entities;
 
       // Above-the-fold stack (order matters: bullets land above the blockquote).
       // LLMs preferentially extract the first block of prose under an article
@@ -500,6 +504,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         tags: LANE_TAGS[lane] ?? [],
         categorySlug: lane.replace(/_/g, '-'),
       }),
+      entities: postEntities,
     };
 
     const markdownContent = matter.stringify(body, frontmatter);
