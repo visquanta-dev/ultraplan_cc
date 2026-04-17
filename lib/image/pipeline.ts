@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 import { loadImageStyle, buildImagePrompt, getImageCount, type ImageStyleConfig } from './style-loader';
 import { generateImage, type GeneratedImage } from './generate';
 import { runImageGates, type ImageGateResult } from './gates';
 import { callLLMStructured } from '../llm/openrouter';
+import { searchAndDownload } from './pexels-client';
+import { applyTextOverlay } from './text-overlay';
 
 // ---------------------------------------------------------------------------
 // Image generation pipeline — spec §7 (stage 6b)
@@ -321,4 +324,199 @@ export async function runImagePipeline(
     allPassed: blockedImages.length === 0,
     blockedImages,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-option image pipeline — generates 3 hero candidates (1 AI + 2 stock)
+// Each candidate also gets a text-overlay variant.
+// ---------------------------------------------------------------------------
+
+export interface MultiOptionImageResult {
+  options: Array<{
+    label: string;        // 'A', 'B', 'C'
+    source: 'ai' | 'pexels';
+    path: string;         // relative path to the base image
+    overlayPath: string;  // relative path to the overlay version
+    altText: string;
+    photographer?: string; // for Pexels attribution
+  }>;
+  /** Which paths were generated */
+  allPaths: string[];
+}
+
+/**
+ * Strip common filler words from a headline to extract core search terms
+ * suitable for a Pexels stock photo query.
+ */
+function headlineToPexelsQuery(headline: string): string {
+  const stopWords = new Set([
+    'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as',
+    'and', 'or', 'but', 'not', 'no', 'nor', 'so', 'yet', 'both', 'either',
+    'how', 'why', 'what', 'when', 'where', 'who', 'which', 'that', 'this',
+    'it', 'its', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'can', 'may', 'might', 'shall', 'must', 'has', 'have', 'had',
+    'most', 'still', 'just', 'even', 'also', 'very', 'too', 'more',
+    'about', 'into', 'over', 'after', 'before', 'between', 'through',
+    'your', 'you', 'they', 'them', 'their', 'we', 'our', 'us',
+  ]);
+
+  const words = headline
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !stopWords.has(w));
+
+  // Keep first 4 meaningful words — enough for a good search, not too noisy
+  const query = words.slice(0, 4).join(' ');
+
+  // Fallback if we stripped too aggressively
+  if (query.length < 3) return 'car dealership';
+
+  // Prefix with dealership context for better results
+  return `car dealership ${query}`;
+}
+
+/**
+ * Run the multi-option image pipeline for a blog post.
+ * Generates 3 hero image candidates in parallel:
+ *   Option A — AI-generated via OpenRouter
+ *   Option B — Pexels stock photo #1
+ *   Option C — Pexels stock photo #2
+ * Each successful option also gets a text-overlay variant.
+ *
+ * @param slug            Article slug (used for output directory)
+ * @param lane            Editorial lane (determines style config)
+ * @param headline        Article headline
+ * @param sectionHeadings Section headings from the outline
+ * @param overlayText     Key stat for the text overlay (e.g. "Prices Up $1,500")
+ * @param overlaySubtitle Optional subtitle for the overlay
+ * @param options         Pipeline callbacks
+ * @param articleContent  Full article markdown (passed to image agent)
+ */
+export async function runMultiOptionImagePipeline(
+  slug: string,
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case',
+  headline: string,
+  sectionHeadings: string[],
+  overlayText: string,
+  overlaySubtitle?: string,
+  options: ImagePipelineOptions = {},
+  articleContent?: string,
+): Promise<MultiOptionImageResult> {
+  const style = loadImageStyle(lane);
+  const outputDir = path.join(process.cwd(), 'public', 'images', 'blog', slug);
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const heroW = style.dimensions.hero.width;
+  const heroH = style.dimensions.hero.height;
+
+  console.log('[image-pipeline] Generating 3 hero options...');
+
+  const pexelsQuery = headlineToPexelsQuery(headline);
+  console.log(`[image-pipeline] Pexels search query: "${pexelsQuery}"`);
+
+  // Run AI generation and Pexels search in parallel
+  const [aiResult, pexelsResult] = await Promise.allSettled([
+    // Option A: AI-generated image
+    (async () => {
+      let prompt: string;
+      if (articleContent) {
+        prompt = await generateImagePrompt(headline, articleContent);
+      } else {
+        prompt = `Ultra-realistic photograph, modern car dealership environment related to: "${headline}". Professional editorial quality, warm lighting, automotive setting. No identifiable faces (show people from behind or silhouetted only). No readable text or signage. No brand logos or car manufacturer badges. No watermarks.`;
+      }
+      return generateAndValidate(prompt, style, 'hero', path.join(outputDir, 'hero-option-a.webp'), options, 0);
+    })(),
+    // Options B & C: Pexels stock photos
+    searchAndDownload(pexelsQuery, 2),
+  ]);
+
+  const resultOptions: MultiOptionImageResult['options'] = [];
+  const allPaths: string[] = [];
+
+  // --- Process Option A (AI) ---
+  if (aiResult.status === 'fulfilled' && aiResult.value.path) {
+    const aiPath = aiResult.value.path;
+    const relPath = path.relative(process.cwd(), aiPath);
+    console.log('[image-pipeline] Option A: AI generated');
+
+    // Create overlay variant
+    const aiBuf = fs.readFileSync(aiPath);
+    const overlayBuf = await applyTextOverlay(aiBuf, {
+      text: overlayText,
+      subtitle: overlaySubtitle,
+      width: heroW,
+      height: heroH,
+    });
+    const overlayFilePath = path.join(outputDir, 'hero-option-a-overlay.jpg');
+    fs.writeFileSync(overlayFilePath, overlayBuf);
+    const relOverlay = path.relative(process.cwd(), overlayFilePath);
+
+    const altText = await generateAltText(headline, 'hero image');
+    resultOptions.push({
+      label: 'A',
+      source: 'ai',
+      path: relPath,
+      overlayPath: relOverlay,
+      altText,
+    });
+    allPaths.push(relPath, relOverlay);
+  } else {
+    const reason = aiResult.status === 'rejected' ? aiResult.reason : 'blocked by gates';
+    console.warn(`[image-pipeline] Option A failed: ${reason}`);
+  }
+
+  // --- Process Options B & C (Pexels) ---
+  if (pexelsResult.status === 'fulfilled') {
+    const photos = pexelsResult.value;
+    const labels = ['B', 'C'] as const;
+
+    for (let i = 0; i < photos.length && i < 2; i++) {
+      const { photo, buffer } = photos[i];
+      const label = labels[i];
+      const baseFileName = `hero-option-${label.toLowerCase()}.jpg`;
+      const overlayFileName = `hero-option-${label.toLowerCase()}-overlay.jpg`;
+
+      console.log(`[image-pipeline] Option ${label}: Pexels "${photo.photographer}"`);
+
+      // Resize to match hero dimensions using Sharp (cover mode)
+      const resizedBuf = await sharp(buffer)
+        .resize(heroW, heroH, { fit: 'cover', position: 'centre' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      const basePath = path.join(outputDir, baseFileName);
+      fs.writeFileSync(basePath, resizedBuf);
+      const relBase = path.relative(process.cwd(), basePath);
+
+      // Create overlay variant
+      const overlayBuf = await applyTextOverlay(resizedBuf, {
+        text: overlayText,
+        subtitle: overlaySubtitle,
+        width: heroW,
+        height: heroH,
+      });
+      const overlayFilePath = path.join(outputDir, overlayFileName);
+      fs.writeFileSync(overlayFilePath, overlayBuf);
+      const relOverlay = path.relative(process.cwd(), overlayFilePath);
+
+      const altText = await generateAltText(headline, `stock photo hero image by ${photo.photographer}`);
+      resultOptions.push({
+        label,
+        source: 'pexels',
+        path: relBase,
+        overlayPath: relOverlay,
+        altText,
+        photographer: photo.photographer,
+      });
+      allPaths.push(relBase, relOverlay);
+    }
+  } else {
+    console.warn(`[image-pipeline] Pexels search failed: ${pexelsResult.reason}`);
+  }
+
+  console.log(`[image-pipeline] Generated ${resultOptions.length} hero options with ${allPaths.length} total images`);
+
+  return { options: resultOptions, allPaths };
 }
