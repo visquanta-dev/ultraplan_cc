@@ -19,7 +19,7 @@ import YAML from 'yaml';
 
 export type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
 
-export type SourceStrategy = 'feed_first' | 'curated_first' | 'search_first';
+export type SourceStrategy = 'feed_first' | 'curated_first' | 'search_first' | 'calendar_first';
 
 export interface LaneConfig {
   cadence: string;

@@ -11,11 +11,13 @@ config({ path: '.env.cron.tmp' });
 
 import { resolveSlot } from '../lib/topics/resolver';
 import { runBlogPipeline } from '../workflows/blog-pipeline';
-import { getLaneWordCount, type Lane } from '../lib/config/topics-config';
+import { getLaneWordCount, type Lane, type SourceStrategy } from '../lib/config/topics-config';
 
 const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case'];
 const lane = (process.argv[2] as Lane) ?? 'daily_seo';
 const curatedBucket = process.argv[3] ?? undefined;
+const strategyFlag = process.argv.find(a => a.startsWith('--strategy='))?.split('=')[1]
+  ?? (process.argv.includes('--strategy') ? process.argv[process.argv.indexOf('--strategy') + 1] : undefined);
 
 if (!VALID_LANES.includes(lane)) {
   console.error(`Unknown lane: ${lane}. Valid: ${VALID_LANES.join(', ')}`);
@@ -39,6 +41,7 @@ async function main() {
     onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
     onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
     ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
+    ...(strategyFlag ? { forcedStrategy: strategyFlag as SourceStrategy } : {}),
   });
   stamp(`resolveSlot: done — bundle slug "${bundle.topic_slug}", ${bundle.sources.length} sources`);
 

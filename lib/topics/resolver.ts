@@ -1,4 +1,5 @@
-import { searchForLane, type SearchResult } from './search';
+import { searchForLane, searchRecentArticles, type SearchResult } from './search';
+import { pickCalendarTopic } from './calendar-source';
 import { clusterArticles, type TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
 import { scoreCluster, type ClusterScore } from './keyword-scorer';
@@ -175,7 +176,27 @@ export async function resolveSlot(
   }
 
   // ------------------------------------------------------------------
-  // Strategy C: search — Firecrawl keyword search (always the final fallback)
+  // Strategy C: calendar_first — pick from content-calendar.yaml
+  // ------------------------------------------------------------------
+  if (searchResults.length === 0 && strategy === 'calendar_first') {
+    const topic = pickCalendarTopic();
+    if (topic) {
+      console.log(`[resolver] Calendar topic: "${topic.keyword}" (KD ${topic.kd}, TP ${topic.traffic_potential}, vertical: ${topic.vertical})`);
+      // Use the calendar keyword as a search query to find fresh sources
+      searchResults = await searchRecentArticles(topic.keyword, { limit: 20 });
+      if (searchResults.length > 0) {
+        console.log(`[resolver] Found ${searchResults.length} sources for calendar topic`);
+        options.onSearch?.(searchResults.length);
+      } else {
+        console.log(`[resolver] No sources found for "${topic.keyword}" — falling back to search`);
+      }
+    } else {
+      console.log('[resolver] No unpublished calendar topics — falling back to search');
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Strategy D: search — Firecrawl keyword search (always the final fallback)
   // ------------------------------------------------------------------
   if (searchResults.length === 0) {
     console.log(`[resolver] Searching for ${lane} topics via Firecrawl...`);
