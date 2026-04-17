@@ -1,0 +1,85 @@
+name: Daily Blog Post
+
+on:
+  schedule:
+    # 9:30 AM America/Chicago = 14:30 UTC (CDT, UTC-5) or 15:30 UTC (CST, UTC-6)
+    # Using 14:30 UTC for CDT (summer). Adjust to 15:30 for CST (winter).
+    - cron: '30 14 * * 1-5'  # Mon-Fri at 9:30 AM Chicago time (CDT)
+  workflow_dispatch:  # Allow manual triggering from GitHub UI
+    inputs:
+      strategy:
+        description: 'Topic strategy (calendar_first, feed_first, curated_first)'
+        required: false
+        default: 'calendar_first'
+      curated_bucket:
+        description: 'Curated bucket name (optional, only for curated_first)'
+        required: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Pipeline takes ~15 min, give it headroom
+
+    steps:
+      - name: Checkout ultraplan_cc
+        uses: actions/checkout@v4
+
+      - name: Checkout site repo (for dedup)
+        uses: actions/checkout@v4
+        with:
+          repository: visquanta-dev/site
+          path: ../site
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run pipeline
+        id: pipeline
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          AHREFS_API_TOKEN: ${{ secrets.AHREFS_API_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          VERCEL_BLOB_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          STRATEGY="${{ github.event.inputs.strategy || 'calendar_first' }}"
+          BUCKET="${{ github.event.inputs.curated_bucket }}"
+
+          ARGS="daily_seo"
+          if [ -n "$BUCKET" ]; then
+            ARGS="$ARGS $BUCKET"
+          elif [ "$STRATEGY" != "feed_first" ]; then
+            ARGS="$ARGS --strategy $STRATEGY"
+          fi
+
+          echo "Running: npx tsx scripts/run-pipeline-local.ts $ARGS"
+          npx tsx scripts/run-pipeline-local.ts $ARGS 2>&1 | tee pipeline.log
+
+          # Extract result JSON from the output
+          RESULT=$(grep -A 20 '=== RESULT ===' pipeline.log | tail -n +2 | head -20)
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$RESULT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Notify via webhook
+        if: always()
+        env:
+          N8N_WEBHOOK_URL: ${{ secrets.N8N_BLOG_WEBHOOK_URL }}
+        run: |
+          RESULT='${{ steps.pipeline.outputs.result }}'
+
+          # If no result (pipeline failed before output), create error payload
+          if [ -z "$RESULT" ] || [ "$RESULT" = "" ]; then
+            RESULT='{"slug":"unknown","verdict":"error","error":"Pipeline failed before producing output"}'
+          fi
+
+          curl -s -X POST "$N8N_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$RESULT" || echo "Webhook notification failed (non-fatal)"

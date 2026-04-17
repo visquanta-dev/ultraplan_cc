@@ -1,0 +1,37 @@
+name: Refresh Topical Map
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  schedule:
+    - cron: '0 12 * * 0'  # Weekly on Sunday at noon UTC
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate topical map
+        env:
+          AHREFS_API_TOKEN: ${{ secrets.AHREFS_API_TOKEN }}
+        run: npx tsx scripts/topical-map.ts
+
+      - name: Commit updated calendar
+        run: |
+          git config user.name "UltraPlan Bot"
+          git config user.email "ultraplan@visquanta.com"
+          git add config/content-calendar.yaml
+          git diff --cached --quiet || git commit -m "chore: refresh content calendar from Ahrefs"
+          git push
