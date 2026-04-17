@@ -8,10 +8,17 @@ import sharp from 'sharp';
 export interface TextOverlayOptions {
   /** Main text to overlay (e.g. "Prices Up $1,500 in One Month") */
   text: string;
-  /** Optional subtitle/source line */
+  /** Optional subtitle/source line (ignored for 'center' position) */
   subtitle?: string;
-  /** Position: 'bottom' (default) or 'top' */
-  position?: 'bottom' | 'top';
+  /**
+   * Position of the text:
+   *   'bottom' — legacy: gradient bar at bottom, left-aligned headline
+   *   'top'    — legacy: gradient bar at top, left-aligned headline
+   *   'center' — editorial treatment: centered both axes, larger bold
+   *              headline, radial vignette, double drop shadow. This is
+   *              the default going forward.
+   */
+  position?: 'bottom' | 'top' | 'center';
   /** Target output width (default 1600) */
   width?: number;
   /** Target output height (default 900) */
@@ -41,7 +48,69 @@ function wrapText(text: string, maxChars: number): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// SVG overlay generator
+// SVG overlay — centered editorial treatment (v2)
+//
+// This is the default VisQuanta hero overlay going forward: large centered
+// headline, 32% base tint + radial vignette for contrast, double drop shadow
+// so the white text reads cleanly even on busy backgrounds. Font size scales
+// with image width so the same treatment works at 1600 or 1920 output.
+// ---------------------------------------------------------------------------
+function buildCenteredSvg(
+  width: number,
+  height: number,
+  text: string,
+): string {
+  const mainFontSize = Math.round(width * 0.058); // 112pt at 1920w
+  const lineHeight = mainFontSize * 1.08;
+  const padX = Math.round(width * 0.10);
+  const maxCharsPerLine = Math.floor((width - padX * 2) / (mainFontSize * 0.50));
+  const lines = wrapText(text, maxCharsPerLine);
+  const blockHeight = lines.length * lineHeight;
+  const blockTop = Math.round(height / 2 - blockHeight / 2 + mainFontSize * 0.75);
+  const cx = Math.round(width / 2);
+
+  const tspans = lines
+    .map(
+      (l, i) =>
+        `<tspan x="${cx}" dy="${i === 0 ? 0 : lineHeight}" text-anchor="middle">${escapeXml(l)}</tspan>`,
+    )
+    .join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <defs>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%"   stop-color="rgba(0,0,0,0.15)" />
+      <stop offset="60%"  stop-color="rgba(0,0,0,0.45)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.75)" />
+    </radialGradient>
+    <filter id="textShadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="rgba(0,0,0,0.90)" />
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="rgba(0,0,0,0.60)" />
+    </filter>
+  </defs>
+
+  <!-- Base dark tint + radial vignette for editorial framing -->
+  <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(0,0,0,0.32)" />
+  <rect x="0" y="0" width="${width}" height="${height}" fill="url(#vignette)" />
+
+  <!-- Centered bold headline with double drop shadow -->
+  <text
+    x="${cx}"
+    y="${blockTop}"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="${mainFontSize}"
+    font-weight="900"
+    fill="white"
+    letter-spacing="-2"
+    filter="url(#textShadow)"
+  >${tspans}</text>
+</svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy SVG overlay — gradient bar at top/bottom with left-aligned headline.
+// Kept available via position:'top' and position:'bottom' for backward compat.
 // ---------------------------------------------------------------------------
 function buildSvg(
   width: number,
@@ -158,7 +227,7 @@ export async function applyTextOverlay(
   const {
     text,
     subtitle,
-    position = 'bottom',
+    position = 'center', // Editorial centered treatment is the new default
     width = 1600,
     height = 900,
   } = options;
@@ -169,8 +238,12 @@ export async function applyTextOverlay(
     position: 'centre',
   });
 
-  // 2. Build SVG overlay
-  const svgString = buildSvg(width, height, text, subtitle, position);
+  // 2. Build SVG overlay — centered editorial style by default,
+  //    legacy top/bottom gradient bar on request.
+  const svgString =
+    position === 'center'
+      ? buildCenteredSvg(width, height, text)
+      : buildSvg(width, height, text, subtitle, position);
   const svgBuffer = Buffer.from(svgString, 'utf8');
 
   // 3. Composite SVG onto resized image and encode as JPEG
