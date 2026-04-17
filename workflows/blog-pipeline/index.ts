@@ -10,7 +10,8 @@ import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
-import { enrichContent, renderTLDR, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
+import { enrichContent, renderTLDR, renderKeyTakeaways, renderBottomLine, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
+import { routeAuthorForPost } from '../../lib/authors';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
 import { findAvailableSlug } from '../../lib/topics/dedup';
@@ -337,14 +338,19 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const articleText = bodyParts.join('\n');
       const enriched = await enrichContent(articleText, bundle, outline.headline);
 
-      // Insert "The Bottom Line" summary at the very top of the body, BEFORE
-      // the first H2. LLMs (Google AI Overviews, ChatGPT, Perplexity, Claude)
-      // extract the first block of prose under an article headline as the
-      // primary answer candidate for AI search queries, so the summary needs
-      // to live above any section heading. Formatted as a markdown blockquote
-      // — professional tone that matches how dealer principals talk.
+      // Above-the-fold stack (order matters: bullets land above the blockquote).
+      // LLMs preferentially extract the first block of prose under an article
+      // headline as the answer candidate for AI search queries, so the Key
+      // Takeaways bullets + Key Takeaway blockquote both live above any H2.
+      // The bullets are above the blockquote because they're the single
+      // highest-value element for AI-overview citation — self-contained,
+      // numerically specific, and extractable without surrounding context.
       if (enriched.tldr) {
-        bodyParts.unshift(`> **The Bottom Line:** ${stripEmDashes(enriched.tldr)}\n`);
+        bodyParts.unshift(renderTLDR(stripEmDashes(enriched.tldr)));
+      }
+      if (enriched.key_takeaways.length > 0) {
+        const cleanBullets = enriched.key_takeaways.map(stripEmDashes);
+        bodyParts.unshift(renderKeyTakeaways(cleanBullets));
       }
 
       // Insert tables at target positions
@@ -353,6 +359,19 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         const withTables = insertTables(bodyParts, enriched.tables, headings);
         bodyParts.length = 0;
         bodyParts.push(...withTables);
+      }
+
+      // Append closing "The Bottom Line" synthesis between last body section
+      // and FAQ. This is the second-highest-value LLM extraction slot on the
+      // page (after the opener) — leaving it off the post was citing-by-default
+      // to whoever wrote the last H2.
+      const bl = enriched.bottom_line;
+      if (bl && (bl.synthesis || bl.what_this_means.length || bl.closer)) {
+        bodyParts.push(renderBottomLine({
+          synthesis: stripEmDashes(bl.synthesis),
+          what_this_means: bl.what_this_means.map(stripEmDashes),
+          closer: stripEmDashes(bl.closer),
+        }));
       }
 
       // Append FAQ before Related Reading
@@ -366,7 +385,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         bodyParts.push(renderFAQSchema(cleanFaqs));
       }
 
-      console.log(`[pipeline]   enriched: ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs`);
+      console.log(`[pipeline]   enriched: ${enriched.key_takeaways.length} takeaway bullets, ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs, bottom-line: ${bl?.what_this_means.length ?? 0} points`);
     } catch (err) {
       console.warn('[pipeline]   enrichment failed (non-fatal):', (err as Error).message);
     }
@@ -476,7 +495,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       published: true,
       category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
       tags: LANE_TAGS[lane] ?? [],
-      author: 'VisQuanta Team',
+      author: routeAuthorForPost({
+        lane,
+        tags: LANE_TAGS[lane] ?? [],
+        categorySlug: lane.replace(/_/g, '-'),
+      }),
     };
 
     const markdownContent = matter.stringify(body, frontmatter);

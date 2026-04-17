@@ -364,9 +364,16 @@ const checks: Check[] = [
 
   // -------------------- AEO 1: Key Takeaway block at top --------------------
   (input) => {
+    // Scan the first handful of non-empty lines for the labelled blockquote.
+    // The new enrichment output may emit the Key Takeaways bullet section
+    // above the blockquote, so testing only line[0] is too strict — accept
+    // the old labels ("The Bottom Line", "TL;DR") too for backward compat.
     const body = extractBody(input.markdown).trimStart();
-    const firstBlock = body.split('\n')[0] ?? '';
-    const passed = /^>\s+\*\*(The Bottom Line|TL;DR)/i.test(firstBlock);
+    const topLines = body.split('\n').slice(0, 30);
+    const blockquoteLine = topLines.find((l) => l.startsWith('> '));
+    const passed =
+      blockquoteLine !== undefined &&
+      /\*\*(Key Takeaway|The Bottom Line|TL;DR)/i.test(blockquoteLine);
     return {
       id: 'aeo/tldr-block-at-top',
       category: 'aeo',
@@ -374,8 +381,8 @@ const checks: Check[] = [
       score: passed ? 2 : 0,
       passed,
       reason: passed
-        ? 'The Bottom Line blockquote present at top of body'
-        : 'no Bottom Line blockquote at top of body - LLMs will not reliably extract a summary',
+        ? 'Key Takeaway blockquote present near top of body'
+        : 'no Key Takeaway blockquote near top of body - LLMs will not reliably extract a summary',
     };
   },
 

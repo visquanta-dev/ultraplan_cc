@@ -1,0 +1,99 @@
+authors:
+  william-voyles:
+    name: William Voyles
+    slug: william-voyles
+    title: Co-Founder & Chief Sales Officer
+    short_title: Co-Founder & CSO
+    company: VisQuanta
+    photo: https://cdn.prod.website-files.com/67f4e135760df55ea3128ae5/684ac61ef7f05cf2726e525e_william%2Cvoyles%2Cheadshot%2Cvisquanta.webp
+    linkedin: https://www.linkedin.com/in/wvoyles/
+    author_page: /author/william-voyles
+    credential_line: >-
+      Co-Founder & CSO at VisQuanta. Works directly with dealership GMs across
+      North America on AI-powered sales and lead reactivation systems.
+    bio: >-
+      William Voyles is Co-Founder and Chief Sales Officer at VisQuanta, where he
+      leads go-to-market strategy for the AutoMaster Suite. With years of
+      hands-on experience in automotive sales leadership, William has
+      firsthand experience running the lead-handling and customer acquisition
+      processes he now helps dealerships automate.
+
+
+      At VisQuanta, William works directly with dealership owners and GMs across
+      North America, overseeing deployments of speed-to-lead, lead reactivation,
+      reputation management, and voice agent systems. His focus is helping
+      dealerships recover revenue from existing customer databases and capture
+      inbound leads faster than the competition.
+
+
+      William writes about dealership sales strategy, lead response
+      optimization, CRM workflow design, and the economics of automation
+      adoption in automotive retail.
+    lanes:
+      - sales
+      - speed-to-lead
+      - lead-reactivation
+      - crm
+      - customer-acquisition
+      - reputation
+      - reviews
+      - follow-up
+      - voice-agents-sales
+      - revenue-recovery
+      - growth
+
+  # Stubs — fill in when these authors come online.
+  # Routing function in lib/authors.ts falls back to william-voyles
+  # whenever a post's lane does not match a listed author.
+  christopher-wilson:
+    name: Christopher Wilson
+    slug: christopher-wilson
+    title: Co-Founder & Chief Operating Officer
+    short_title: Co-Founder & COO
+    company: VisQuanta
+    photo: ""
+    linkedin: ""
+    author_page: /author/christopher-wilson
+    credential_line: ""
+    bio: ""
+    lanes:
+      - operations
+      - service-drive
+      - fixed-ops
+      - process-design
+
+  aaron-rowley:
+    name: Aaron Rowley
+    slug: aaron-rowley
+    title: Co-Founder & Chief Technology Officer
+    short_title: Co-Founder & CTO
+    company: VisQuanta
+    photo: ""
+    linkedin: ""
+    author_page: /author/aaron-rowley
+    credential_line: ""
+    bio: ""
+    lanes:
+      - technology
+      - integrations
+      - voice-ai-technical
+      - infrastructure
+
+  matt-nixon:
+    name: Matt Nixon
+    slug: matt-nixon
+    title: Co-Founder & Chief Financial Officer
+    short_title: Co-Founder & CFO
+    company: VisQuanta
+    photo: ""
+    linkedin: ""
+    author_page: /author/matt-nixon
+    credential_line: ""
+    bio: ""
+    lanes:
+      - roi
+      - finance
+      - economics
+      - unit-economics
+
+default_author: william-voyles

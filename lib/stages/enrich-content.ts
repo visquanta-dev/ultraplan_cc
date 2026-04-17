@@ -16,8 +16,16 @@ const ENRICH_PROMPT_PATH = path.join(
   'enrich-content.md',
 );
 
-interface EnrichResult {
+export interface EnrichBottomLine {
+  synthesis: string;
+  what_this_means: string[];
+  closer: string;
+}
+
+export interface EnrichResult {
   tldr: string;
+  key_takeaways: string[];
+  bottom_line: EnrichBottomLine;
   tables: Array<{
     title: string;
     insert_after_heading: string;
@@ -60,7 +68,36 @@ export async function enrichContent(
     properties: {
       tldr: {
         type: 'string',
-        description: 'A 2-3 sentence TL;DR summary with the key stat and takeaway',
+        description: 'A 2-3 sentence Key Takeaway highlight paragraph (rendered as a blockquote at the top of the post)',
+      },
+      key_takeaways: {
+        type: 'array',
+        items: { type: 'string' },
+        minItems: 4,
+        maxItems: 6,
+        description: 'Above-the-fold bullet list — 4-6 self-contained, specific, outcome-framed takeaways for LLM extraction',
+      },
+      bottom_line: {
+        type: 'object',
+        description: 'Closing synthesis section inserted between the last body section and the FAQ',
+        properties: {
+          synthesis: {
+            type: 'string',
+            description: '1-2 sentence synthesis of the core argument',
+          },
+          what_this_means: {
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 3,
+            maxItems: 5,
+            description: '3-5 short bullet takeaways under "What this means for dealerships in 2026:"',
+          },
+          closer: {
+            type: 'string',
+            description: 'One directional closing sentence (not a sales pitch)',
+          },
+        },
+        required: ['synthesis', 'what_this_means', 'closer'],
       },
       tables: {
         type: 'array',
@@ -97,7 +134,7 @@ export async function enrichContent(
         maxItems: 6,
       },
     },
-    required: ['tldr', 'tables', 'faqs'],
+    required: ['tldr', 'key_takeaways', 'bottom_line', 'tables', 'faqs'],
   };
 
   const result = await callLLMStructured<EnrichResult>({
@@ -106,8 +143,19 @@ export async function enrichContent(
     schema,
     parse: (raw) => {
       const obj = raw as Record<string, unknown>;
+      const bl = (obj.bottom_line ?? {}) as Record<string, unknown>;
       return {
         tldr: String(obj.tldr ?? ''),
+        key_takeaways: Array.isArray(obj.key_takeaways)
+          ? obj.key_takeaways.map((x) => String(x))
+          : [],
+        bottom_line: {
+          synthesis: String(bl.synthesis ?? ''),
+          what_this_means: Array.isArray(bl.what_this_means)
+            ? bl.what_this_means.map((x) => String(x))
+            : [],
+          closer: String(bl.closer ?? ''),
+        },
         tables: Array.isArray(obj.tables) ? obj.tables : [],
         faqs: Array.isArray(obj.faqs) ? obj.faqs : [],
       };
@@ -164,12 +212,57 @@ export function renderFAQ(
 }
 
 /**
- * Render "The Bottom Line" summary box.
+ * Render the top-of-post blockquote. Renamed from "The Bottom Line" to
+ * "Key Takeaway" so it doesn't collide with the closing bottom-line synthesis
+ * section — two things named "Bottom Line" on one page confuses both humans
+ * and crawlers. The site renders this via a selector that catches both labels
+ * for SpeakableSpecification.
  */
 export function renderTLDR(tldr: string): string {
   return [
     '',
-    `**The Bottom Line:** ${tldr}`,
+    `> **Key Takeaway:** ${tldr}`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * Render the "Key Takeaways" bullet block that sits near the top of the post,
+ * under the direct-answer paragraph and above the Key Takeaway blockquote.
+ * This is the single highest-value element for LLM answer-surface citation.
+ */
+export function renderKeyTakeaways(bullets: string[]): string {
+  if (!bullets.length) return '';
+  return [
+    '',
+    '### Key Takeaways',
+    '',
+    ...bullets.map((b) => `- ${b}`),
+    '',
+  ].join('\n');
+}
+
+/**
+ * Render the closing Bottom Line synthesis section inserted between the last
+ * body section and the FAQ. LLMs extract the final section of a post
+ * aggressively (second only to the opener) — this is the citation slot on the
+ * closing side of the article.
+ */
+export function renderBottomLine(bl: EnrichBottomLine): string {
+  const hasContent = bl.synthesis || bl.what_this_means.length || bl.closer;
+  if (!hasContent) return '';
+  const bullets = bl.what_this_means.map((b) => `- ${b}`).join('\n');
+  return [
+    '',
+    '## The Bottom Line',
+    '',
+    bl.synthesis,
+    '',
+    '**What this means for dealerships in 2026:**',
+    '',
+    bullets,
+    '',
+    bl.closer,
     '',
   ].join('\n');
 }
