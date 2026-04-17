@@ -15,63 +15,63 @@ pillars:
         traffic_potential: 177000
         cpc: 170
         score: 17700
-        published: false
+        published: true
       - keyword: chevy specialist near me
         volume: 20
         kd: 0
         traffic_potential: 13000
         cpc: 250
         score: 1300
-        published: false
+        published: true
       - keyword: chevy truck repair near me
         volume: 40
         kd: 10
         traffic_potential: 14000
         cpc: 250
         score: 700
-        published: false
+        published: true
       - keyword: chevy apppointment
         volume: 10
         kd: 0
         traffic_potential: 6000
         cpc: 150
         score: 600
-        published: false
+        published: true
       - keyword: chevy certified service
         volume: 70
         kd: 2
         traffic_potential: 6800
         cpc: 250
         score: 566.67
-        published: false
+        published: true
       - keyword: gmc oil change near me
         volume: 1500
         kd: 6
         traffic_potential: 8900
         cpc: 250
         score: 556.25
-        published: false
+        published: true
       - keyword: chevy volt repair near me
         volume: 30
         kd: 3
         traffic_potential: 2800
         cpc: 250
         score: 215.38
-        published: false
+        published: true
       - keyword: used car dealerships in cedar city utah
         volume: 30
         kd: 8
         traffic_potential: 400
         cpc: 70
         score: 22.22
-        published: false
+        published: true
       - keyword: patriot chevrolet service
         volume: 50
         kd: 9
         traffic_potential: 10
         cpc: null
         score: 0.53
-        published: false
+        published: true
       - keyword: how to run a dealership service department
         volume: 100
         kd: 0
@@ -85,14 +85,14 @@ pillars:
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: best ford dealership service department near me
         volume: 10
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
   - pillar: dealership inventory management
     vertical: dealer_operations
     product_page: /
@@ -105,21 +105,21 @@ pillars:
         traffic_potential: 67000
         cpc: null
         score: 6700
-        published: false
+        published: true
       - keyword: vautio
         volume: 40
         kd: 2
         traffic_potential: 69000
         cpc: 30
         score: 5750
-        published: false
+        published: true
       - keyword: vautologin
         volume: 150
         kd: 4
         traffic_potential: 70000
         cpc: 250
         score: 5000
-        published: false
+        published: true
       - keyword: dealership inventory management
         volume: 100
         kd: 5
@@ -133,7 +133,7 @@ pillars:
         traffic_potential: 9800
         cpc: 50
         score: 816.67
-        published: false
+        published: true
       - keyword: management systems
         volume: 1200
         kd: 9
@@ -243,7 +243,7 @@ pillars:
         traffic_potential: 7700
         cpc: 190
         score: 427.78
-        published: false
+        published: true
       - keyword: auto dealership digital marketing
         volume: 100
         kd: 16
@@ -271,7 +271,7 @@ pillars:
         traffic_potential: 90
         cpc: 1100
         score: 4.5
-        published: false
+        published: true
       - keyword: dealertrack digital showroom
         volume: 10
         kd: 0
@@ -389,7 +389,7 @@ pillars:
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
   - pillar: bdc car dealership meaning
     vertical: bdc_operations
     product_page: /speed-to-lead
