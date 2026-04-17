@@ -241,25 +241,25 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
     : '';
 
   // Build the hero image options section if multi-option images are available.
-  // Images are referenced via raw.githubusercontent.com so they render inline in the PR.
-  const RAW_BASE = `https://raw.githubusercontent.com/${TARGET_REPO}`;
+  // Images use GitHub blob URL with ?raw=true which works for private repos
+  // (raw.githubusercontent.com returns 404 on private repos).
+  const BLOB_BASE = `https://github.com/${TARGET_REPO}/blob`;
   let imageOptionsSection = '';
   if (input.imageOptions && input.imageOptions.length > 0) {
     const lines: string[] = [
       '### Hero Image Options',
       '',
-      'Pick one hero image and delete the rest before merging. Rename your choice to `hero.jpg`.',
+      `Pick one hero image. Rename your choice to \`${input.slug}-hero.jpg\` and delete the rest before merging.`,
       '',
     ];
     for (const opt of input.imageOptions) {
       const sourceLabel = opt.source === 'ai'
         ? 'AI Generated'
         : `Pexels — Photo by ${opt.photographer ?? 'Unknown'}`;
-      // Convert local relative path (e.g. public/images/blog/slug/hero-option-a.webp)
-      // to a repo-relative path for the raw URL (forward slashes, no leading slash).
+      // Convert local relative path to repo-relative path (forward slashes, no leading slash).
       const toRepoPath = (relPath: string) => relPath.replace(/\\/g, '/').replace(/^\//, '');
-      const baseUrl = `${RAW_BASE}/${branchName}/${toRepoPath(opt.path)}`;
-      const overlayUrl = `${RAW_BASE}/${branchName}/${toRepoPath(opt.overlayPath)}`;
+      const baseUrl = `${BLOB_BASE}/${branchName}/${toRepoPath(opt.path)}?raw=true`;
+      const overlayUrl = `${BLOB_BASE}/${branchName}/${toRepoPath(opt.overlayPath)}?raw=true`;
       lines.push(
         `**Option ${opt.label}** (${sourceLabel})`,
         `![Option ${opt.label}](${baseUrl})`,
