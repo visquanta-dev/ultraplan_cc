@@ -449,7 +449,10 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // by getPostFeaturedImage() as a category fallback and is present on
     // disk. If that image moves, update this fallback too.
     const FALLBACK_HERO_PATH = '/images/wireframes/6.jpeg';
-    const heroRelPath = imageResult.paths.find((p) => p.includes('hero.'));
+    // Multi-option pipeline: use the first option's path as the default hero.
+    // The user will pick their preferred option in the PR and rename it.
+    const heroRelPath = imageResult.paths.find((p) => p.includes('hero'))
+      ?? multiImageResult?.options[0]?.path;
     let heroFrontmatterPath: string;
     let usedHeroFallback = false;
     if (heroRelPath) {

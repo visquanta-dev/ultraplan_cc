@@ -426,7 +426,7 @@ export async function runMultiOptionImagePipeline(
       } else {
         prompt = `Ultra-realistic photograph, modern car dealership environment related to: "${headline}". Professional editorial quality, warm lighting, automotive setting. No identifiable faces (show people from behind or silhouetted only). No readable text or signage. No brand logos or car manufacturer badges. No watermarks.`;
       }
-      return generateAndValidate(prompt, style, 'hero', path.join(outputDir, 'hero-option-a.webp'), options, 0);
+      return generateAndValidate(prompt, style, 'hero', path.join(outputDir, `${slug}-hero-a.webp`), options, 0);
     })(),
     // Options B & C: Pexels stock photos
     searchAndDownload(pexelsQuery, 2),
@@ -449,7 +449,7 @@ export async function runMultiOptionImagePipeline(
       width: heroW,
       height: heroH,
     });
-    const overlayFilePath = path.join(outputDir, 'hero-option-a-overlay.jpg');
+    const overlayFilePath = path.join(outputDir, `${slug}-hero-a-overlay.jpg`);
     fs.writeFileSync(overlayFilePath, overlayBuf);
     const relOverlay = path.relative(process.cwd(), overlayFilePath);
 
@@ -475,8 +475,8 @@ export async function runMultiOptionImagePipeline(
     for (let i = 0; i < photos.length && i < 2; i++) {
       const { photo, buffer } = photos[i];
       const label = labels[i];
-      const baseFileName = `hero-option-${label.toLowerCase()}.jpg`;
-      const overlayFileName = `hero-option-${label.toLowerCase()}-overlay.jpg`;
+      const baseFileName = `${slug}-hero-${label.toLowerCase()}.jpg`;
+      const overlayFileName = `${slug}-hero-${label.toLowerCase()}-overlay.jpg`;
 
       console.log(`[image-pipeline] Option ${label}: Pexels "${photo.photographer}"`);
 
