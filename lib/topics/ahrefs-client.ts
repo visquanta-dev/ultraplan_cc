@@ -112,13 +112,19 @@ export async function matchingTerms(
 ): Promise<MatchingTermsResponse> {
   const { country = 'us', limit = 30, maxKD = 30 } = options;
 
-  return ahrefsGet<MatchingTermsResponse>('keywords-explorer/matching-terms', {
+  const raw = await ahrefsGet<MatchingTermsResponse>('keywords-explorer/matching-terms', {
     select: 'keyword,volume,difficulty,traffic_potential,cpc,global_volume',
     country,
     keywords: keyword,
     limit: String(limit),
-    where: `difficulty <= ${maxKD}`,
   });
+
+  // Post-filter by KD (Ahrefs v3 where param not supported on this endpoint)
+  raw.keywords = raw.keywords.filter(
+    (kw) => kw.difficulty === null || kw.difficulty <= maxKD,
+  );
+
+  return raw;
 }
 
 export interface RelatedTermsOptions {
@@ -137,13 +143,19 @@ export async function relatedTerms(
 ): Promise<RelatedTermsResponse> {
   const { country = 'us', limit = 20, maxKD = 30 } = options;
 
-  return ahrefsGet<RelatedTermsResponse>('keywords-explorer/related-terms', {
+  const raw = await ahrefsGet<RelatedTermsResponse>('keywords-explorer/related-terms', {
     select: 'keyword,volume,difficulty,traffic_potential,cpc,global_volume',
     country,
     keywords: keyword,
     limit: String(limit),
-    where: `difficulty <= ${maxKD}`,
   });
+
+  // Post-filter by KD (Ahrefs v3 where param not supported on this endpoint)
+  raw.keywords = raw.keywords.filter(
+    (kw) => kw.difficulty === null || kw.difficulty <= maxKD,
+  );
+
+  return raw;
 }
 
 export interface KeywordOverviewOptions {
