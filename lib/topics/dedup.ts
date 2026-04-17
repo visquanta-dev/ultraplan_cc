@@ -145,27 +145,47 @@ export async function checkTopicOverlap(
  * to "74-dealers-buying-voice-agents-2026" and would clobber each other
  * on main if merged blindly.
  */
+export class SlugCollisionError extends Error {
+  collidedSlug: string;
+  constructor(slug: string) {
+    super(
+      `slug "${slug}" already exists (main content/blog/ OR Vercel Blob run index). ` +
+      `Aborting publish — pipeline should pick a different topic rather than ship a near-duplicate at an uglier URL.`,
+    );
+    this.name = 'SlugCollisionError';
+    this.collidedSlug = slug;
+  }
+}
+
+/**
+ * Throws `SlugCollisionError` on collision. Historic behavior was to append
+ * -v{N} and publish anyway, which produced ugly versioned URLs (see 2026-04-17
+ * post-mortem: two -v2 slugs shipped because Vercel Blob carried ghost entries
+ * from earlier failed runs). Clean slugs are non-negotiable — if the candidate
+ * is taken, the pipeline aborts and the resolver picks a different topic on
+ * the next run.
+ *
+ * Known cleanup debt: periodic purge of Vercel Blob run-index entries whose
+ * slug has no corresponding markdown on site main. Without it, genuine
+ * first-publish attempts can false-positive as collisions and abort.
+ */
 export async function findAvailableSlug(candidate: string): Promise<{
   slug: string;
-  collided: boolean;
+  collided: false;
   original: string;
 }> {
   const existing = await loadExistingSlugs();
   if (!existing.has(candidate)) {
     return { slug: candidate, collided: false, original: candidate };
   }
-  for (let i = 2; i <= 20; i++) {
-    const suffixed = `${candidate}-v${i}`;
-    if (!existing.has(suffixed)) {
-      return { slug: suffixed, collided: true, original: candidate };
-    }
-  }
-  // Ran out of sane numeric suffixes — fall back to a timestamp, which is
-  // guaranteed unique and keeps the pipeline from wedging on a pathological
-  // repeated-topic day.
+  throw new SlugCollisionError(candidate);
+  // The unreachable return below keeps TypeScript's inference narrower even
+  // though the function always either returns or throws. Left as a placeholder
+  // anchor for the legacy return shape; do not re-enable -v{N} suffixing.
+  // eslint-disable-next-line no-unreachable
   return {
-    slug: `${candidate}-v${Date.now().toString(36)}`,
-    collided: true,
+    slug: `${candidate}-unreachable`,
+    collided: false,
     original: candidate,
   };
 }

@@ -14,7 +14,7 @@ import { enrichContent, renderTLDR, renderKeyTakeaways, renderBottomLine, render
 import { routeAuthorForPost } from '../../lib/authors';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
-import { findAvailableSlug } from '../../lib/topics/dedup';
+import { findAvailableSlug, SlugCollisionError } from '../../lib/topics/dedup';
 import { runPreflight } from '../../lib/preflight/validate-config';
 import { runSeoAeoGate } from '../../lib/gates/seo-aeo';
 import { callLLMStructured } from '../../lib/llm/openrouter';
@@ -143,15 +143,37 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     // Headline-slug collision guard. Cluster-level dedup runs before the
     // outline exists, so it can't catch the case where two different clusters
-    // produce the same headline-derived slug. Without this, the pipeline
-    // silently overwrites an already-published post at the same URL. Uniquify
-    // by appending -v{N} if a collision is detected.
-    const resolved = await findAvailableSlug(slug);
-    if (resolved.collided) {
-      console.warn(
-        `[pipeline]   slug collision: "${resolved.original}" already exists — using "${resolved.slug}" instead`,
-      );
+    // produce the same headline-derived slug. On collision the pipeline
+    // ABORTS rather than auto-suffixing -v{N} — clean URLs are non-negotiable
+    // (see 2026-04-17 post-mortem where two -v2 slugs shipped to production
+    // because Vercel Blob carried ghost entries from earlier failed runs).
+    try {
+      const resolved = await findAvailableSlug(slug);
       slug = resolved.slug;
+    } catch (err) {
+      if (err instanceof SlugCollisionError) {
+        console.warn(`[pipeline]   slug collision on "${err.collidedSlug}" — aborting this run cleanly`);
+        const abortRecord: RunRecord = {
+          slug: err.collidedSlug,
+          lane: bundle.lane,
+          status: 'blocked',
+          verdict: 'blocked',
+          created_at: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+          error: err.message,
+          gate_scores: {},
+          gate_report: { verdict: 'blocked', attempt: 0, results: [] } as unknown as RunRecord['gate_report'],
+        };
+        await logBlocked(abortRecord);
+        return {
+          slug: err.collidedSlug,
+          lane: bundle.lane,
+          verdict: 'blocked',
+          error: 'slug collision — topic already published; next run picks a different cluster',
+          durationMs: Date.now() - startTime,
+        };
+      }
+      throw err;
     }
 
     // Step 2: Draft paragraphs
