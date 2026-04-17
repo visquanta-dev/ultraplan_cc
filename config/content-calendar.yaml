@@ -126,7 +126,7 @@ pillars:
         traffic_potential: 69000
         cpc: 600
         score: 4600
-        published: false
+        published: true
       - keyword: provisions auto
         volume: 40
         kd: 2
@@ -140,7 +140,7 @@ pillars:
         traffic_potential: 500
         cpc: 40
         score: 26.32
-        published: false
+        published: true
       - keyword: car dealership inventory management strategies
         volume: 10
         kd: 0
@@ -154,14 +154,14 @@ pillars:
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: dealership inventory management and accounting
         volume: 10
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: auto dealership inventory management system
         volume: 40
         kd: 0
@@ -181,56 +181,56 @@ pillars:
         traffic_potential: 5700
         cpc: 180
         score: 475
-        published: false
+        published: true
       - keyword: seo for auto
         volume: 300
         kd: 0
         traffic_potential: 1000
         cpc: 400
         score: 100
-        published: false
+        published: true
       - keyword: auto dealership seo
         volume: 200
         kd: 2
         traffic_potential: 400
         cpc: 1100
         score: 33.33
-        published: false
+        published: true
       - keyword: seo for dealers
         volume: 100
         kd: 1
         traffic_potential: 20
         cpc: 40
         score: 1.82
-        published: false
+        published: true
       - keyword: auto dealer seo service
         volume: 20
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: affordable auto dealer seo services
         volume: 10
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: seo services for auto dealer
         volume: 10
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
       - keyword: auto dealer local seo service
         volume: 150
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
-        published: false
+        published: true
   - pillar: dealership digital marketing
     vertical: dealer_marketing
     product_page: /auto-master-suite
@@ -250,21 +250,21 @@ pillars:
         traffic_potential: 7700
         cpc: 500
         score: 296.15
-        published: false
+        published: true
       - keyword: automotive ad agency
         volume: 300
         kd: 23
         traffic_potential: 2900
         cpc: 500
         score: 87.88
-        published: false
+        published: true
       - keyword: digital marketing for automotive
         volume: 150
         kd: 2
         traffic_potential: 60
         cpc: 400
         score: 5
-        published: false
+        published: true
       - keyword: www.dealer.com login
         volume: 10
         kd: 10
@@ -278,7 +278,7 @@ pillars:
         traffic_potential: 10
         cpc: 600
         score: 1
-        published: false
+        published: true
       - keyword: dealership digital marketing tools
         volume: 30
         kd: 0
@@ -326,56 +326,56 @@ pillars:
         traffic_potential: 2100
         cpc: null
         score: 210
-        published: false
+        published: true
       - keyword: automotive bdc representative
         volume: 100
         kd: 0
         traffic_potential: 2000
         cpc: 50
         score: 200
-        published: false
+        published: true
       - keyword: sales bdc meaning
         volume: 60
         kd: 0
         traffic_potential: 2000
         cpc: null
         score: 200
-        published: false
+        published: true
       - keyword: bdc sales representative
         volume: 100
         kd: 0
         traffic_potential: 2000
         cpc: 250
         score: 200
-        published: false
+        published: true
       - keyword: acv max
         volume: 1600
         kd: 0
         traffic_potential: 1500
         cpc: 200
         score: 150
-        published: false
+        published: true
       - keyword: service bdc
         volume: 200
         kd: 0
         traffic_potential: 1200
         cpc: 350
         score: 120
-        published: false
+        published: true
       - keyword: virtual bdc automotive
         volume: 100
         kd: 1
         traffic_potential: 150
         cpc: null
         score: 13.64
-        published: false
+        published: true
       - keyword: bdc position at car dealership
         volume: 40
         kd: 0
         traffic_potential: 60
         cpc: null
         score: 6
-        published: false
+        published: true
       - keyword: automotive bdc outsourced solutions
         volume: 10
         kd: 0
@@ -402,7 +402,7 @@ pillars:
         traffic_potential: 2100
         cpc: 500
         score: 210
-        published: false
+        published: true
       - keyword: bdc car dealership meaning
         volume: 60
         kd: 0
@@ -422,28 +422,28 @@ pillars:
         traffic_potential: 2000
         cpc: null
         score: 200
-        published: false
+        published: true
       - keyword: close gaps
         volume: 50
         kd: 0
         traffic_potential: 1200
         cpc: 0
         score: 120
-        published: false
+        published: true
       - keyword: service lane technology
         volume: 70
         kd: 0
         traffic_potential: 150
         cpc: null
         score: 15
-        published: false
+        published: true
       - keyword: service advisor software
         volume: 30
         kd: 0
         traffic_potential: 70
         cpc: 500
         score: 7
-        published: false
+        published: true
       - keyword: service department
         volume: 900
         kd: 11
@@ -484,7 +484,7 @@ pillars:
         traffic_potential: 1900
         cpc: null
         score: 190
-        published: false
+        published: true
       - keyword: dealership bdc solutions
         volume: 10
         kd: 0
@@ -525,7 +525,7 @@ pillars:
         traffic_potential: 1700
         cpc: null
         score: 141.67
-        published: false
+        published: true
       - keyword: automotive customer experience
         volume: 350
         kd: 0
@@ -587,14 +587,14 @@ pillars:
         traffic_potential: 1100
         cpc: null
         score: 110
-        published: false
+        published: true
       - keyword: face face
         volume: 300
         kd: 0
         traffic_potential: 250
         cpc: 20
         score: 25
-        published: false
+        published: true
       - keyword: dealership bdc training
         volume: 30
         kd: 0
@@ -670,56 +670,56 @@ pillars:
         traffic_potential: 2100
         cpc: 70
         score: 105
-        published: false
+        published: true
       - keyword: car dealer marketing strategy
         volume: 60
         kd: 2
         traffic_potential: 1200
         cpc: 500
         score: 100
-        published: false
+        published: true
       - keyword: media plan
         volume: 900
         kd: 4
         traffic_potential: 1000
         cpc: 80
         score: 71.43
-        published: false
+        published: true
       - keyword: auto dealership marketing ideas
         volume: 90
         kd: 2
         traffic_potential: 500
         cpc: null
         score: 41.67
-        published: false
+        published: true
       - keyword: car dealership marketing ideas
         volume: 150
         kd: 0
         traffic_potential: 400
         cpc: 300
         score: 40
-        published: false
+        published: true
       - keyword: dealership marketing ideas
         volume: 50
         kd: 0
         traffic_potential: 400
         cpc: 300
         score: 40
-        published: false
+        published: true
       - keyword: marketing for auto dealers
         volume: 60
         kd: 15
         traffic_potential: 900
         cpc: 500
         score: 36
-        published: false
+        published: true
       - keyword: car dealer advertisement
         volume: 40
         kd: 0
         traffic_potential: 350
         cpc: 800
         score: 35
-        published: false
+        published: true
       - keyword: dealership holiday marketing ideas
         volume: 40
         kd: 0
@@ -774,7 +774,7 @@ pillars:
         traffic_potential: 700
         cpc: 25
         score: 70
-        published: false
+        published: true
       - keyword: advisor role
         volume: 50
         kd: 1
@@ -843,49 +843,49 @@ pillars:
         traffic_potential: 700
         cpc: null
         score: 70
-        published: false
+        published: true
       - keyword: car dealership revenue
         volume: 30
         kd: 4
         traffic_potential: 800
         cpc: null
         score: 57.14
-        published: false
+        published: true
       - keyword: car dealership profitability
         volume: 50
         kd: 4
         traffic_potential: 700
         cpc: null
         score: 50
-        published: false
+        published: true
       - keyword: used car dealer profit margin
         volume: 200
         kd: 0
         traffic_potential: 500
         cpc: null
         score: 50
-        published: false
+        published: true
       - keyword: dealer profit margin on new cars
         volume: 20
         kd: 3
         traffic_potential: 400
         cpc: 80
         score: 30.77
-        published: false
+        published: true
       - keyword: inventory calculations
         volume: 10
         kd: 1
         traffic_potential: 300
         cpc: 150
         score: 27.27
-        published: false
+        published: true
       - keyword: car dealership margins
         volume: 80
         kd: 1
         traffic_potential: 150
         cpc: 80
         score: 13.64
-        published: false
+        published: true
       - keyword: strong partnerships
         volume: 20
         kd: 1
@@ -1023,7 +1023,7 @@ pillars:
         traffic_potential: 250
         cpc: 200
         score: 20.83
-        published: false
+        published: true
       - keyword: fixed ops automotive
         volume: 40
         kd: 0
