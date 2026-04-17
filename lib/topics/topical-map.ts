@@ -85,7 +85,12 @@ function slugToWords(slug: string): Set<string> {
 function loadPublishedSlugs(): Set<string>[] {
   const slugSets: Set<string>[] = [];
 
-  const blogDir = path.resolve(ROOT, '..', 'site', 'content', 'blog');
+  // Check multiple possible locations for the site repo
+  const candidateBlogDirs = [
+    path.resolve(ROOT, 'site', 'content', 'blog'),       // CI: checked out as sibling
+    path.resolve(ROOT, '..', 'site', 'content', 'blog'),  // Local: ../site
+  ];
+  const blogDir = candidateBlogDirs.find(d => fs.existsSync(d)) ?? candidateBlogDirs[0];
   const draftsDir = path.resolve(ROOT, 'tmp', 'drafts');
 
   for (const dir of [blogDir, draftsDir]) {
