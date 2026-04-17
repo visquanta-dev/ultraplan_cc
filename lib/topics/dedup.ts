@@ -50,7 +50,8 @@ async function loadExistingSlugs(): Promise<Set<string>> {
 
   // 2. Local site checkout (check multiple possible locations)
   const candidateDirs = [
-    path.join(process.cwd(), 'site', 'content', 'blog'),           // CI: checked out as sibling
+    path.join(process.cwd(), 'site-checkout', 'content', 'blog'),  // CI: checked out inside repo
+    path.join(process.cwd(), 'site', 'content', 'blog'),           // CI: alt name
     path.join(process.cwd(), '..', 'site', 'content', 'blog'),     // Local: ../site
     path.join(process.env.HOME ?? process.env.USERPROFILE ?? '', 'Desktop', 'site', 'content', 'blog'),  // Local: ~/Desktop/site
   ];
