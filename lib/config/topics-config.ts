@@ -17,7 +17,7 @@ import YAML from 'yaml';
 // word counts anywhere else.
 // ---------------------------------------------------------------------------
 
-export type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
+export type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
 
 export type SourceStrategy = 'feed_first' | 'curated_first' | 'search_first' | 'calendar_first';
 

@@ -116,7 +116,7 @@ async function upsertFile(
 
 export interface CreateDraftPRInput {
   slug: string;
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
   markdownContent: string;
   images: Array<{ relativePath: string; absolutePath: string }>;
   gateReport: GateReport;
@@ -207,6 +207,7 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
     daily_seo: 'funnel:tofu',
     weekly_authority: 'funnel:mofu',
     monthly_anonymized_case: 'funnel:bofu',
+    listicle: 'funnel:tofu',
   } as const;
   const funnelLabel = funnelMap[input.lane];
 

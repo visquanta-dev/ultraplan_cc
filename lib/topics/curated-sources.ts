@@ -151,7 +151,7 @@ export function bucketToCluster(bucket: CuratedBucket): TopicCluster {
  */
 export async function resolveFromCurated(
   bucket: CuratedBucket,
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case',
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
   options: {
     onScrape?: (total: number, succeeded: number) => void;
   } = {},

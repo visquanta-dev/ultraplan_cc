@@ -117,6 +117,11 @@ const LANE_QUERIES: Record<string, string[]> = {
     'auto dealer technology implementation',
     'car dealer service improvement metrics',
   ],
+  listicle: [
+    'best ai tools car dealerships',
+    'top dealership software 2026',
+    'dealership sales strategies ranked',
+  ],
 };
 
 /**

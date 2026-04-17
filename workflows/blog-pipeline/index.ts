@@ -435,6 +435,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       daily_seo: 'Industry Insights',
       weekly_authority: 'Leadership',
       monthly_anonymized_case: 'Case Studies',
+      listicle: 'Guides & Roundups',
     };
 
     const LANE_TAGS: Record<string, Array<{ slug: string; title: string }>> = {
@@ -452,6 +453,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         { slug: 'case-study', title: 'Case Study' },
         { slug: 'dealership-operations', title: 'Dealership Operations' },
         { slug: 'results', title: 'Results' },
+      ],
+      listicle: [
+        { slug: 'roundup', title: 'Roundup' },
+        { slug: 'guide', title: 'Guide' },
+        { slug: 'dealership-operations', title: 'Dealership Operations' },
       ],
     };
 

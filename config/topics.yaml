@@ -59,6 +59,32 @@ lanes:
       judge: gpt-5
       image: google/gemini-2.5-flash-image-preview-pro
 
+  listicle:
+    # Listicle lane — "Top N X" / "N Best Y" / "[Number] Reasons Z" format posts.
+    # Designed to target high-CTR numbered-query keywords ("best ai tools for
+    # car dealerships", "top 10 dealer reputation tactics") which consistently
+    # outperform plain titles by 30-50% in SERP click-through. Enumerated H2
+    # structure is also the single highest-extraction format for LLM answer
+    # surfaces (ChatGPT, Perplexity, Google AI Overviews) in 2026.
+    cadence: "on-demand"  # triggered via workflow_dispatch, not a daily slot
+    funnel_target: ToFu
+    source_strategy: curated_first
+    word_count:
+      min: 1800
+      max: 2400
+    sources:
+      - trade_press
+      - reddit
+    topic_strategy: list_roundup
+    image:
+      count: 1
+      style: daily_seo
+    review: pr_only
+    models:
+      drafter: claude-opus-4-6
+      judge: gpt-5
+      image: google/gemini-2.5-flash-image-preview-pro
+
   monthly_anonymized_case:
     # Replaces the daily_seo Friday slot on the 1st Friday of each month.
     cadence: "1ST FRI 06:00"

@@ -13,7 +13,7 @@ import { resolveSlot } from '../lib/topics/resolver';
 import { runBlogPipeline } from '../workflows/blog-pipeline';
 import { getLaneWordCount, type Lane, type SourceStrategy } from '../lib/config/topics-config';
 
-const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case'];
+const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case', 'listicle'];
 const lane = (process.argv[2] as Lane) ?? 'daily_seo';
 const curatedBucket = process.argv[3] ?? undefined;
 const strategyFlag = process.argv.find(a => a.startsWith('--strategy='))?.split('=')[1]

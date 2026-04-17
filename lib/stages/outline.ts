@@ -41,7 +41,7 @@ const OUTLINE_SCHEMA = {
   required: ['headline', 'lane', 'sections'],
   properties: {
     headline: { type: 'string', description: 'Specific, insight-promising headline' },
-    lane: { type: 'string', enum: ['daily_seo', 'weekly_authority', 'monthly_anonymized_case'] },
+    lane: { type: 'string', enum: ['daily_seo', 'weekly_authority', 'monthly_anonymized_case', 'listicle'] },
     sections: {
       type: 'array',
       minItems: 4,

@@ -1,0 +1,60 @@
+# ============================================================================
+# UltraPlan — image style: daily_seo lane
+# Flux 2 Pro photorealistic editorial style. Every daily SEO post hero reads
+# as part of the same professional publication.
+# ============================================================================
+
+lane: listicle
+model: google/gemini-3.1-flash-image-preview
+
+# ----------------------------------------------------------------------------
+# Aspect ratio + dimensions (hero only)
+# ----------------------------------------------------------------------------
+dimensions:
+  hero:
+    width: 1600
+    height: 900
+    aspect_ratio: "16:9"
+
+# ----------------------------------------------------------------------------
+# Style prompt — prepended verbatim to every prompt for this lane
+# ----------------------------------------------------------------------------
+style_prompt: |
+  Photorealistic editorial photograph for a professional business blog.
+  The image must visually relate to the article's headline and core topic.
+  Think: Harvard Business Review cover art, Wired feature photography.
+  Clean composition, natural lighting, shallow depth of field.
+  Show a real scene that a dealership manager would recognize - service desks,
+  phone systems, empty waiting areas, digital dashboards, scheduling screens,
+  clean modern office environments, professional workspaces.
+  Warm, modern color palette. Clear focal point.
+  No identifiable human faces (silhouettes or backs of heads OK).
+  No brand logos, car badges, or text overlays.
+
+# ----------------------------------------------------------------------------
+# Negative prompt — hard rejections
+# ----------------------------------------------------------------------------
+negative_prompt: |
+  identifiable human faces, brand logos, car badges, OEM logos, NHTSA logo,
+  text overlay, text artifacts, cluttered composition, stock photo aesthetic,
+  corporate clip art, cartoon, anime, 3D render, gradient backgrounds,
+  watermarks, low resolution
+
+# ----------------------------------------------------------------------------
+# Brand-fit vision check rubric (stage 6b gate)
+# ----------------------------------------------------------------------------
+# Vision model scores each generated image 1-10 against this rubric.
+# Minimum passing score: 7.
+brand_fit_rubric:
+  - "Professional editorial photography quality — not stock photo aesthetic"
+  - "Clean composition with clear focal point and strong balance"
+  - "No identifiable human faces, no brand logos, no text in the image"
+  - "Warm, modern tones appropriate for a business technology publication"
+  - "Subject matter is relevant or abstractly evocative of the article topic"
+
+# ----------------------------------------------------------------------------
+# Anonymization — extra check for client-identifying content
+# ----------------------------------------------------------------------------
+anonymization_rule: |
+  No specific dealership names, no identifiable car brand logos or badges,
+  no OEM branding visible anywhere in the image.

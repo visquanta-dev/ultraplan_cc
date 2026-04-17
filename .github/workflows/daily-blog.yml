@@ -7,6 +7,10 @@ on:
     - cron: '30 14 * * 1-5'  # Mon-Fri at 9:30 AM Chicago time (CDT)
   workflow_dispatch:  # Allow manual triggering from GitHub UI
     inputs:
+      lane:
+        description: 'Editorial lane (daily_seo, weekly_authority, monthly_anonymized_case, listicle)'
+        required: false
+        default: 'daily_seo'
       strategy:
         description: 'Topic strategy (calendar_first, feed_first, curated_first)'
         required: false
@@ -51,10 +55,11 @@ jobs:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
         run: |
+          LANE="${{ github.event.inputs.lane || 'daily_seo' }}"
           STRATEGY="${{ github.event.inputs.strategy || 'calendar_first' }}"
           BUCKET="${{ github.event.inputs.curated_bucket }}"
 
-          ARGS="daily_seo"
+          ARGS="$LANE"
           if [ -n "$BUCKET" ]; then
             ARGS="$ARGS $BUCKET"
           elif [ "$STRATEGY" != "feed_first" ]; then

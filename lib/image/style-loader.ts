@@ -30,7 +30,7 @@ export interface ImageStyleConfig {
   anonymization_rule?: string;
 }
 
-type LaneName = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
+type LaneName = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
 
 const cache = new Map<string, ImageStyleConfig>();
 

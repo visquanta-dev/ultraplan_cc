@@ -260,7 +260,7 @@ async function generateAndValidate(
  */
 export async function runImagePipeline(
   slug: string,
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case',
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
   headline: string,
   sectionHeadings: string[],
   options: ImagePipelineOptions = {},
@@ -396,7 +396,7 @@ function headlineToPexelsQuery(headline: string): string {
  */
 export async function runMultiOptionImagePipeline(
   slug: string,
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case',
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
   headline: string,
   sectionHeadings: string[],
   overlayText: string,

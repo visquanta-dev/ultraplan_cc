@@ -41,6 +41,11 @@ const LANE_KEYWORDS: Record<string, string[]> = {
     'before', 'after', 'conversion', 'close', 'show', 'rate', 'lift',
     'revenue', 'roi', 'improved', 'increase', 'reduction', 'success',
   ],
+  listicle: [
+    'top', 'best', 'tools', 'software', 'strategies', 'tactics', 'ways',
+    'reasons', 'mistakes', 'tips', 'guide', 'roundup', 'compared',
+    'dealership', 'dealer', 'automotive', 'ai', 'automation',
+  ],
 };
 
 function tokenize(str: string): string[] {

@@ -216,6 +216,45 @@ Declarative headings are weaker for this than question-phrased ones.
   Closing generalizes to the reader's context. Reading time 12–16 minutes.
   **NEVER** include a client name — use `safe_patterns` from clients_blocklist.yaml.
 
+- **listicle** (1800–2400 words): roundup / "Top N" / numbered-format post.
+  Built specifically to target high-CTR numbered-query keywords ("best ai
+  tools for car dealerships", "top 10 dealer reputation tactics") and to
+  maximize extraction by LLM answer surfaces.
+  **HARD RULES for the listicle lane** (non-negotiable — the SEO/AEO gate
+  will block drafts that violate these):
+  1. **H1 MUST start with a number between 5 and 12.** Examples: "7 AI
+     Tools That Boost Dealership Sales", "10 Ways Dealers Lose Service
+     Revenue in 2026", "5 Reasons CRM Reactivation Beats Paid Ads".
+     NEVER a non-numbered headline for this lane.
+  2. **Outline MUST contain exactly N numbered H2 sections**, matching the
+     number in the H1. If the H1 says "7 Tools", you deliver exactly 7
+     item sections (plus an intro section and optional FAQ/closing — those
+     don't count toward N). Do NOT ship 8 items to "7 Tools" or vice versa.
+  3. **Each of the N item H2s follows the pattern: "N. [Specific item
+     name] — [One-line benefit]".** Example: "3. Speed-to-Lead Voice
+     Agents — Cut response time from 22 minutes to under 60 seconds."
+  4. **Each item section contains:** one 60-90 word description of what
+     the item is, one 60-90 word paragraph of why it matters to dealers
+     with a specific stat, one 2-4 item bullet list of what it actually
+     changes in practice. Brevity is structural — items should feel like
+     flashcards, not mini-essays.
+  5. **Lead with an intro section** (1 H2, ~150 words) that names the
+     criteria for inclusion in the list ("We evaluated 20 tools against
+     three criteria: response speed, integration depth, and measurable
+     lift. These 7 topped the list."). This criteria framing is what
+     separates a credible listicle from vendor-pitch slop.
+  6. **Close with a short FAQ section** (4-5 Q&A) covering comparison
+     questions readers Google alongside the topic ("Which tool is best
+     for independent vs franchise dealers?", "What's the minimum ROI
+     timeline?"). FAQ sections on listicles disproportionately win
+     featured-snippet and People-Also-Ask placement.
+  7. **Vendor-neutral framing.** VisQuanta products CAN appear as items
+     when genuinely best-in-class for a criterion, but the listicle must
+     include at least 2 non-VisQuanta items to read as credible to Google
+     reviewers and to dealers. An all-VisQuanta "top 7" reads as vendor
+     content and won't rank.
+  Reading time 7–9 minutes.
+
 ## What follows
 
 The user message contains the bundle JSON. Produce the outline. Return JSON

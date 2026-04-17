@@ -83,7 +83,7 @@ export interface Bundle {
    * Editorial lane this bundle is assembled for. Determines word count
    * range, topic strategy, and which sources are allowed.
    */
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case';
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
 
   /**
    * Topic slug resolved from the cluster step (slot resolver — Phase 3).

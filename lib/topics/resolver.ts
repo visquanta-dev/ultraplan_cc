@@ -25,7 +25,7 @@ export interface ResolvedSlot {
 
 export type { SourceStrategy };
 
-function getLaneStrategy(lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case'): SourceStrategy {
+function getLaneStrategy(lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle'): SourceStrategy {
   return loadLaneStrategy(lane);
 }
 
@@ -95,7 +95,7 @@ async function discoverFromFeeds(lane: string): Promise<SearchResult[]> {
  * @throws if no articles are found or no bundle can be assembled
  */
 export async function resolveSlot(
-  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case',
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
   options: {
     onSearch?: (count: number) => void;
     onCluster?: (cluster: TopicCluster) => void;
