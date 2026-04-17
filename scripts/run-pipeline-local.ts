@@ -52,6 +52,10 @@ async function main() {
   console.log('\n=== RESULT ===');
   console.log(JSON.stringify(result, null, 2));
   console.log(`\nTotal wall time: ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
+
+  // Write result to file for CI consumption (GitHub Actions reads this)
+  const fs = await import('node:fs');
+  fs.writeFileSync('pipeline-result.json', JSON.stringify(result));
 }
 
 main().catch((err) => {

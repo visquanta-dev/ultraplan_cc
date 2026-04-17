@@ -62,26 +62,34 @@ jobs:
           fi
 
           echo "Running: npx tsx scripts/run-pipeline-local.ts $ARGS"
-          npx tsx scripts/run-pipeline-local.ts $ARGS 2>&1 | tee pipeline.log
+          npx tsx scripts/run-pipeline-local.ts $ARGS 2>&1 | tee pipeline.log || true
 
-          # Extract result JSON from the output
-          RESULT=$(grep -A 20 '=== RESULT ===' pipeline.log | tail -n +2 | head -20)
-          echo "result<<EOF" >> $GITHUB_OUTPUT
-          echo "$RESULT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Pipeline writes result to pipeline-result.json
+          if [ -f pipeline-result.json ]; then
+            cat pipeline-result.json
+            echo "result=$(cat pipeline-result.json)" >> $GITHUB_OUTPUT
+          else
+            echo 'result={"slug":"unknown","verdict":"error","error":"No result file produced"}' >> $GITHUB_OUTPUT
+          fi
 
       - name: Notify via webhook
         if: always()
         env:
           N8N_WEBHOOK_URL: ${{ secrets.N8N_BLOG_WEBHOOK_URL }}
         run: |
-          RESULT='${{ steps.pipeline.outputs.result }}'
+          # Read result from file if available, fall back to GitHub output
+          if [ -f pipeline-result.json ]; then
+            RESULT=$(cat pipeline-result.json)
+          else
+            RESULT='${{ steps.pipeline.outputs.result }}'
+          fi
 
-          # If no result (pipeline failed before output), create error payload
+          # If still no result, create error payload
           if [ -z "$RESULT" ] || [ "$RESULT" = "" ]; then
             RESULT='{"slug":"unknown","verdict":"error","error":"Pipeline failed before producing output"}'
           fi
 
+          echo "Sending to webhook: $RESULT"
           curl -s -X POST "$N8N_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$RESULT" || echo "Webhook notification failed (non-fatal)"
