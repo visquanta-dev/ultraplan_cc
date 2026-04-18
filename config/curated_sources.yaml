@@ -95,11 +95,14 @@ daily_seo:
     - https://www.thedrive.com/news/add-ai-to-the-list-of-reasons-you-cant-trust-online-car-dealer-reviews
 
   # ---------------------------------------------------------------------------
-  # Topic: Used car prices spiking — tariffs, Manheim index, wholesale surge
+  # Topic: Pre-owned prices spiking — tariffs, Manheim index, wholesale surge
+  # Brand-voice: always "pre-owned" in drafter output, never "used car".
+  # Source URLs themselves use "used" because that's how the original
+  # publishers wrote them — those are external and can't be rewritten.
   # Fits calculator: none
   # Fits link: none (general industry insight)
   # ---------------------------------------------------------------------------
-  used_car_price_spike:
+  preowned_price_spike:
     - https://news.dealershipguy.com/p/used-vehicle-prices-surge-1-500-from-mid-march
     - https://digitaldealer.com/news/carfax-used-car-prices-spike-after-hitting-12-month-low/170080/
     - https://www.prnewswire.com/news-releases/carfax-used-car-prices-spike-after-hitting-12-month-low-302741213.html

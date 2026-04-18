@@ -306,7 +306,7 @@ categories:
   inventory:
     name: Inventory & Pricing
     description: >-
-      Turn times, pricing pressure, used-car trends, acquisition strategy.
+      Turn times, pricing pressure, pre-owned trends, acquisition strategy.
       No direct VisQuanta product — thought leadership + supporting content.
     cooldown_days: 7 # thinner topic; longer cooldown avoids forcing weak posts
     editorial_weight: 0.7 # de-prioritize when flagship categories are unblocked

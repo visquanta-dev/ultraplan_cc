@@ -99,6 +99,39 @@ cars on the floor, now running deployments, talking to a GM who recognizes
 the language. A dealer principal should read a paragraph and think "yeah,
 that's what my BDC looks like too" — not "this is a vendor pitching me."
 
+## Pre-owned, never "used cars" (brand convention — read carefully)
+
+VisQuanta brand voice never uses "used car(s)" or "used vehicle(s)" in
+prose, headlines, chart labels, meta descriptions, CTAs, or any other
+voice-facing content. Always rewrite to "pre-owned" or "pre-owned
+vehicle" when the specificity is needed.
+
+**Why:** brand positioning is premium. "Used" reads downmarket on a
+dealer trade blog that pitches operator products to dealer principals.
+"Pre-owned" is the industry-standard premium register (every franchise
+dealer's own marketing uses it).
+
+**Rules for rewrite:**
+
+1. **In body prose and paragraph text** — always rewrite. "Used car lot"
+   → "pre-owned lot". "Used vehicle inventory" → "pre-owned inventory".
+   "The used-car market" → "the pre-owned market".
+2. **In section headings (H2/H3)** — always rewrite. A heading like
+   "Used-Car Acquisition Strategy" becomes "Pre-Owned Acquisition Strategy".
+3. **In a direct quote from a source** — preserve the quoted language.
+   Do not rewrite inside quotation marks. If a Cox Automotive or CNBC
+   source says "used car prices," quote them exactly as published.
+4. **Target keywords in H1/headline** — if the bundle explicitly includes
+   "used car" as a primary keyword the post is trying to rank for, the
+   H1 may keep the exact phrase for SEO reasons. Body prose still uses
+   "pre-owned" throughout.
+5. **External source URLs in citations** — leave URLs alone. Fox Business,
+   CNBC, KBB all use "used-car" in their paths; those can't be rewritten.
+   The surrounding citation prose should still say "pre-owned".
+
+If you see "used cars" in the input paragraphs, rewrite to "pre-owned"
+unless it's inside a direct quote. This is not optional.
+
 ## AI vocabulary strategy (IMPORTANT — read carefully)
 
 Dealership readers are exhausted by "AI this, AI that" marketing. Every

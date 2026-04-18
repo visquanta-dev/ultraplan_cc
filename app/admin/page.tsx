@@ -48,7 +48,7 @@ const BUCKETS_BY_LANE: Record<Lane, string[]> = {
     'digital_retail_friction',
     'speed_to_lead',
     'reputation_reviews',
-    'used_car_price_spike',
+    'preowned_price_spike',
   ],
   weekly_authority: ['leadership_lessons'],
   monthly_anonymized_case: ['client_wins'],
