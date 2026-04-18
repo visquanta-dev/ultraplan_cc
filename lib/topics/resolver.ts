@@ -2,7 +2,7 @@ import type { TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
 import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
-import type { Bundle, ScrapedInput } from '../bundle/types';
+import type { Bundle, ScrapedInput, Source } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
 import { getSignalCandidates, type TopicCluster as SignalCluster } from './competitor-signal';
 import { getCategoryStatus, getAvailableCategories } from './category-cooldown';
@@ -82,6 +82,116 @@ export async function resolveSlot(
   // PATH 2: Signal-driven (default)
   // ------------------------------------------------------------------
   return resolveSignalPath(lane, options);
+}
+
+// ---------------------------------------------------------------------------
+// Originate path — operator-voice seed drives the post
+//
+// Bypasses competitor-signal entirely. The operator (typically William or
+// anyone on the VisQuanta team) provides a short observation about something
+// they saw in deployment — e.g. "Hyundai store closed 17 units off web leads
+// last week, 4x prior rate." The pipeline treats that observation as the
+// primary source. Drafter builds a full post around it with operator-voice
+// framing. These posts are the 20% of weekly output that can't be
+// competitor-mirrored — they're citable precisely because they contain
+// first-hand data nobody else has.
+// ---------------------------------------------------------------------------
+
+export async function resolveOriginate(args: {
+  seed: string;
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
+  category_id?: string;
+}): Promise<ResolvedSlot> {
+  const seed = args.seed.trim();
+  if (seed.length < 80) {
+    throw new Error(
+      '[resolver] originate seed is too short. Provide at least 80 characters — aim for 3-5 sentences with a specific number or pattern the drafter can anchor to.',
+    );
+  }
+  if (seed.length > 2000) {
+    throw new Error(
+      '[resolver] originate seed is too long. Trim to < 2000 characters — 3-5 sentences of first-hand observation is the target.',
+    );
+  }
+
+  // Split into sentences and require at least 3 substantive ones. Each
+  // sentence becomes a quote in the synthesized operator source, bypassing
+  // the factual-scoring filter that would reject short seeds.
+  const sentences = seed
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 30); // drop trivial fragments
+
+  if (sentences.length < 3) {
+    throw new Error(
+      `[resolver] originate seed needs at least 3 substantive sentences (got ${sentences.length}). Each sentence becomes a verbatim quote the drafter anchors to.`,
+    );
+  }
+
+  const firstSentence = sentences[0];
+  const slugBase = firstSentence
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 60);
+  const slug = slugBase || `originate-${Date.now()}`;
+
+  console.log(
+    `[resolver] Originate path: seed (${seed.length} chars, ${sentences.length} sentences), category=${args.category_id ?? '(none)'}`,
+  );
+
+  // Build the operator Source directly, bypassing assembleBundle's quote
+  // scoring. Each sentence → one verbatim quote. Drafter + gates treat
+  // these quote_ids like any other bundle quote.
+  const operatorSourceId = 'src_001';
+  const operatorSource: Source = {
+    source_id: operatorSourceId,
+    domain: 'visquanta.com',
+    url: `https://www.visquanta.com/internal/operator-seed/${slug}`,
+    title: firstSentence.slice(0, 120),
+    published: new Date().toISOString(),
+    quotes: sentences.slice(0, 8).map((text, i) => ({
+      quote_id: `${operatorSourceId}_q${i + 1}`,
+      text,
+      type: /\d/.test(text) ? 'stat' : 'claim',
+    })),
+  };
+
+  const bundle: Bundle = {
+    bundle_id: `bundle_${slug}_${Date.now()}`,
+    lane: args.lane,
+    topic_slug: slug,
+    ...(args.category_id ? { category_id: args.category_id } : {}),
+    originate_seed: seed,
+    assembled_at: new Date().toISOString(),
+    sources: [operatorSource],
+  };
+
+  console.log(
+    `[resolver] Originate bundle assembled: 1 operator source, ${operatorSource.quotes.length} quotes`,
+  );
+
+  const cluster: TopicCluster = {
+    label: firstSentence.slice(0, 100),
+    slug,
+    keywords: seed
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 4)
+      .slice(0, 12),
+    sourceCount: 1,
+    articles: [
+      {
+        url: operatorSource.url,
+        title: operatorSource.title,
+        description: 'Operator-voice seed (originate path)',
+        publishedAt: operatorSource.published,
+      },
+    ],
+  };
+
+  return { bundle, cluster };
 }
 
 // ---------------------------------------------------------------------------

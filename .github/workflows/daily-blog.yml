@@ -18,6 +18,12 @@ on:
       curated_bucket:
         description: 'Curated bucket name (optional, only for curated_first)'
         required: false
+      originate_seed_b64:
+        description: 'Base64-encoded operator-voice seed (originate path only). 3-5 sentences of first-hand observation.'
+        required: false
+      originate_category:
+        description: 'Category id for the originate post (e.g. reputation, lead_reactivation) — required when originate_seed_b64 is set.'
+        required: false
 
 jobs:
   generate:
@@ -54,15 +60,29 @@ jobs:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+        env:
+          ORIGINATE_SEED_B64: ${{ github.event.inputs.originate_seed_b64 }}
+          ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}
         run: |
           LANE="${{ github.event.inputs.lane || 'daily_seo' }}"
           STRATEGY="${{ github.event.inputs.strategy || 'calendar_first' }}"
           BUCKET="${{ github.event.inputs.curated_bucket }}"
 
+          # Originate mode: decode the base64-encoded seed to a file and set
+          # ORIGINATE_SEED_FILE + ORIGINATE_CATEGORY for the pipeline runner.
+          # Base64 is used to cleanly carry multi-line text through the
+          # workflow_dispatch input layer without escaping headaches.
+          if [ -n "$ORIGINATE_SEED_B64" ]; then
+            mkdir -p tmp
+            echo "$ORIGINATE_SEED_B64" | base64 -d > tmp/originate-seed.txt
+            export ORIGINATE_SEED_FILE="tmp/originate-seed.txt"
+            echo "Originate mode: seed=$(wc -c < tmp/originate-seed.txt) chars, category=$ORIGINATE_CATEGORY"
+          fi
+
           ARGS="$LANE"
-          if [ -n "$BUCKET" ]; then
+          if [ -n "$BUCKET" ] && [ -z "$ORIGINATE_SEED_B64" ]; then
             ARGS="$ARGS $BUCKET"
-          elif [ "$STRATEGY" != "feed_first" ]; then
+          elif [ "$STRATEGY" != "feed_first" ] && [ -z "$ORIGINATE_SEED_B64" ]; then
             ARGS="$ARGS --strategy $STRATEGY"
           fi
 

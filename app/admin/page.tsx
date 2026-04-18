@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo } from 'react';
 // Orange used as ink, not decoration.
 // ---------------------------------------------------------------------------
 
-type Tab = 'trigger' | 'status' | 'blocked' | 'runs' | 'rejections';
+type Tab = 'trigger' | 'originate' | 'status' | 'blocked' | 'runs' | 'rejections';
 type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
 type Strategy = 'calendar_first' | 'feed_first' | 'curated_first';
 
@@ -128,6 +128,19 @@ export default function AdminDashboard() {
     actionsUrl?: string;
   } | null>(null);
 
+  // Originate form state — operator-voice seed drives a post
+  const [originateSeed, setOriginateSeed] = useState<string>('');
+  const [originateCategory, setOriginateCategory] = useState<string>('reputation');
+  const [originateLane, setOriginateLane] = useState<Lane>('daily_seo');
+  const [originateSubmitting, setOriginateSubmitting] = useState(false);
+  const [originateResult, setOriginateResult] = useState<{
+    ok: boolean;
+    message: string;
+    actionsUrl?: string;
+    sentence_count?: number;
+    seed_chars?: number;
+  } | null>(null);
+
   useEffect(() => {
     loadData(tab);
     if (tab === 'trigger') void loadRunsQuiet();
@@ -147,7 +160,8 @@ export default function AdminDashboard() {
   }
 
   async function loadData(activeTab: Tab) {
-    if (activeTab === 'trigger') return;
+    // Trigger + Originate tabs are pure forms — no auth prompt on tab switch
+    if (activeTab === 'trigger' || activeTab === 'originate') return;
     setLoading(true);
     setError(null);
     try {
@@ -206,12 +220,48 @@ export default function AdminDashboard() {
     }
   }
 
+  async function submitOriginate() {
+    setOriginateSubmitting(true);
+    setOriginateResult(null);
+    try {
+      const headers: HeadersInit = { ...authHeaders(), 'Content-Type': 'application/json' };
+      const res = await fetch('/api/admin/trigger-originate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          seed: originateSeed,
+          category_id: originateCategory,
+          lane: originateLane,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setOriginateResult({ ok: false, message: data.error ?? `HTTP ${res.status}` });
+      } else {
+        setOriginateResult({
+          ok: true,
+          message: data.message,
+          actionsUrl: data.actionsUrl,
+          sentence_count: data.sentence_count,
+          seed_chars: data.seed_chars,
+        });
+        // Refresh recent runs side panel 2.5s after a successful trigger
+        setTimeout(() => void loadRunsQuiet(), 2500);
+      }
+    } catch (err) {
+      setOriginateResult({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setOriginateSubmitting(false);
+    }
+  }
+
   const availableBuckets = BUCKETS_BY_LANE[triggerLane] ?? [];
   const bucketRequired = triggerStrategy === 'curated_first' && availableBuckets.length > 0;
   const recentRuns = useMemo(() => runs.slice(0, 6), [runs]);
 
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: 'trigger', label: 'New Run' },
+    { id: 'originate', label: 'Originate' },
     { id: 'status', label: 'Pipeline Status' },
     { id: 'blocked', label: 'Blocked Drafts' },
     { id: 'runs', label: 'Run History' },
@@ -594,6 +644,175 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 </aside>
+              </div>
+            )}
+
+            {/* ──────────────── ORIGINATE ──────────────── */}
+            {tab === 'originate' && (
+              <div>
+                <div className="flex items-baseline gap-3">
+                  <h2
+                    className="text-[36px] leading-[1] tracking-tight text-zinc-50"
+                    style={{ fontFamily: 'var(--font-display), Georgia, serif', fontWeight: 400 }}
+                  >
+                    Originate.
+                  </h2>
+                </div>
+                <div className="mt-2 h-px w-8 bg-[#F97316]" aria-hidden />
+                <p
+                  className="mt-3 max-w-xl text-[13px] text-zinc-500"
+                  style={{ fontFamily: 'var(--font-mono), monospace' }}
+                >
+                  ¶ Operator-voice seed drives a post. The drafter anchors to
+                  your observation, not competitor research. Use this for
+                  first-hand data no competitor can mirror.
+                </p>
+
+                <div className="mt-8 border border-zinc-900 bg-[#0C0C10] max-w-3xl">
+                  <div className="grid gap-6 p-7">
+                    <div className="grid gap-2">
+                      <label
+                        htmlFor="originate-seed"
+                        className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500"
+                        style={{ fontFamily: 'var(--font-mono), monospace' }}
+                      >
+                        <span className="text-zinc-700">01</span>
+                        <span className="h-px flex-shrink-0 w-4 bg-zinc-800" aria-hidden />
+                        <span>Operator observation</span>
+                      </label>
+                      <textarea
+                        id="originate-seed"
+                        value={originateSeed}
+                        onChange={(e) => setOriginateSeed(e.target.value)}
+                        rows={6}
+                        maxLength={2000}
+                        placeholder="Example: Mid-size Hyundai store in Oklahoma — after 60 days on Speed-to-Lead, they closed 17 units off web leads last week. That's 4x their prior rate. Sales manager texted me Monday saying 'this is crazy.' Anonymize the store."
+                        className="w-full resize-y border border-zinc-800 bg-black px-3 py-2.5 text-[14px] leading-[1.55] text-zinc-100 outline-none transition focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/40"
+                        style={{ fontFamily: 'var(--font-body), system-ui, sans-serif' }}
+                      />
+                      <div
+                        className="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-zinc-600"
+                        style={{ fontFamily: 'var(--font-mono), monospace' }}
+                      >
+                        <span>
+                          {originateSeed.length}/2000 chars ·{' '}
+                          {originateSeed.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length >= 30).length} substantive sentences
+                        </span>
+                        <span className="text-zinc-700">Min 80 chars, 3 sentences</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <div className="grid gap-2">
+                        <label
+                          htmlFor="originate-category"
+                          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500"
+                          style={{ fontFamily: 'var(--font-mono), monospace' }}
+                        >
+                          <span className="text-zinc-700">02</span>
+                          <span className="h-px flex-shrink-0 w-4 bg-zinc-800" aria-hidden />
+                          <span>Category</span>
+                        </label>
+                        <select
+                          id="originate-category"
+                          value={originateCategory}
+                          onChange={(e) => setOriginateCategory(e.target.value)}
+                          className="w-full appearance-none border border-zinc-800 bg-black px-3 py-2.5 text-[14px] text-zinc-100 outline-none transition focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/40"
+                        >
+                          <option value="lead_reactivation">lead_reactivation</option>
+                          <option value="speed_to_lead">speed_to_lead</option>
+                          <option value="service_drive">service_drive</option>
+                          <option value="web_capture">web_capture</option>
+                          <option value="reputation">reputation</option>
+                          <option value="inventory">inventory</option>
+                          <option value="industry_trends">industry_trends</option>
+                        </select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label
+                          htmlFor="originate-lane"
+                          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-zinc-500"
+                          style={{ fontFamily: 'var(--font-mono), monospace' }}
+                        >
+                          <span className="text-zinc-700">03</span>
+                          <span className="h-px flex-shrink-0 w-4 bg-zinc-800" aria-hidden />
+                          <span>Lane</span>
+                        </label>
+                        <select
+                          id="originate-lane"
+                          value={originateLane}
+                          onChange={(e) => setOriginateLane(e.target.value as Lane)}
+                          className="w-full appearance-none border border-zinc-800 bg-black px-3 py-2.5 text-[14px] text-zinc-100 outline-none transition focus:border-[#F97316] focus:ring-1 focus:ring-[#F97316]/40"
+                        >
+                          <option value="daily_seo">daily_seo — Industry Insights</option>
+                          <option value="weekly_authority">weekly_authority — Leadership</option>
+                          <option value="monthly_anonymized_case">monthly_anonymized_case — Case Studies</option>
+                          <option value="listicle">listicle — Guides &amp; Roundups</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        onClick={submitOriginate}
+                        disabled={originateSubmitting || originateSeed.trim().length < 80}
+                        className="group relative flex w-full items-center justify-between gap-3 px-6 py-4 text-[13px] font-semibold uppercase tracking-[0.2em] text-black transition disabled:cursor-not-allowed"
+                        style={{
+                          background:
+                            originateSubmitting || originateSeed.trim().length < 80 ? '#1a1a20' : '#F97316',
+                          color:
+                            originateSubmitting || originateSeed.trim().length < 80 ? '#52525b' : '#08080A',
+                          fontFamily: 'var(--font-mono), monospace',
+                        }}
+                      >
+                        <span>{originateSubmitting ? 'Triggering…' : 'Draft from seed'}</span>
+                        <span aria-hidden className="text-lg">
+                          {originateSubmitting ? '·' : '→'}
+                        </span>
+                      </button>
+                    </div>
+
+                    {originateResult && (
+                      <div
+                        className={`border px-5 py-4 ${
+                          originateResult.ok
+                            ? 'border-emerald-500/30 bg-emerald-950/20'
+                            : 'border-red-500/30 bg-red-950/20'
+                        }`}
+                      >
+                        <p
+                          className={`text-[10px] uppercase tracking-[0.25em] ${
+                            originateResult.ok ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                          style={{ fontFamily: 'var(--font-mono), monospace' }}
+                        >
+                          {originateResult.ok ? '● Originate triggered' : '✗ Failed'}
+                        </p>
+                        <p className="mt-1 text-[14px] text-zinc-300">{originateResult.message}</p>
+                        {originateResult.ok && originateResult.sentence_count !== undefined && (
+                          <p
+                            className="mt-1 text-[11px] uppercase tracking-[0.18em] text-zinc-500"
+                            style={{ fontFamily: 'var(--font-mono), monospace' }}
+                          >
+                            {originateResult.seed_chars} chars · {originateResult.sentence_count} quotes
+                          </p>
+                        )}
+                        {originateResult.actionsUrl && (
+                          <a
+                            href={originateResult.actionsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-3 inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.18em] text-[#F97316] transition hover:text-[#FFA45C]"
+                            style={{ fontFamily: 'var(--font-mono), monospace' }}
+                          >
+                            Open GitHub Actions <span aria-hidden>→</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

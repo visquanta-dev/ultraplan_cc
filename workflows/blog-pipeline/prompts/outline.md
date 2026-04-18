@@ -93,6 +93,36 @@ The current year is 2026. When source articles reference past-year stats
 current year. Never write as if it is 2025 or any prior year. Headlines
 and section headings must reflect 2026 as the present.
 
+## Originate mode (applies only when the bundle has `originate_seed`)
+
+Some bundles arrive with an `originate_seed` field — a verbatim operator-voice
+observation written by a VisQuanta team member about something they saw in
+deployment (e.g. "Hyundai store closed 17 units off web leads last week, 4x
+the prior rate"). When this field is present, the outline MUST be built
+around that observation, not around competitor research. Specifically:
+
+1. **The operator observation is THE headline hook.** The H1 should frame the
+   claim directly ("How one Hyundai store 4x'd web-lead close rates in 60
+   days" — not "Speed-to-lead benchmarks for 2026").
+2. **Lead section opens with the number from the seed.** Whatever specific
+   datapoint the operator provided is the cold-open — no windup, no industry
+   context first.
+3. **All sections anchor to the operator's quote_ids** (the seed is split
+   into quotes at the bundle level). Section intents are operator-voice
+   framings like "establish the pattern we saw," "explain the operational
+   change behind the number," "generalize from the single deployment."
+4. **Supporting research (if any other sources are in the bundle) is
+   secondary** — used only to contextualize the operator's claim, never as
+   the primary frame. Most originate bundles have only the operator source.
+5. **The post must feel first-hand, not reported.** Headlines like "Study
+   finds…" or "According to data…" are wrong for this mode. Headlines like
+   "We watched a Hyundai store…" or "Across the rooftops we work with…" are
+   right.
+
+This mode is how VisQuanta publishes the 20% of weekly content that can't
+be competitor-mirrored. These posts get LLM-cited precisely because they
+contain first-hand operational data nobody else has.
+
 ## Your task
 
 Design an outline with a headline and 4–8 sections. Every section must
