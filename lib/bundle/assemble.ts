@@ -157,7 +157,14 @@ function extractDomain(url: string): string {
  */
 export function assembleBundle(
   inputs: ScrapedInput[],
-  meta: { lane: Bundle['lane']; topic_slug: string },
+  meta: {
+    lane: Bundle['lane'];
+    topic_slug: string;
+    /** Product-aligned category id (see config/categories.yaml) — drives CTA routing */
+    category_id?: string;
+    /** Operator-voice seed text (originate path only) */
+    originate_seed?: string;
+  },
 ): Bundle {
   const sources: Source[] = [];
 
@@ -192,6 +199,8 @@ export function assembleBundle(
     bundle_id: `bundle_${meta.topic_slug}_${Date.now()}`,
     lane: meta.lane,
     topic_slug: meta.topic_slug,
+    ...(meta.category_id ? { category_id: meta.category_id } : {}),
+    ...(meta.originate_seed ? { originate_seed: meta.originate_seed } : {}),
     assembled_at: new Date().toISOString(),
     sources,
   };

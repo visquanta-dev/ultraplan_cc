@@ -229,12 +229,37 @@ export function insertInternalLinks(
  * here bridges to the underlying lead-response gap (which is the
  * same problem viewed from a different channel).
  */
-export function buildMidArticleCTA(): string {
+// Per-category mid-article CTA copy. Lead with a category-relevant stat,
+// link to the product page from config/categories.yaml, describe the
+// product in one sentence framed as the reader's outcome.
+//
+// When no category is provided (legacy callers, or category-less bundles)
+// we fall back to the Speed-to-Lead pitch because that's VisQuanta's
+// flagship conversion path.
+const CTA_BY_CATEGORY: Record<string, string> = {
+  lead_reactivation:
+    '**The average dealer has 10,000+ dormant leads sitting in their CRM — most will never hear from the store again.** [See how VisQuanta reactivates dormant CRM leads](https://www.visquanta.com/lead-reactivation): automated SMS outreach that wakes up lost leads and books them back into the showroom.',
+  speed_to_lead:
+    '**78% of car buyers choose the first dealer to respond - and the industry average response time is 1 hour 38 minutes.** [See how Speed to Lead replies in under 60 seconds](https://www.visquanta.com/speed-to-lead): automated SMS response that captures inbound leads 24/7 before your competitors can pick up the phone.',
+  service_drive:
+    '**Fixed operations drives more than half of total dealership gross profit — and 48% of service customers leave frustrated.** [See Service Drive Pro in action](https://www.visquanta.com/service-drive): voice AI that answers every service call, books appointments around your advisors, and recovers the margin that missed calls bleed every day.',
+  web_capture:
+    '**Most dealer websites convert under 2% of visitors — the rest bounce without leaving a name.** [Install the SMS First Widget](https://www.visquanta.com/website-widget): converts anonymous site visitors into SMS conversations in under 30 seconds, so you capture contact info before they click to a competitor.',
+  reputation:
+    '**Car buyers read an average of 10 reviews before they contact a dealership — and review response time now correlates directly with CSI.** [See Reputation Management in action](https://www.visquanta.com/reputation-management): monitors every review across Google, Cars.com, and DealerRater, responds inside the first hour, and turns 3-star survey answers into 5-star outcomes.',
+  inventory:
+    '**Every day a pre-owned unit sits on your lot costs you roughly $40 in holding, depreciation, and flooring.** [Talk to our team about dealership operations](https://www.visquanta.com/book-demo): we help dealers tighten turn times and close the gap between acquisition price and retail-ready.',
+  industry_trends:
+    '**Dealer principals who operationalize AI in 2026 will own the retention gap before their competitors recognize it exists.** [Book a VisQuanta demo](https://www.visquanta.com/book-demo): see the full AutoMaster Suite — lead reactivation, speed to lead, service drive, reputation, and web capture — working together on your store.',
+};
+
+export function buildMidArticleCTA(categoryId?: string): string {
+  const copy = (categoryId && CTA_BY_CATEGORY[categoryId]) || CTA_BY_CATEGORY.speed_to_lead;
   return [
     '',
     '---',
     '',
-    '**78% of car buyers choose the first dealer to respond - and the industry average response time is 1 hour 38 minutes.** [See how Speed to Lead replies in under 60 seconds](https://www.visquanta.com/speed-to-lead): automated SMS response that captures inbound leads 24/7 before your competitors can pick up the phone.',
+    copy,
     '',
     '---',
     '',

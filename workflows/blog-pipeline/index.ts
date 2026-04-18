@@ -406,9 +406,13 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const paras = bodyBySection.get(i) ?? [];
       bodyParts.push(paras.join('\n\n'));
 
-      // Insert mid-article CTA after the middle section
+      // Insert mid-article CTA after the middle section. Routed by the
+      // bundle's category_id so a reputation post pitches Reputation
+      // Management (not the Speed-to-Lead fallback). Falls back to the
+      // Speed-to-Lead copy when category_id is missing (legacy bundles
+      // or the curated path before it populates category).
       if (i === midPoint) {
-        bodyParts.push(buildMidArticleCTA());
+        bodyParts.push(buildMidArticleCTA(bundle.category_id));
       }
       bodyParts.push('');
     });

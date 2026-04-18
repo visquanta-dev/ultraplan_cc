@@ -92,6 +92,22 @@ export interface Bundle {
   topic_slug: string;
 
   /**
+   * Product-aligned category id (from config/categories.yaml). Set by the
+   * signal-driven resolver from the winning cluster's suggested_category.
+   * Drives per-category CTA routing and cooldown accounting.
+   * Optional because legacy callers (curated path) don't always set it.
+   */
+  category_id?: string;
+
+  /**
+   * Originate seed (operator-voice observation) — set when this bundle
+   * was assembled via the originate path (step 6). The drafter uses this
+   * as the primary cold-open hook, with competitor research as supporting
+   * evidence. Undefined for the normal signal-driven / curated paths.
+   */
+  originate_seed?: string;
+
+  /**
    * ISO 8601 timestamp when assembly completed.
    */
   assembled_at: string;

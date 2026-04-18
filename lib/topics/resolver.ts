@@ -145,8 +145,13 @@ async function resolveSignalPath(
     );
   }
 
-  // Scrape the cluster URLs and assemble a bundle
-  return scrapeAndAssemble(filtered[0], lane, options);
+  // Scrape the cluster URLs and assemble a bundle, propagating category_id
+  // so downstream stages (CTA routing, cooldown accounting) know which
+  // product category this post belongs to.
+  return scrapeAndAssemble(filtered[0], lane, {
+    ...options,
+    category_id: winner.suggested_category,
+  });
 }
 
 function adaptSignalCluster(signal: SignalCluster): TopicCluster {
@@ -238,7 +243,7 @@ async function resolveCuratedPath(
 async function scrapeAndAssemble(
   cluster: TopicCluster,
   lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
-  options: { onScrape?: (total: number, succeeded: number) => void },
+  options: { onScrape?: (total: number, succeeded: number) => void; category_id?: string },
 ): Promise<ResolvedSlot> {
   const urls = cluster.articles.map((a) => a.url);
   console.log(`[resolver] Scraping ${urls.length} URLs...`);
@@ -299,7 +304,11 @@ async function scrapeAndAssemble(
     rawText: r.article!.rawText,
   }));
 
-  const bundle = assembleBundle(inputs, { lane, topic_slug: cluster.slug });
+  const bundle = assembleBundle(inputs, {
+    lane,
+    topic_slug: cluster.slug,
+    ...(options.category_id ? { category_id: options.category_id } : {}),
+  });
 
   console.log(
     `[resolver] Bundle assembled: ${bundle.sources.length} sources, ${bundle.sources.reduce((n, s) => n + s.quotes.length, 0)} quotes`,
