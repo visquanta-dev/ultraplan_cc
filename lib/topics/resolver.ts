@@ -1,21 +1,38 @@
-import { searchForLane, searchRecentArticles, type SearchResult } from './search';
-import { pickCalendarTopic } from './calendar-source';
-import { clusterArticles, type TopicCluster } from './cluster';
+import type { TopicCluster } from './cluster';
 import { filterDuplicateClusters } from './dedup';
-import { scoreCluster, type ClusterScore } from './keyword-scorer';
 import { scrapeMany } from '../sources/firecrawl';
 import { assembleBundle } from '../bundle/assemble';
 import type { Bundle, ScrapedInput } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
-import { crawlAllFeeds, getFreshnessDaysForUrl, type FeedArticle } from '../sources/crawl-index';
-import { filterByRelevance } from '../sources/relevance-filter';
-import { getLaneStrategy as loadLaneStrategy, type SourceStrategy } from '../config/topics-config';
+import { getSignalCandidates, type TopicCluster as SignalCluster } from './competitor-signal';
+import { getCategoryStatus, getAvailableCategories } from './category-cooldown';
+import { getFreshnessDaysForUrl } from '../sources/crawl-index';
+import type { SourceStrategy } from '../config/topics-config';
 
 // ---------------------------------------------------------------------------
-// Slot resolver — spec §4
-// Ties together search → cluster → scrape → bundle assembly.
-// Given a lane, discovers trending topics, picks the strongest cluster,
-// scrapes the articles, and assembles a research bundle.
+// Slot resolver — content strategy redesign (2026-04-18)
+//
+// Replaces the four-strategy (feed_first / calendar_first / curated_first /
+// search_first) flow with a two-path model:
+//
+//   1. SIGNAL-DRIVEN (default) — queries competitor-signal.ts for clusters
+//      that (a) have tier-1/2 competitor coverage, (b) map to a category
+//      that's NOT in cooldown, (c) meet research-density thresholds. Picks
+//      the highest-scored cluster. This is how the pipeline runs on autopilot.
+//
+//   2. CURATED OVERRIDE (explicit) — when the operator passes `curatedBucket`,
+//      bypass signal selection and use the specified curated_sources.yaml
+//      bucket. This is the escape hatch for news-breaking topics or
+//      deliberate editorial choices.
+//
+// Removed: feed_first, calendar_first, search_first. These produced the
+// cannibalization problems documented 2026-04-18 — fixed schedules and
+// stale calendar picks kept landing on over-covered topics.
+//
+// Skip-if-thin: if the signal path has no viable clusters (all categories
+// in cooldown, OR no competitor coverage, OR research too thin), throws a
+// SkipRunError. The scheduled cron should treat this as a non-post day,
+// not an error.
 // ---------------------------------------------------------------------------
 
 export interface ResolvedSlot {
@@ -25,74 +42,19 @@ export interface ResolvedSlot {
 
 export type { SourceStrategy };
 
-function getLaneStrategy(lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle'): SourceStrategy {
-  return loadLaneStrategy(lane);
-}
-
-/**
- * Convert a FeedArticle into a SearchResult-compatible shape for the
- * existing clustering pipeline. Since the feed crawler only discovers URLs
- * (no title or description), we synthesize a "title" from the URL slug —
- * most vendor/trade blogs slugify the headline, so the slug tokens are a
- * reasonable proxy for the real title on a clustering-weight budget.
- */
-function feedArticleToSearchResult(article: FeedArticle): SearchResult {
-  let slugText = '';
-  try {
-    const parsed = new URL(article.url);
-    const lastSegment = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
-    slugText = lastSegment.replace(/[-_]+/g, ' ').replace(/\.(html?|php|aspx?)$/i, '');
-  } catch {
-    slugText = article.url;
-  }
-  return {
-    url: article.url,
-    title: slugText,
-    description: `${article.sourceName}: ${slugText}`,
-    publishedAt: null,
-  };
-}
-
-/**
- * Feed discovery path — crawls every index in config/feed_sources.yaml via
- * Firecrawl /v2/map (cheap), filters to article-looking URLs on allowlisted
- * domains, runs the relevance filter to drop off-topic links, converts the
- * survivors into SearchResult shape, and returns them for clustering.
- *
- * Returns an empty array on any failure so the caller can fall through to
- * the next strategy (curated or search) without blowing up the pipeline.
- */
-async function discoverFromFeeds(lane: string): Promise<SearchResult[]> {
-  try {
-    console.log(`[resolver] Feed discovery: crawling index pages...`);
-    const { articles, stats } = await crawlAllFeeds({ concurrency: 4 });
-    console.log(
-      `[resolver] Feed discovery stats: ${stats.sourcesSucceeded}/${stats.sourcesAttempted} sources, ` +
-      `${articles.length} articles found`,
-    );
-    if (articles.length === 0) return [];
-
-    const relevant = filterByRelevance(articles, lane);
-    console.log(`[resolver] Feed relevance filter: ${relevant.length} kept from ${articles.length}`);
-    if (relevant.length === 0) return [];
-
-    return relevant.map(feedArticleToSearchResult);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[resolver] Feed discovery failed (${msg.slice(0, 160)}) — falling through`);
-    return [];
+export class SkipRunError extends Error {
+  constructor(msg: string) {
+    super(`[resolver] SKIP: ${msg}`);
+    this.name = 'SkipRunError';
   }
 }
 
 /**
- * Resolve a topic slot for the given lane. Full flow:
- * 1. Search allowlisted sources for recent articles relevant to the lane
- * 2. Cluster results by keyword overlap
- * 3. Pick the strongest cluster (most diverse source coverage)
- * 4. Scrape the cluster's articles via Firecrawl
- * 5. Assemble a research bundle from the scraped content
+ * Resolve a topic slot for the given lane.
  *
- * @throws if no articles are found or no bundle can be assembled
+ * @throws SkipRunError when no viable cluster exists — caller should treat
+ *   this as a planned non-post day, not a pipeline failure.
+ * @throws Error on unexpected failures (no fresh sources after scrape, etc.)
  */
 export async function resolveSlot(
   lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
@@ -100,175 +62,185 @@ export async function resolveSlot(
     onSearch?: (count: number) => void;
     onCluster?: (cluster: TopicCluster) => void;
     onScrape?: (total: number, succeeded: number) => void;
-    /** Optional: force the resolver to use a specific curated bucket */
+    /** Explicit curated bucket override — bypasses signal selection */
     curatedBucket?: string;
-    /** Legacy: if false, skip the curated path. Overrides source_strategy. */
+    /** Legacy flag kept for backward compat with admin dashboard + CLI */
     preferCurated?: boolean;
-    /** Override config/topics.yaml source_strategy for this call. */
+    /** Legacy flag — ignored unless it's curated_first with a bucket */
     forcedStrategy?: SourceStrategy;
   } = {},
 ): Promise<ResolvedSlot> {
-  // Resolve strategy: explicit override > legacy preferCurated=false > topics.yaml
-  let strategy: SourceStrategy;
-  if (options.forcedStrategy) {
-    strategy = options.forcedStrategy;
-  } else if (options.preferCurated === false) {
-    strategy = 'search_first';
-  } else {
-    strategy = getLaneStrategy(lane);
-  }
-  console.log(`[resolver] Source strategy: ${strategy} (lane: ${lane})`);
-
-  // Buffer for whichever strategy populates it first. Clustering (Step 2+)
-  // runs against this list regardless of where it came from.
-  let searchResults: SearchResult[] = [];
-
   // ------------------------------------------------------------------
-  // Strategy A: feed_first — crawl feed_sources.yaml indices first
+  // PATH 1: Curated override (explicit)
   // ------------------------------------------------------------------
-  if (strategy === 'feed_first') {
-    searchResults = await discoverFromFeeds(lane);
-    if (searchResults.length > 0) {
-      console.log(`[resolver] Feed path: ${searchResults.length} articles discovered`);
-      options.onSearch?.(searchResults.length);
-    } else {
-      console.log('[resolver] Feed path: empty — falling through to curated');
-    }
+  if (options.curatedBucket) {
+    console.log(`[resolver] Curated override: bucket=${options.curatedBucket}`);
+    return resolveCuratedPath(lane, options);
   }
 
   // ------------------------------------------------------------------
-  // Strategy B: curated_first (or feed_first fallback) — curated_sources.yaml
+  // PATH 2: Signal-driven (default)
   // ------------------------------------------------------------------
-  const tryCurated = searchResults.length === 0
-    && (strategy === 'curated_first' || strategy === 'feed_first');
-  if (tryCurated) {
-    const allBuckets = loadCuratedSources();
-    const excluded = new Set<string>();
-    let picked = null;
-    while (true) {
-      const candidate = pickCuratedBucket(lane, {
-        requestedTopic: options.curatedBucket,
-        excludeTopics: excluded,
-      });
-      if (!candidate) break;
-      const tempCluster = bucketToCluster(candidate);
-      const { filtered } = await filterDuplicateClusters([tempCluster]);
-      if (filtered.length > 0) {
-        picked = candidate;
-        break;
-      }
-      console.log(`[resolver] Curated bucket "${candidate.topic}" already shipped — trying next`);
-      excluded.add(candidate.topic);
-      if (options.curatedBucket) break;
-    }
+  return resolveSignalPath(lane, options);
+}
 
-    if (picked) {
-      console.log(`[resolver] Using curated bucket "${picked.topic}"`);
-      options.onCluster?.(bucketToCluster(picked));
-      return resolveFromCurated(picked, lane, { onScrape: options.onScrape });
-    }
+// ---------------------------------------------------------------------------
+// Signal-driven path
+// ---------------------------------------------------------------------------
 
-    if (allBuckets.size > 0) {
-      console.log(`[resolver] All curated buckets for lane "${lane}" are duplicates — falling back to search`);
-    } else {
-      console.log(`[resolver] No curated buckets defined — falling back to search`);
-    }
+async function resolveSignalPath(
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
+  options: {
+    onSearch?: (count: number) => void;
+    onCluster?: (cluster: TopicCluster) => void;
+    onScrape?: (total: number, succeeded: number) => void;
+  },
+): Promise<ResolvedSlot> {
+  console.log('[resolver] Signal-driven resolution');
+
+  // Log cooldown state up front so operators can see why picks are narrow
+  const status = getCategoryStatus();
+  const available = getAvailableCategories();
+  console.log(
+    `[resolver] Category cooldown: ${available.length}/${status.length} open ` +
+      `(open: ${available.map((c) => c.id).join(', ') || 'none'})`,
+  );
+
+  if (available.length === 0) {
+    throw new SkipRunError('every category is in cooldown — nothing to write about today');
   }
 
-  // ------------------------------------------------------------------
-  // Strategy C: calendar_first — pick from content-calendar.yaml
-  // ------------------------------------------------------------------
-  if (searchResults.length === 0 && strategy === 'calendar_first') {
-    const topic = pickCalendarTopic();
-    if (topic) {
-      console.log(`[resolver] Calendar topic: "${topic.keyword}" (KD ${topic.kd}, TP ${topic.traffic_potential}, vertical: ${topic.vertical})`);
-      // Use the calendar keyword as a search query to find fresh sources
-      searchResults = await searchRecentArticles(topic.keyword, { limit: 20 });
-      if (searchResults.length > 0) {
-        console.log(`[resolver] Found ${searchResults.length} sources for calendar topic`);
-        options.onSearch?.(searchResults.length);
-      } else {
-        console.log(`[resolver] No sources found for "${topic.keyword}" — falling back to search`);
-      }
-    } else {
-      console.log('[resolver] No unpublished calendar topics — falling back to search');
-    }
-  }
+  // Fetch ranked signal clusters (cached 6h; pass bypassCache if a fresh run is needed)
+  const signal = await getSignalCandidates({ limit: 20 });
+  console.log(
+    `[resolver] Signal: ${signal.total_candidates} candidates from ${signal.sources_scraped}/${signal.sources_scraped + signal.sources_failed} sources → ${signal.clusters.length} viable clusters`,
+  );
+  options.onSearch?.(signal.total_candidates);
 
-  // ------------------------------------------------------------------
-  // Strategy D: search — Firecrawl keyword search (always the final fallback)
-  // ------------------------------------------------------------------
-  if (searchResults.length === 0) {
-    console.log(`[resolver] Searching for ${lane} topics via Firecrawl...`);
-    searchResults = await searchForLane(lane, { limit: 20 });
-    options.onSearch?.(searchResults.length);
-  }
-
-  if (searchResults.length === 0) {
-    throw new Error(
-      `[resolver] No articles found for lane "${lane}" via any strategy. Check FIRECRAWL_API_KEY and source allowlist.`,
+  if (signal.clusters.length === 0) {
+    throw new SkipRunError(
+      'no viable clusters — every candidate either maps to a cooldowned category ' +
+        'or lacks tier-1/2 competitor coverage',
     );
   }
 
-  console.log(`[resolver] Proceeding to clustering with ${searchResults.length} articles`);
-
-  // Step 2: Cluster
-  const rawClusters = clusterArticles(searchResults, { maxClusters: 5 });
-  if (rawClusters.length === 0) {
-    throw new Error('[resolver] Clustering produced zero clusters');
-  }
-
-  // Step 2b: Filter out topics that overlap with existing published content
-  const { filtered: clusters, removed } = await filterDuplicateClusters(rawClusters);
-  for (const r of removed) {
-    console.log(`[resolver] Skipped cluster "${r.cluster.label}" — ${r.reason}`);
-  }
-  if (clusters.length === 0) {
-    throw new Error('[resolver] All clusters overlap with existing content. Try again tomorrow or expand search queries.');
-  }
-
-  // Step 2c: Score clusters with Ahrefs keyword data (volume, difficulty, traffic potential)
-  console.log(`[resolver] Scoring ${clusters.length} clusters with Ahrefs...`);
-  const scores: ClusterScore[] = [];
-  for (const cluster of clusters) {
-    const score = await scoreCluster(cluster.label, cluster.keywords);
-    scores.push(score);
-    const best = score.bestKeyword;
-    if (best && best.volume > 0) {
-      console.log(
-        `[resolver]   "${cluster.label}" → best keyword: "${best.keyword}" (vol: ${best.volume}, KD: ${best.difficulty}, TP: ${best.trafficPotential}) → score: ${score.score.toFixed(1)}`,
-      );
-    } else {
-      console.log(`[resolver]   "${cluster.label}" → no Ahrefs data (neutral score)`);
-    }
-  }
-
-  // Re-rank clusters: Ahrefs score > source diversity
-  // If Ahrefs data is available (score > 0), sort by Ahrefs score
-  // Otherwise fall back to source diversity (original ordering)
-  const hasAhrefsData = scores.some((s) => s.score > 0);
-  let rankedClusters: TopicCluster[];
-  if (hasAhrefsData) {
-    const clusterWithScores = clusters.map((c, i) => ({ cluster: c, score: scores[i] }));
-    clusterWithScores.sort((a, b) => b.score.score - a.score.score);
-    rankedClusters = clusterWithScores.map((cs) => cs.cluster);
-    console.log(`[resolver] Re-ranked by Ahrefs score (keyword-first selection)`);
-  } else {
-    rankedClusters = clusters;
-    console.log(`[resolver] No Ahrefs data — using source diversity ranking`);
-  }
-
-  // Pick the strongest cluster
-  const winner = rankedClusters[0];
-  const winnerScore = scores[clusters.indexOf(winner)];
-  options.onCluster?.(winner);
+  // Pick the winner — highest score among unblocked + competitor-backed clusters
+  const winner = signal.clusters[0];
   console.log(
-    `[resolver] Winning cluster: "${winner.label}" (${winner.sourceCount} sources, ${winner.articles.length} articles)` +
-    (winnerScore?.bestKeyword ? ` — target keyword: "${winnerScore.bestKeyword.keyword}" (vol: ${winnerScore.bestKeyword.volume}, KD: ${winnerScore.bestKeyword.difficulty})` : ''),
+    `[resolver] Winning cluster: "${winner.representative_title}" ` +
+      `(category: ${winner.suggested_category}, score: ${winner.score.toFixed(2)}, ` +
+      `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4})`,
   );
 
-  // Step 3: Scrape the cluster's articles
-  const urls = winner.articles.map((a) => a.url);
+  // Adapt the signal cluster shape to the legacy TopicCluster the bundle pipeline expects
+  const legacyCluster = adaptSignalCluster(winner);
+  options.onCluster?.(legacyCluster);
+
+  // Check dedup — the signal module already filters cooldown, but dedup
+  // catches slug-level collisions (same post about to be drafted twice)
+  const { filtered } = await filterDuplicateClusters([legacyCluster]);
+  if (filtered.length === 0) {
+    throw new SkipRunError(
+      `winning cluster "${winner.representative_title}" collides with an existing post — skipping`,
+    );
+  }
+
+  // Scrape the cluster URLs and assemble a bundle
+  return scrapeAndAssemble(filtered[0], lane, options);
+}
+
+function adaptSignalCluster(signal: SignalCluster): TopicCluster {
+  // Re-shape competitor-signal.TopicCluster into the legacy TopicCluster
+  // format the bundle pipeline and dedup gates expect.
+  const keywords = Array.from(
+    new Set(
+      signal.urls
+        .flatMap((u) => u.title.toLowerCase().split(/\s+/))
+        .filter((w) => w.length >= 4),
+    ),
+  ).slice(0, 12);
+
+  const slug = signal.representative_title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 80);
+
+  return {
+    label: signal.representative_title,
+    slug,
+    keywords,
+    sourceCount: new Set(signal.urls.map((u) => u.source_id)).size,
+    articles: signal.urls.map((u) => ({
+      url: u.url,
+      title: u.title,
+      description: `${u.source_name} · ${u.suggested_category}`,
+      publishedAt: u.lastmod,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Curated override path — unchanged behavior from the old resolver
+// ---------------------------------------------------------------------------
+
+async function resolveCuratedPath(
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
+  options: {
+    onSearch?: (count: number) => void;
+    onCluster?: (cluster: TopicCluster) => void;
+    onScrape?: (total: number, succeeded: number) => void;
+    curatedBucket?: string;
+  },
+): Promise<ResolvedSlot> {
+  const allBuckets = loadCuratedSources();
+  if (allBuckets.size === 0) {
+    throw new Error('[resolver] No curated buckets defined in config/curated_sources.yaml');
+  }
+
+  const excluded = new Set<string>();
+  let picked = null;
+  while (true) {
+    const candidate = pickCuratedBucket(lane, {
+      requestedTopic: options.curatedBucket,
+      excludeTopics: excluded,
+    });
+    if (!candidate) break;
+    const tempCluster = bucketToCluster(candidate);
+    const { filtered } = await filterDuplicateClusters([tempCluster]);
+    if (filtered.length > 0) {
+      picked = candidate;
+      break;
+    }
+    console.log(`[resolver] Curated bucket "${candidate.topic}" already shipped — trying next`);
+    excluded.add(candidate.topic);
+    if (options.curatedBucket) break; // explicit override: don't silently fall over
+  }
+
+  if (!picked) {
+    throw new SkipRunError(
+      options.curatedBucket
+        ? `curated bucket "${options.curatedBucket}" collides with an existing post`
+        : 'every curated bucket for this lane is a duplicate of an existing post',
+    );
+  }
+
+  console.log(`[resolver] Using curated bucket "${picked.topic}"`);
+  options.onCluster?.(bucketToCluster(picked));
+  return resolveFromCurated(picked, lane, { onScrape: options.onScrape });
+}
+
+// ---------------------------------------------------------------------------
+// Scrape + freshness filter + bundle assembly (shared by both paths)
+// ---------------------------------------------------------------------------
+
+async function scrapeAndAssemble(
+  cluster: TopicCluster,
+  lane: 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle',
+  options: { onScrape?: (total: number, succeeded: number) => void },
+): Promise<ResolvedSlot> {
+  const urls = cluster.articles.map((a) => a.url);
   console.log(`[resolver] Scraping ${urls.length} URLs...`);
   const scrapeResults = await scrapeMany(urls, 3);
 
@@ -277,36 +249,23 @@ export async function resolveSlot(
   console.log(`[resolver] Scraped ${succeeded}/${urls.length} successfully`);
 
   if (succeeded === 0) {
-    throw new Error(
-      '[resolver] All scrapes failed. Check FIRECRAWL_API_KEY and source URLs.',
-    );
+    throw new Error('[resolver] All scrapes failed. Check FIRECRAWL_API_KEY and source URLs.');
   }
 
-  // Step 3b: Source-freshness filter.
-  //
-  // Two cutoffs stacked: a lane-level ceiling (18 months for daily_seo,
-  // 36 for weekly/monthly — no current-events post should cite a 2-year-old
-  // article), AND a per-source override from feed_sources.yaml freshness_days
-  // (30/45/60 days). When a URL belongs to a feed source, we use
-  // min(lane_cutoff, source_cutoff). This makes the feed sources tighter
-  // than the lane default instead of looser — a CBT News article must be
-  // less than 30 days old even though the lane would have allowed 18 months.
-  //
-  // Articles with no publishedAt metadata are kept (we can't filter on
-  // unknown data). If every article is stale, throw.
+  // Freshness filter: lane cutoff (18mo daily_seo, 36mo otherwise) +
+  // per-source overrides from feed_sources.yaml. See old-resolver comments
+  // for the reasoning; unchanged logic.
   const LANE_CUTOFF_DAYS = lane === 'daily_seo' ? 18 * 30 : 36 * 30;
   const now = Date.now();
   const freshResults = scrapeResults.filter((r) => {
     if (!r.article) return false;
     const pub = r.article.publishedAt;
-    if (!pub) return true; // unknown date → keep, rather than drop
+    if (!pub) return true;
     const pubMs = Date.parse(pub);
     if (Number.isNaN(pubMs)) return true;
 
     const sourceCutoff = getFreshnessDaysForUrl(r.url);
-    const effectiveDays = sourceCutoff != null
-      ? Math.min(LANE_CUTOFF_DAYS, sourceCutoff)
-      : LANE_CUTOFF_DAYS;
+    const effectiveDays = sourceCutoff != null ? Math.min(LANE_CUTOFF_DAYS, sourceCutoff) : LANE_CUTOFF_DAYS;
     const cutoffMs = now - effectiveDays * 24 * 60 * 60 * 1000;
 
     const isFresh = pubMs >= cutoffMs;
@@ -318,15 +277,21 @@ export async function resolveSlot(
     }
     return isFresh;
   });
+
   const freshCount = freshResults.length;
   console.log(`[resolver] After freshness filter: ${freshCount}/${succeeded} sources kept`);
-  if (freshCount === 0) {
-    throw new Error(
-      `[resolver] Every source in cluster "${winner.label}" failed the freshness filter (lane cutoff ${LANE_CUTOFF_DAYS}d + per-source overrides). Bundle unusable.`,
+
+  // Research-density threshold: require at least 3 fresh sources. Matches
+  // config/categories.yaml rules.research_density.min_primary_sources.
+  // This is what "skip-if-thin" enforces — better no post than a post built
+  // on one or two shaky sources.
+  const MIN_PRIMARY_SOURCES = 3;
+  if (freshCount < MIN_PRIMARY_SOURCES) {
+    throw new SkipRunError(
+      `only ${freshCount} fresh source${freshCount === 1 ? '' : 's'} after scrape + filter (need ≥${MIN_PRIMARY_SOURCES}) — research too thin to draft`,
     );
   }
 
-  // Step 4: Convert to ScrapedInputs and assemble bundle
   const inputs: ScrapedInput[] = freshResults.map((r) => ({
     url: r.url,
     title: r.article!.title,
@@ -334,14 +299,11 @@ export async function resolveSlot(
     rawText: r.article!.rawText,
   }));
 
-  const bundle = assembleBundle(inputs, {
-    lane,
-    topic_slug: winner.slug,
-  });
+  const bundle = assembleBundle(inputs, { lane, topic_slug: cluster.slug });
 
   console.log(
     `[resolver] Bundle assembled: ${bundle.sources.length} sources, ${bundle.sources.reduce((n, s) => n + s.quotes.length, 0)} quotes`,
   );
 
-  return { bundle, cluster: winner };
+  return { bundle, cluster };
 }
