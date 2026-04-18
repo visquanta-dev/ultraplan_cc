@@ -4,10 +4,18 @@
 //   1. Published posts on the main site (content/blog/*.md slugs)
 //   2. Recent pipeline drafts (tmp/drafts/*.md slugs)
 //   3. Open PRs on visquanta-dev/site with ultraplan- label
+//
+// Two layers:
+//   (a) pre-draft cluster overlap (checkTopicOverlap) — cheap slug/keyword
+//       check that runs at bundle selection. Catches "inventory" spam pattern.
+//   (b) post-draft entity + source overlap (checkPostOverlap) — catches the
+//       CSI-style case where two posts shared primary sources and identical
+//       entities despite different slugs. Runs after enrichment, before PR.
 // ---------------------------------------------------------------------------
 
 import fs from 'node:fs';
 import path from 'node:path';
+import matter from 'gray-matter';
 import type { TopicCluster } from './cluster';
 import { listRuns } from '../admin/run-logger';
 
@@ -188,6 +196,182 @@ export async function findAvailableSlug(candidate: string): Promise<{
     collided: false,
     original: candidate,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Post-draft overlap check — entities + source citations
+//
+// Calibrated from the 2026-04-18 branch audit: same-week cannibalization was
+// systemic (4 inventory drafts on 2026-04-17, CSI listicle+daily_seo pair,
+// 3 lead-response posts in 3 days). Slug dedup caught some of these but
+// missed entity/source overlap. Thresholds:
+//   - 3/3 entity match against any post in last 14 days  -> block
+//   - >=3 shared primary-source URLs against any post in last 7 days -> block
+//   - title cosine > 0.55                                -> block
+// ---------------------------------------------------------------------------
+
+export class PostOverlapError extends Error {
+  matchedSlug: string;
+  reason: string;
+  constructor(reason: string, matchedSlug: string) {
+    super(`[dedup] post overlaps with ${matchedSlug}: ${reason}`);
+    this.name = 'PostOverlapError';
+    this.matchedSlug = matchedSlug;
+    this.reason = reason;
+  }
+}
+
+interface RecentPostMeta {
+  slug: string;
+  title: string;
+  publishedAt: string; // ISO date
+  entities: Array<{ name: string; sameAs: string }>;
+  /** Lowercased host+path fragments pulled from source citations in body. */
+  sourceFingerprints: Set<string>;
+}
+
+function findSiteBlogDir(): string | null {
+  const candidates = [
+    path.join(process.cwd(), 'site-checkout', 'content', 'blog'),
+    path.join(process.cwd(), 'site', 'content', 'blog'),
+    path.join(process.cwd(), '..', 'site', 'content', 'blog'),
+    path.join(process.env.HOME ?? process.env.USERPROFILE ?? '', 'Desktop', 'site', 'content', 'blog'),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) return dir;
+  }
+  return null;
+}
+
+function extractSourceFingerprints(body: string): Set<string> {
+  // Pull domain+path fragments from markdown link targets — these are the
+  // primary source citations. Two posts citing chriscollinsinc.com and
+  // cdkglobal.com/insights/... repeatedly will share these fingerprints.
+  const fps = new Set<string>();
+  for (const m of body.matchAll(/\]\((https?:\/\/[^)]+)\)/g)) {
+    try {
+      const u = new URL(m[1]);
+      // Skip internal visquanta links — those are CTA placements, not citations
+      if (u.hostname.includes('visquanta.com')) continue;
+      const pathFrag = u.pathname.split('/').filter(Boolean).slice(0, 2).join('/');
+      fps.add(`${u.hostname}${pathFrag ? '/' + pathFrag : ''}`);
+    } catch {
+      // malformed URL — skip
+    }
+  }
+  return fps;
+}
+
+async function loadRecentPosts(windowDays: number): Promise<RecentPostMeta[]> {
+  const blogDir = findSiteBlogDir();
+  if (!blogDir) return [];
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const posts: RecentPostMeta[] = [];
+  for (const file of fs.readdirSync(blogDir)) {
+    if (!file.endsWith('.md')) continue;
+    try {
+      const raw = fs.readFileSync(path.join(blogDir, file), 'utf-8');
+      const parsed = matter(raw);
+      const publishedAt = typeof parsed.data.publishedAt === 'string' ? parsed.data.publishedAt : '';
+      if (!publishedAt) continue;
+      const ts = Date.parse(publishedAt);
+      if (Number.isNaN(ts) || ts < cutoff) continue;
+      const entities = Array.isArray(parsed.data.entities)
+        ? parsed.data.entities
+            .filter((e: unknown) => e && typeof e === 'object')
+            .map((e: unknown) => {
+              const obj = e as Record<string, unknown>;
+              return {
+                name: typeof obj.name === 'string' ? obj.name : '',
+                sameAs: typeof obj.sameAs === 'string' ? obj.sameAs : '',
+              };
+            })
+            .filter((e: { name: string; sameAs: string }) => e.name && e.sameAs)
+        : [];
+      posts.push({
+        slug: file.replace(/\.md$/, ''),
+        title: typeof parsed.data.title === 'string' ? parsed.data.title : '',
+        publishedAt,
+        entities,
+        sourceFingerprints: extractSourceFingerprints(parsed.content),
+      });
+    } catch {
+      // malformed file — skip, don't fail dedup
+    }
+  }
+  return posts;
+}
+
+function titleCosine(a: string, b: string): number {
+  const tokenize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+  const ta = tokenize(a);
+  const tb = tokenize(b);
+  if (ta.length === 0 || tb.length === 0) return 0;
+  const counts: Record<string, { a: number; b: number }> = {};
+  for (const w of ta) (counts[w] ??= { a: 0, b: 0 }).a += 1;
+  for (const w of tb) (counts[w] ??= { a: 0, b: 0 }).b += 1;
+  let dot = 0, magA = 0, magB = 0;
+  for (const { a, b } of Object.values(counts)) {
+    dot += a * b;
+    magA += a * a;
+    magB += b * b;
+  }
+  return magA && magB ? dot / Math.sqrt(magA * magB) : 0;
+}
+
+export async function checkPostOverlap(args: {
+  title: string;
+  entities: Array<{ name: string; sameAs: string }>;
+  body: string;
+}): Promise<void> {
+  const { title, entities, body } = args;
+  const fingerprints = extractSourceFingerprints(body);
+  const entitySameAs = new Set(entities.map((e) => e.sameAs));
+
+  // Two windows: 14d for entity/title, 7d for source fingerprints. Recent
+  // citation reuse is a stronger cannibalization signal than a distant echo.
+  const recent14 = await loadRecentPosts(14);
+  const recent7 = recent14.filter(
+    (p) => Date.parse(p.publishedAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000,
+  );
+
+  for (const post of recent14) {
+    // 3/3 entity match
+    if (entities.length >= 3 && post.entities.length >= 3) {
+      const postSameAs = new Set(post.entities.map((e) => e.sameAs));
+      const shared = [...entitySameAs].filter((s) => postSameAs.has(s)).length;
+      if (shared >= 3) {
+        throw new PostOverlapError(
+          `3/3 entities identical (${[...entitySameAs].filter((s) => postSameAs.has(s)).join(', ')})`,
+          post.slug,
+        );
+      }
+    }
+    // Title cosine
+    const cos = titleCosine(title, post.title);
+    if (cos > 0.55) {
+      throw new PostOverlapError(
+        `title cosine ${cos.toFixed(2)} vs "${post.title}"`,
+        post.slug,
+      );
+    }
+  }
+
+  for (const post of recent7) {
+    // >=3 shared source fingerprints
+    const shared = [...fingerprints].filter((f) => post.sourceFingerprints.has(f));
+    if (shared.length >= 3) {
+      throw new PostOverlapError(
+        `${shared.length} shared citations in last 7d: ${shared.slice(0, 3).join(', ')}`,
+        post.slug,
+      );
+    }
+  }
 }
 
 /**

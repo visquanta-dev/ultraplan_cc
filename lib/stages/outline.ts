@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { callLLMStructured, MODELS } from '../llm/openrouter';
 import type { Bundle } from '../bundle/types';
+import { validateChartSpec, type ChartSpec } from '../image/chart-renderer';
 import { buildRejectionFeedbackBlock } from './rejection-feedback';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,14 @@ export interface Outline {
    * 4–8 sections depending on lane. Each section has required anchor_quotes.
    */
   sections: OutlineSection[];
+
+  /**
+   * Optional stat-hero chart spec. Emit only when the post has a single
+   * central statistic that defines the angle (e.g. "48%" framing). The
+   * pipeline renders this as a PNG hero (listing card + inline body) and
+   * skips the metaphor image path. Malformed specs hard-fail the outline.
+   */
+  chart?: ChartSpec;
 }
 
 const OUTLINE_SCHEMA = {
@@ -63,6 +72,29 @@ const OUTLINE_SCHEMA = {
             description: 'H3 subsection headings for SEO depth (2-3 per section)',
           },
         },
+      },
+    },
+    chart: {
+      type: 'object',
+      description: 'Optional stat-hero chart. Only include when a single central statistic defines the post angle.',
+      required: ['type', 'headline', 'data'],
+      properties: {
+        type: { type: 'string', enum: ['bar', 'delta', 'trendline'] },
+        headline: { type: 'string', description: 'Short label shown alongside the chart' },
+        data: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['label', 'value'],
+            properties: {
+              label: { type: 'string' },
+              value: { type: 'number' },
+              valueLabel: { type: 'string', description: 'Optional display override like "48%" or "$1.5M"' },
+            },
+          },
+        },
+        source: { type: 'string', description: 'Primary source citation (e.g. "Cox Automotive")' },
       },
     },
   },
@@ -171,10 +203,25 @@ export async function generateOutline(
         };
       });
 
+      // Optional stat-hero chart. Validation is strict — a malformed chart
+      // spec hard-fails the outline stage rather than degrading to a metaphor
+      // image. This is the chart-feature contract: if the drafter claims the
+      // post has a central stat, it has to deliver well-formed data.
+      let chart: ChartSpec | undefined;
+      if (obj.chart !== undefined && obj.chart !== null) {
+        try {
+          chart = validateChartSpec(obj.chart);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          throw new Error(`[outline] chart spec rejected: ${msg}`);
+        }
+      }
+
       return {
         headline: obj.headline,
         lane: bundle.lane,
         sections,
+        ...(chart ? { chart } : {}),
       };
     },
   });

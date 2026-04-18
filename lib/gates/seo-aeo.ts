@@ -614,6 +614,74 @@ const checks: Check[] = [
       reason: `${shortQuotable} short (6-15 word) sentences available for LLM quoting`,
     };
   },
+
+  // -------------------- AEO: listicle word count (lane-gated) --------------------
+  // Listicle prompt targets 1800-2400. The CSI listicle we audited shipped at
+  // ~3800 words — prompt-only enforcement didn't hold. This is the gate that
+  // locks it down. weight=0 for non-listicle so the check is a no-op there.
+  (input) => {
+    if (input.outline.lane !== 'listicle') {
+      return { id: 'aeo/listicle-word-count', category: 'aeo', weight: 0, score: 0, passed: true, reason: 'not a listicle (skipped)' };
+    }
+    const body = extractBody(input.markdown);
+    const wc = countWords(body);
+    const passed = wc >= 1800 && wc <= 2400;
+    return {
+      id: 'aeo/listicle-word-count',
+      category: 'aeo',
+      weight: 2,
+      score: passed ? 2 : wc >= 1600 && wc <= 2800 ? 1 : 0,
+      passed,
+      reason: `listicle body is ${wc} words (target 1800-2400)`,
+    };
+  },
+
+  // -------------------- AEO: listicle numbered H2 count matches title N --------------------
+  // "7 Ways..." MUST produce exactly 7 numbered H2s. Prompt-only enforcement
+  // passed on the CSI test but we want the hard guarantee. Lane-gated.
+  (input) => {
+    if (input.outline.lane !== 'listicle') {
+      return { id: 'aeo/listicle-h2-count', category: 'aeo', weight: 0, score: 0, passed: true, reason: 'not a listicle (skipped)' };
+    }
+    const titleN = parseInt(input.frontmatter.title.match(/^\d+/)?.[0] ?? '0', 10);
+    const body = extractBody(input.markdown);
+    const numberedH2s = [...body.matchAll(/^## \d+\.\s+/gm)];
+    const count = numberedH2s.length;
+    const passed = titleN > 0 && count === titleN;
+    return {
+      id: 'aeo/listicle-h2-count',
+      category: 'aeo',
+      weight: 2,
+      score: passed ? 2 : 0,
+      passed,
+      reason: `title promises ${titleN || '??'}, body has ${count} numbered H2s`,
+    };
+  },
+
+  // -------------------- AEO: listicle question-heading ratio --------------------
+  // The CSI listicle had 7/7 numbered H2s phrased as questions. That repetition
+  // becomes its own AI tell. Cap at 50%. Lane-gated.
+  (input) => {
+    if (input.outline.lane !== 'listicle') {
+      return { id: 'aeo/listicle-question-ratio', category: 'aeo', weight: 0, score: 0, passed: true, reason: 'not a listicle (skipped)' };
+    }
+    const body = extractBody(input.markdown);
+    const numberedH2s = [...body.matchAll(/^## (\d+\.\s+.+)$/gm)].map((m) => m[1]);
+    if (numberedH2s.length === 0) {
+      return { id: 'aeo/listicle-question-ratio', category: 'aeo', weight: 1, score: 0, passed: false, reason: 'no numbered H2s to evaluate' };
+    }
+    const questionCount = numberedH2s.filter((h) => h.trim().endsWith('?')).length;
+    const ratio = questionCount / numberedH2s.length;
+    const passed = ratio <= 0.5;
+    return {
+      id: 'aeo/listicle-question-ratio',
+      category: 'aeo',
+      weight: 1,
+      score: passed ? 1 : ratio <= 0.7 ? 0.5 : 0,
+      passed,
+      reason: `${questionCount}/${numberedH2s.length} (${Math.round(ratio * 100)}%) numbered H2s phrased as questions (target <=50%)`,
+    };
+  },
 ];
 
 // ---------------------------------------------------------------------------

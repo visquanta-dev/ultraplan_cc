@@ -5,16 +5,17 @@ import { checkRephraseDistances } from '../../lib/stages/rephrase-distance';
 import { voiceTransform } from '../../lib/stages/voice-transform';
 import { runWithRetry } from '../../lib/gates/retry-loop';
 import { runImagePipeline, runMultiOptionImagePipeline, type ImagePipelineResult, type MultiOptionImageResult } from '../../lib/image/pipeline';
+import { renderChart } from '../../lib/image/chart-renderer';
 import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
-import { enrichContent, renderTLDR, renderKeyTakeaways, renderBottomLine, renderTable, renderFAQ, renderFAQSchema, insertTables } from '../../lib/stages/enrich-content';
+import { enrichContent, renderKeyTakeaways, renderBottomLine, renderMondayDirective, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
 import { routeAuthorForPost } from '../../lib/authors';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
-import { findAvailableSlug, SlugCollisionError } from '../../lib/topics/dedup';
+import { findAvailableSlug, SlugCollisionError, checkPostOverlap, PostOverlapError } from '../../lib/topics/dedup';
 import { runPreflight } from '../../lib/preflight/validate-config';
 import { runSeoAeoGate } from '../../lib/gates/seo-aeo';
 import { callLLMStructured } from '../../lib/llm/openrouter';
@@ -226,59 +227,93 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       };
     }
 
-    // Step 6: Generate images (multi-option)
+    // Step 6: Generate hero image
+    // Two paths: if the outline emitted a `chart:` block (stat-hero posts),
+    // render the editorial chart PNG via chart-renderer. Otherwise run the
+    // multi-option metaphor image pipeline. The chart path short-circuits
+    // the whole metaphor/Pexels stack — no AI image generation, no gates,
+    // no overlay compositing. Malformed chart specs are already rejected
+    // upstream by validateChartSpec in the outline parser.
     console.log('[pipeline] Step 6/7: Generating images');
     const sectionHeadings = outline.sections.map((s) => s.heading);
     const articleText = finalParagraphs.map(p => p.text).join('\n\n');
 
-    // Use headline as overlay text — enrichment (TL;DR) happens in Step 5c
-    // which runs AFTER this step, so enriched.tldr is not available here.
-    const overlayText = outline.headline;
-
     let imageResult: ImagePipelineResult;
     let multiImageResult: MultiOptionImageResult | null = null;
+    let chartRelPath: string | null = null;
 
-    try {
-      multiImageResult = await runMultiOptionImagePipeline(
-        slug, lane, outline.headline, sectionHeadings,
-        overlayText,
-        undefined,
-        {
-          onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
-          onImageResult: (type, idx, passed, attempt) =>
-            console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
-        },
-        articleText,
-      );
+    if (outline.chart) {
+      console.log(`[pipeline]   chart path: ${outline.chart.type} (${outline.chart.data.length} pts)`);
+      try {
+        const chartPng = await renderChart(outline.chart);
+        const chartDir = path.join(process.cwd(), 'public', 'images', 'blog', slug);
+        fs.mkdirSync(chartDir, { recursive: true });
+        const chartAbsPath = path.join(chartDir, 'chart-hero.png');
+        fs.writeFileSync(chartAbsPath, chartPng);
+        chartRelPath = `public/images/blog/${slug}/chart-hero.png`;
+        const chartLabel = outline.chart.data[0]?.valueLabel ?? String(outline.chart.data[0]?.value ?? '');
+        const altText = `${chartLabel} - ${outline.chart.headline}${outline.chart.source ? ` (${outline.chart.source})` : ''}`;
+        imageResult = {
+          paths: [chartRelPath],
+          altTexts: { [chartRelPath]: altText },
+          gateResults: [],
+          allPassed: true,
+          blockedImages: [],
+        };
+      } catch (err) {
+        // Chart rendering must succeed — malformed specs are caught upstream
+        // so a failure here means a rendering bug (sharp, SVG, I/O). Hard-fail
+        // so the PR doesn't open with a missing hero.
+        const msg = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : '';
+        console.error(`[pipeline]   chart render FAILED: ${msg}\n${stack ?? ''}`);
+        throw new Error(`Chart render failed (${msg}). Check chart-renderer + sharp install.`);
+      }
+    } else {
+      // Use headline as overlay text — enrichment (TL;DR) happens in Step 5c
+      // which runs AFTER this step, so enriched.tldr is not available here.
+      const overlayText = outline.headline;
 
-      // Build a compatible ImagePipelineResult from the first successful option
-      // so the rest of the pipeline (hero path in frontmatter) still works
-      const firstOption = multiImageResult.options[0];
-      imageResult = {
-        paths: firstOption ? [firstOption.path] : [],
-        altTexts: firstOption ? { [firstOption.path]: firstOption.altText } : {},
-        gateResults: [],
-        allPassed: multiImageResult.options.length > 0,
-        blockedImages: multiImageResult.options.length === 0 ? ['hero.webp'] : [],
-      };
-    } catch (err) {
-      // Previously this catch swallowed image errors and let the PR ship with
-      // no images — the failure mode that produced PR 39 (branch committed
-      // markdown only, zero image files). Surface the error so the outer
-      // pipeline catch marks the run failed and no broken PR opens. When the
-      // chart pipeline replaces the metaphor image path for stat-heavy posts,
-      // this branch should be gated behind `!bundle.chart`.
-      const msg = err instanceof Error ? err.message : String(err);
-      const stack = err instanceof Error ? err.stack : '';
-      console.error(`[pipeline]   image pipeline FAILED: ${msg}\n${stack ?? ''}`);
-      throw new Error(`Image pipeline failed (${msg}). Check image model ID and OpenRouter status before retrying.`);
-    }
+      try {
+        multiImageResult = await runMultiOptionImagePipeline(
+          slug, lane, outline.headline, sectionHeadings,
+          overlayText,
+          undefined,
+          {
+            onImageStart: (type, idx) => console.log(`[pipeline]   generating ${type} ${idx}...`),
+            onImageResult: (type, idx, passed, attempt) =>
+              console.log(`[pipeline]   ${type} ${idx}: ${passed ? 'PASS' : 'FAIL'} (attempt ${attempt})`),
+          },
+          articleText,
+        );
 
-    if (!imageResult.allPassed) {
-      // All gate retries exhausted but the pipeline produced *something*. Log
-      // loudly so reviewers know before merge — the fallback hero path below
-      // (FALLBACK_HERO_PATH) will kick in if no hero was salvageable.
-      console.error(`[pipeline]   ${imageResult.blockedImages.length} images blocked after all retries — continuing with available`);
+        // Build a compatible ImagePipelineResult from the first successful option
+        // so the rest of the pipeline (hero path in frontmatter) still works
+        const firstOption = multiImageResult.options[0];
+        imageResult = {
+          paths: firstOption ? [firstOption.path] : [],
+          altTexts: firstOption ? { [firstOption.path]: firstOption.altText } : {},
+          gateResults: [],
+          allPassed: multiImageResult.options.length > 0,
+          blockedImages: multiImageResult.options.length === 0 ? ['hero.webp'] : [],
+        };
+      } catch (err) {
+        // Previously this catch swallowed image errors and let the PR ship with
+        // no images — the failure mode that produced PR 39 (branch committed
+        // markdown only, zero image files). Surface the error so the outer
+        // pipeline catch marks the run failed and no broken PR opens.
+        const msg = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : '';
+        console.error(`[pipeline]   image pipeline FAILED: ${msg}\n${stack ?? ''}`);
+        throw new Error(`Image pipeline failed (${msg}). Check image model ID and OpenRouter status before retrying.`);
+      }
+
+      if (!imageResult.allPassed) {
+        // All gate retries exhausted but the pipeline produced *something*. Log
+        // loudly so reviewers know before merge — the fallback hero path below
+        // (FALLBACK_HERO_PATH) will kick in if no hero was salvageable.
+        console.error(`[pipeline]   ${imageResult.blockedImages.length} images blocked after all retries — continuing with available`);
+      }
     }
 
     // Step 7: Create GitHub PR
@@ -374,16 +409,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       const enriched = await enrichContent(articleText, bundle, outline.headline);
       postEntities = enriched.entities;
 
-      // Above-the-fold stack (order matters: bullets land above the blockquote).
-      // LLMs preferentially extract the first block of prose under an article
-      // headline as the answer candidate for AI search queries, so the Key
-      // Takeaways bullets + Key Takeaway blockquote both live above any H2.
-      // The bullets are above the blockquote because they're the single
-      // highest-value element for AI-overview citation — self-contained,
-      // numerically specific, and extractable without surrounding context.
-      if (enriched.tldr) {
-        bodyParts.unshift(renderTLDR(stripEmDashes(enriched.tldr)));
-      }
+      // Above-the-fold: bullet Key Takeaways only — the earlier "Key Takeaway:"
+      // blockquote (renderTLDR) was a duplicate of the bullet block and got
+      // dropped on 2026-04-18. LLMs still preferentially extract the first
+      // block of prose under the H1, so the bullet list remains the highest-
+      // value citation target.
       if (enriched.key_takeaways.length > 0) {
         const cleanBullets = enriched.key_takeaways.map(stripEmDashes);
         bodyParts.unshift(renderKeyTakeaways(cleanBullets));
@@ -397,28 +427,33 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         bodyParts.push(...withTables);
       }
 
-      // Append closing "The Bottom Line" synthesis between last body section
-      // and FAQ. This is the second-highest-value LLM extraction slot on the
-      // page (after the opener) — leaving it off the post was citing-by-default
-      // to whoever wrote the last H2.
+      // Closer — per-lane branching. Listicles get a punchier "Monday Morning
+      // Directive" (one action step, no synthesis recap). All other lanes
+      // render the fuller Bottom Line block. Both are second only to the
+      // opener for LLM extraction.
       const bl = enriched.bottom_line;
       if (bl && (bl.synthesis || bl.what_this_means.length || bl.closer)) {
-        bodyParts.push(renderBottomLine({
-          synthesis: stripEmDashes(bl.synthesis),
-          what_this_means: bl.what_this_means.map(stripEmDashes),
-          closer: stripEmDashes(bl.closer),
-        }));
+        if (lane === 'listicle') {
+          bodyParts.push(renderMondayDirective(stripEmDashes(bl.closer)));
+        } else {
+          bodyParts.push(renderBottomLine({
+            synthesis: stripEmDashes(bl.synthesis),
+            what_this_means: bl.what_this_means.map(stripEmDashes),
+            closer: stripEmDashes(bl.closer),
+          }));
+        }
       }
 
-      // Append FAQ before Related Reading
+      // Append FAQ before Related Reading. Inline FAQPage JSON-LD was removed
+      // on 2026-04-18 because the site layout already emits the schema from
+      // parsed frontmatter — embedding it here too caused double-emission,
+      // which some Google validators flag as duplicate structured data.
       if (enriched.faqs.length > 0) {
         const cleanFaqs = enriched.faqs.map(f => ({
           question: stripEmDashes(f.question),
           answer: stripEmDashes(f.answer),
         }));
         bodyParts.push(renderFAQ(cleanFaqs));
-        // Embed FAQPage JSON-LD schema for Google rich results + AI engine consumption
-        bodyParts.push(renderFAQSchema(cleanFaqs));
       }
 
       console.log(`[pipeline]   enriched: ${enriched.key_takeaways.length} takeaway bullets, ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs, bottom-line: ${bl?.what_this_means.length ?? 0} points`);
@@ -451,7 +486,47 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const relatedPosts = buildRelatedPosts(bodyParts.join('\n'));
     if (relatedPosts) bodyParts.push(relatedPosts);
 
-    const body = bodyParts.join('\n');
+    let body = bodyParts.join('\n');
+
+    // Post-draft overlap gate — catches the CSI-style cannibalization where
+    // two posts share 3+ entities or citation fingerprints despite different
+    // slugs. Runs after enrichment (entities known) and after body assembly
+    // (citation fingerprints extractable). Throws PostOverlapError on hit;
+    // the outer pipeline catch records it as blocked + notifies.
+    try {
+      await checkPostOverlap({
+        title: stripEmDashes(outline.headline),
+        entities: postEntities,
+        body,
+      });
+    } catch (err) {
+      if (err instanceof PostOverlapError) {
+        console.error(`[pipeline]   POST OVERLAP: ${err.reason} (matched ${err.matchedSlug})`);
+        throw err;
+      }
+      // Other errors from dedup are non-fatal — log and continue
+      console.warn(`[pipeline]   post-overlap check errored (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Inject chart image inline — placed before the first H2 so it appears
+    // right after the intro paragraph. Listing card uses the same PNG via
+    // frontmatter.image (Option A per the design). If the post didn't emit
+    // a chart spec, body passes through untouched.
+    if (outline.chart && chartRelPath) {
+      const publicChartPath = '/' + chartRelPath.replace(/^public[/\\]/, '').replace(/\\/g, '/');
+      const altLabel = outline.chart.data[0]?.valueLabel ?? String(outline.chart.data[0]?.value ?? '');
+      const alt = `${altLabel} ${outline.chart.headline}`.replace(/"/g, '');
+      const chartMd = `![${alt}](${publicChartPath})\n`;
+      const firstH2 = body.indexOf('\n## ');
+      if (firstH2 !== -1) {
+        body = body.slice(0, firstH2 + 1) + chartMd + body.slice(firstH2 + 1);
+      } else {
+        // No H2 in body — shouldn't happen for a well-formed post, but prepend
+        // rather than drop the chart silently.
+        body = chartMd + body;
+        console.warn('[pipeline]   chart injected at body start — no H2 found for inline placement');
+      }
+    }
 
     // Calculate reading time
     const wordCount2 = body.split(/\s+/).filter(Boolean).length;
@@ -543,6 +618,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         categorySlug: lane.replace(/_/g, '-'),
       }),
       entities: postEntities,
+      hide_hero: true,
     };
 
     const markdownContent = matter.stringify(body, frontmatter);

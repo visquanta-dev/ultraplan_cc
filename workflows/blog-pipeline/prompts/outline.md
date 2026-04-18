@@ -200,6 +200,58 @@ Declarative headings are weaker for this than question-phrased ones.
    definitional sections very often because they're short, clear, and
    standalone.
 
+## Stat-hero chart (optional, powerful when it fits)
+
+The pipeline can render an editorial data-visualization hero image when the
+post has a single central statistic that defines the angle. Emit a `chart`
+field in your outline JSON ONLY when this is true. For concept-heavy posts
+with no defining stat, omit the field entirely — the pipeline will fall back
+to the metaphor-image path.
+
+**When to emit `chart`:**
+- The headline is built around a specific number ("48% of...", "7 out of 10...", "Up 127% year-over-year...")
+- That number comes from a bundle source and will be one of the first things the reader sees in the body
+- The chart's only job is to show that number with editorial weight
+
+**When NOT to emit `chart`:**
+- The post argues a concept or compares approaches without a single hero number
+- The best number in the bundle is buried in a later section rather than framing the whole post
+- You are unsure — default to omit. Metaphor heroes are the safer fallback.
+
+**Chart types — pick one:**
+
+- `delta` — single giant number (most common choice). Use when one statistic
+  is the whole story. `data` is exactly one point: `[{ label: "Service customers frustrated", value: 48, valueLabel: "48%" }]`.
+- `bar` — 2-5 bars comparing labeled groups. Use for before/after,
+  dealer-vs-industry, or tiered comparisons. Example: `[{ label: "2024", value: 52 }, { label: "2025", value: 100 }]`.
+- `trendline` — 3-12 time-series points. Use when the post's argument is
+  about a trajectory over time, not a snapshot. Example quarterly or yearly
+  progression.
+
+**Format (matches the OutlineSchema `chart` object):**
+
+```
+"chart": {
+  "type": "delta",
+  "headline": "of service customers leave frustrated",
+  "data": [
+    { "label": "2023 Cox Automotive Service Study", "value": 48, "valueLabel": "48%" }
+  ],
+  "source": "Cox Automotive"
+}
+```
+
+Rules:
+- `headline` is the short label shown under/near the number, not the post title.
+- `valueLabel` is optional — provide it when the raw `value` needs formatting ("48%", "$1.5M", "2.4x"). Otherwise the renderer uses the number as-is.
+- `source` is required if the number has a named primary source. Omit for internal claims.
+- Numbers must come from anchor quotes in the bundle. Inventing a stat here is the same hard failure as inventing a quote_id.
+
+**Hard-fail behavior:** if you emit a `chart` block that is malformed (wrong
+type, empty data, non-numeric values, delta with multiple points, etc.) the
+outline stage rejects the whole response. Do not guess at the format — if
+unsure, omit the field.
+
 ## Lane-specific hints
 
 - **daily_seo** (1800–2200 words): 5–6 H2 sections + FAQ section, one

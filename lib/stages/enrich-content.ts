@@ -271,6 +271,24 @@ export function renderKeyTakeaways(bullets: string[]): string {
 }
 
 /**
+ * Render a punchier closing for the listicle lane — one concrete action step,
+ * not a three-paragraph synthesis. Replaces the Bottom Line section for
+ * numbered/roundup posts where a reader needs "what do I do Monday morning"
+ * rather than "here's what we just covered." Uses the drafter's `closer`
+ * field only; synthesis + what_this_means bullets are dropped for this lane.
+ */
+export function renderMondayDirective(closer: string): string {
+  if (!closer.trim()) return '';
+  return [
+    '',
+    '## Monday Morning Directive',
+    '',
+    closer,
+    '',
+  ].join('\n');
+}
+
+/**
  * Render the closing Bottom Line synthesis section inserted between the last
  * body section and the FAQ. LLMs extract the final section of a post
  * aggressively (second only to the opener) — this is the citation slot on the
