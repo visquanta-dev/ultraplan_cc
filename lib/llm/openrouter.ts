@@ -8,15 +8,16 @@
 // stages can call different models without juggling SDKs.
 //
 // Model IDs (spec §9):
-//   drafter: anthropic/claude-opus-4-6        (outline, paragraph, voice)
-//   judge:   openai/gpt-5                     (fact recheck, originality — Phase 2)
-//   image:   google/gemini-2.5-flash-image
+//   drafter: anthropic/claude-opus-4-7        (outline, paragraph, voice)
+//   judge:   anthropic/claude-sonnet-4-6      (fact recheck, originality — GPT-5 Azure blocked)
+//   image:   google/gemini-2.5-flash-image-preview
+//
+// Model slugs live in the MODELS export below — single source of truth.
 //
 // Docs: https://openrouter.ai/docs/api-reference/chat-completion
 // ---------------------------------------------------------------------------
 
 const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
-const DEFAULT_DRAFTER_MODEL = 'anthropic/claude-opus-4-6';
 const DEFAULT_MAX_TOKENS = 8192;
 
 interface OpenRouterChatMessage {
@@ -96,7 +97,7 @@ function getApiKey(): string {
  */
 export async function callLLMStructured<T>(opts: LLMStructuredOptions<T>): Promise<T> {
   const apiKey = getApiKey();
-  const model = opts.model ?? DEFAULT_DRAFTER_MODEL;
+  const model = opts.model ?? MODELS.DRAFTER;
   const maxTokens = opts.maxTokens ?? DEFAULT_MAX_TOKENS;
   const temperature = opts.temperature ?? 0.7;
 
@@ -181,7 +182,7 @@ export async function callLLMText(
   options: { model?: string; maxTokens?: number; temperature?: number } = {},
 ): Promise<string> {
   const apiKey = getApiKey();
-  const model = options.model ?? DEFAULT_DRAFTER_MODEL;
+  const model = options.model ?? MODELS.DRAFTER;
   const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS;
 
   const response = await fetch(`${OPENROUTER_API_BASE}/chat/completions`, {
@@ -220,7 +221,7 @@ export async function callLLMText(
  * avoid typos and to centralize model upgrades.
  */
 export const MODELS = {
-  DRAFTER: 'anthropic/claude-opus-4-6',
+  DRAFTER: 'anthropic/claude-opus-4-7',
   JUDGE: 'anthropic/claude-sonnet-4-6',  // GPT-5 blocked by Azure content policy; Sonnet is cheaper + reliable
-  IMAGE: 'google/gemini-2.5-flash-image',
+  IMAGE: 'google/gemini-2.5-flash-image-preview',
 } as const;

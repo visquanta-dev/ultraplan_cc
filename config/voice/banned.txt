@@ -126,6 +126,15 @@ robust solution
 powerful solution
 innovative solution
 
+# ---- AI-tell transitions (Industry Insider prompt, 2026-04-18) ----
+# Added to align with the drafter-prompt banned-transition list. "However"
+# intentionally excluded — too common in legitimate source quotes.
+Furthermore
+Moreover
+Additionally
+In addition
+Let's dive in
+
 # ---- "AI" compound buzzwords — reader fatigue is real ----
 # The dealership audience is exhausted by "AI this, AI that" marketing.
 # Ban the compound constructions but allow bare "AI" used sparingly.

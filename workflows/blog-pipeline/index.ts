@@ -262,13 +262,23 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         blockedImages: multiImageResult.options.length === 0 ? ['hero.webp'] : [],
       };
     } catch (err) {
+      // Previously this catch swallowed image errors and let the PR ship with
+      // no images — the failure mode that produced PR 39 (branch committed
+      // markdown only, zero image files). Surface the error so the outer
+      // pipeline catch marks the run failed and no broken PR opens. When the
+      // chart pipeline replaces the metaphor image path for stat-heavy posts,
+      // this branch should be gated behind `!bundle.chart`.
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[pipeline]   image pipeline threw (${msg}) — degrading to empty result`);
-      imageResult = { paths: [], altTexts: {}, gateResults: [], allPassed: false, blockedImages: ['hero.webp'] };
+      const stack = err instanceof Error ? err.stack : '';
+      console.error(`[pipeline]   image pipeline FAILED: ${msg}\n${stack ?? ''}`);
+      throw new Error(`Image pipeline failed (${msg}). Check image model ID and OpenRouter status before retrying.`);
     }
 
     if (!imageResult.allPassed) {
-      console.warn(`[pipeline]   ${imageResult.blockedImages.length} images blocked — continuing with available`);
+      // All gate retries exhausted but the pipeline produced *something*. Log
+      // loudly so reviewers know before merge — the fallback hero path below
+      // (FALLBACK_HERO_PATH) will kick in if no hero was salvageable.
+      console.error(`[pipeline]   ${imageResult.blockedImages.length} images blocked after all retries — continuing with available`);
     }
 
     // Step 7: Create GitHub PR

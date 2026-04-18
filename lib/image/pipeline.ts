@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { loadImageStyle, buildImagePrompt, getImageCount, type ImageStyleConfig } from './style-loader';
 import { generateImage, type GeneratedImage } from './generate';
 import { runImageGates, type ImageGateResult } from './gates';
-import { callLLMStructured } from '../llm/openrouter';
+import { callLLMStructured, callLLMText } from '../llm/openrouter';
 import { searchAndDownload } from './pexels-client';
 import { applyTextOverlay } from './text-overlay';
 
@@ -146,31 +146,12 @@ async function generateImagePrompt(
   const truncatedContent = articleContent.slice(0, 4000);
   const userMessage = `Read the following blog post and generate one image prompt following the rules exactly.\n\n# ${headline}\n\n${truncatedContent}`;
 
-  const result = await callLLMStructured<{ format: string; reason: string; prompt: string }>({
-    system: agentSystem,
-    user: userMessage,
-    schema: {
-      type: 'object',
-      properties: {
-        format: { type: 'string', description: 'Editorial Photo, Text Overlay on Photo, Text on Solid Background, or Close-Up Detail' },
-        reason: { type: 'string', description: 'One sentence explaining why this format fits' },
-        prompt: { type: 'string', description: 'The image generation prompt, 40-80 words' },
-      },
-      required: ['format', 'reason', 'prompt'],
-    },
-    parse: (raw) => {
-      const obj = raw as Record<string, unknown>;
-      return {
-        format: String(obj.format ?? 'Editorial Photo'),
-        reason: String(obj.reason ?? ''),
-        prompt: String(obj.prompt ?? ''),
-      };
-    },
-  });
-
-  console.log(`[image-agent] Format: ${result.format}`);
-  console.log(`[image-agent] Reason: ${result.reason}`);
-  return result.prompt;
+  // New image-agent prompt returns plain-text output (editorial-metaphor wrapper).
+  // No JSON schema — the prompt output IS the image prompt, no format/reason envelope.
+  const prompt = await callLLMText(agentSystem, userMessage, { temperature: 0.7 });
+  const cleaned = prompt.trim().replace(/^["']|["']$/g, '');
+  console.log(`[image-agent] prompt: ${cleaned.slice(0, 120)}...`);
+  return cleaned;
 }
 
 /**

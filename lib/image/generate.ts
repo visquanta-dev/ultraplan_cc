@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// Image generation via OpenRouter — Nano Banana 2 (Gemini 3.1 Flash Image)
+// Image generation via OpenRouter — Nano Banana 2 (Gemini 2.5 Flash Image)
 // Returns base64-encoded image data for the pipeline.
 // ---------------------------------------------------------------------------
 
-const MODEL = 'google/gemini-3.1-flash-image-preview';
+const MODEL = 'google/gemini-2.5-flash-image-preview';
 const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
 
 export interface GeneratedImage {
