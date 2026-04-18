@@ -1,0 +1,373 @@
+# ---------------------------------------------------------------------------
+# Categories — content strategy source of truth (2026-04-18 redesign)
+#
+# Every pipeline run resolves to exactly one category. The category drives:
+#   1. Cooldown (no two posts in the same category within cooldown_days)
+#   2. Mid-article CTA routing (link to the category's product)
+#   3. Which competitor sources are relevant for topic selection / signal
+#   4. Editorial weighting when multiple categories are unblocked
+#
+# Read by:
+#   - lib/topics/category-cooldown.ts — cooldown check
+#   - lib/topics/competitor-signal.ts — scrape source-tier routing
+#   - lib/topics/resolver.ts — final category + cluster pick
+#   - lib/stages/auto-linker.ts — mid-article CTA selection (future)
+#
+# Related files (stay in sync):
+#   - config/curated_sources.yaml — legacy bucket-based sources, deprecating
+#   - config/topics.yaml — lane word-count + model slugs
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# SOURCES — the 18 blogs + media we watch for topic signal + authority
+#
+# Tiers:
+#   1 = direct competitor (mirror weekly, highest signal weight)
+#   2 = adjacent competitor (scan weekly, medium signal weight)
+#   3 = authority source (cite on demand, not a competition signal)
+#   4 = dealer media (topic-signal leading indicator, 55K+ newsletter reach)
+#
+# sitemap_path: exact URL path to their post sitemap or RSS feed. Scraper
+#   appends to url. Null means "discover via robots.txt at runtime."
+# freshness: how often we re-scrape. Daily for media, weekly for competitors.
+# ---------------------------------------------------------------------------
+
+sources:
+  # ── T1: direct competitors ──────────────────────────────────────────────
+  podium:
+    name: Podium
+    tier: 1
+    url: https://www.podium.com
+    sitemap_path: /resource-center/sitemap.xml
+    freshness: weekly
+    notes: Largest direct competitor — AI BDC, reviews, webchat, revenue mining
+
+  fullpath:
+    name: Fullpath
+    tier: 1
+    url: https://www.fullpath.com
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+    notes: Full-stack CDP + agentic CRM + marketing automation
+
+  impel:
+    name: Impel AI
+    tier: 1
+    url: https://impel.ai
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+    notes: Sales AI, Service AI, Chat AI, Marketing AI, Merchandising AI
+
+  numa:
+    name: Numa
+    tier: 1
+    url: https://www.numa.com
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+    notes: Smart Inbox, Opportunities, HeatCase sentiment, LiveCSI — unique angles
+
+  # ── T2: adjacent competitors ────────────────────────────────────────────
+  matador:
+    name: Matador AI
+    tier: 2
+    url: https://matador.ai
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+
+  tecobi:
+    name: TECOBI
+    tier: 2
+    url: https://www.tecobi.com
+    sitemap_path: /automotive-advertising-technology-blog/sitemap.xml
+    freshness: weekly
+
+  dealerai:
+    name: DealerAI
+    tier: 2
+    url: https://dealerai.com
+    sitemap_path: /blogs/sitemap.xml
+    freshness: weekly
+
+  stella:
+    name: STELLA Automotive
+    tier: 2
+    url: https://www.stellaautomotive.com
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+
+  drivee:
+    name: Drivee AI
+    tier: 2
+    url: https://drivee.ai
+    sitemap_path: /blog/sitemap.xml
+    freshness: weekly
+
+  dealeron:
+    name: DealerOn
+    tier: 2
+    url: https://www.dealeron.com
+    sitemap_path: /blog/sitemap_index.xml
+    freshness: weekly
+    notes: Dealer-website vendor, heavy SEO-advice blog, 4-8 posts/month
+
+  # ── T3: authority sources (cite, don't compete) ─────────────────────────
+  cox_automotive:
+    name: Cox Automotive
+    tier: 3
+    url: https://www.coxautoinc.com
+    sitemap_path: /market-insights/sitemap.xml
+    freshness: on_demand
+    notes: Publishes Pied Piper ILE, Service Study, Fixed Ops Study — primary research
+
+  cdk_global:
+    name: CDK Global
+    tier: 3
+    url: https://www.cdkglobal.com
+    sitemap_path: /insights/sitemap.xml
+    freshness: on_demand
+
+  nada:
+    name: NADA
+    tier: 3
+    url: https://www.nada.org
+    sitemap_path: null # discover via robots.txt — /blog/ + /news/ filtered
+    freshness: on_demand
+
+  edmunds_industry:
+    name: Edmunds Industry Center
+    tier: 3
+    url: https://www.edmunds.com
+    sitemap_path: /industry-center/sitemap.xml
+    freshness: on_demand
+    notes: Real industry data hidden at /industry-center, /car-news, /car-reviews
+
+  # ── T4: dealer media (topic-signal leading indicator) ───────────────────
+  dealership_guy:
+    name: Car Dealership Guy
+    tier: 4
+    url: https://dealershipguy.com
+    sitemap_path: /blog/sitemap.xml
+    freshness: daily
+    notes: 55K+ daily newsletter — leading indicator for dealer attention
+
+  automotive_news:
+    name: Automotive News
+    tier: 4
+    url: https://www.autonews.com
+    sitemap_path: /sitemap-news.xml
+    freshness: daily
+    notes: Industry paper of record
+
+  autoremarketing:
+    name: AutoRemarketing
+    tier: 4
+    url: https://www.autoremarketing.com
+    sitemap_path: /sitemap-articles.xml
+    freshness: daily
+
+  cbt_news:
+    name: CBT News
+    tier: 4
+    url: https://cbtnews.com
+    sitemap_path: /post-sitemap.xml
+    freshness: daily
+
+  digital_dealer:
+    name: Digital Dealer
+    tier: 4
+    url: https://digitaldealer.com
+    sitemap_path: /post-sitemap.xml
+    freshness: daily
+    notes: Conference + magazine; surfaces NADA/20 Group circle narratives
+
+# ---------------------------------------------------------------------------
+# CATEGORIES — 7 product-aligned editorial lanes
+#
+# A post belongs to exactly one category. The category determines:
+#   - Whether it's currently in cooldown (no same-category post in last
+#     cooldown_days)
+#   - Which CTA gets injected mid-article
+#   - Which sources from `sources` above are most relevant for topic mirror
+#   - Its editorial_weight (tiebreaker when multiple categories unblocked)
+#
+# Cooldown semantics:
+#   - Window checked against merged posts on site main (content/blog/*.md)
+#   - Today was 2026-04-18; if a reputation post shipped today, the next
+#     reputation cluster is blocked until 2026-04-23.
+# ---------------------------------------------------------------------------
+
+categories:
+  # ── 1. Lead Reactivation ────────────────────────────────────────────────
+  lead_reactivation:
+    name: Lead Reactivation
+    description: >-
+      Dormant CRM data, database value, reactivation ROI, old-lead
+      resurrection. Flagship VisQuanta product category.
+    cooldown_days: 5
+    editorial_weight: 1.2 # flagship — slight priority when multiple unblocked
+    cta:
+      url: https://www.visquanta.com/lead-reactivation
+      label: See how VisQuanta reactivates dormant CRM leads
+      product: lead-reactivation
+    relevant_sources:
+      - podium # Revenue Mining
+      - impel # Marketing AI
+      - fullpath # dynamic automations
+      - matador # SMS broadcast
+      - tecobi # Auto Bot
+      - dealerai # REACH
+      - stella # Catalyst outbound
+      - numa
+
+  # ── 2. Speed to Lead ────────────────────────────────────────────────────
+  speed_to_lead:
+    name: Speed to Lead
+    description: >-
+      Inbound response time, SMS-first, 15-minute benchmark, web-lead
+      capture, first-response speed. VisQuanta flagship.
+    cooldown_days: 5
+    editorial_weight: 1.2
+    cta:
+      url: https://www.visquanta.com/speed-to-lead
+      label: See the Speed to Lead demo
+      product: speed-to-lead
+    relevant_sources:
+      - podium # AI BDC
+      - fullpath
+      - impel
+      - numa
+      - matador
+      - tecobi
+      - dealerai
+      - stella
+      - drivee
+
+  # ── 3. Service Drive ────────────────────────────────────────────────────
+  service_drive:
+    name: Service Drive
+    description: >-
+      Service advisor process, CSI-in-service, service retention, recalls,
+      24/7 phone coverage, fixed-ops margin. CSI content frames as
+      service-drive when the angle is process/retention.
+    cooldown_days: 5
+    editorial_weight: 1.1
+    cta:
+      url: https://www.visquanta.com/service-drive
+      label: See Service Drive Pro in action
+      product: service-drive-pro
+    relevant_sources:
+      - impel # Service AI
+      - matador # AI Service Agent
+      - fullpath
+      - stella # Service, Reception
+      - numa # Opportunities, LiveCSI
+      - dealerai
+
+  # ── 4. Web Capture ──────────────────────────────────────────────────────
+  web_capture:
+    name: Web Capture
+    description: >-
+      Site conversion, chat vs SMS, form abandonment, night-owl browsing,
+      widget install. Covers the "first contact" moment on the dealer website.
+    cooldown_days: 5
+    editorial_weight: 1.0
+    cta:
+      url: https://www.visquanta.com/website-widget
+      label: Install the SMS First widget on your site
+      product: website-widget
+    relevant_sources:
+      - podium # Webchat
+      - impel # Chat AI
+      - matador
+      - tecobi # website widgets
+      - fullpath # web personalization
+      - dealerai # chat/email/SMS
+      - drivee
+      - dealeron # dealer websites + SEO advice
+
+  # ── 5. Reputation & Reviews ─────────────────────────────────────────────
+  reputation:
+    name: Reputation & Reviews
+    description: >-
+      Review response time, Google/Cars.com, CSI-via-reviews, survey gaming,
+      review management strategy. CSI content frames as reputation when the
+      angle is surveys/public ratings.
+    cooldown_days: 5
+    editorial_weight: 1.3 # under-defended in competitor land — boost priority
+    cta:
+      url: https://www.visquanta.com/reputation-management
+      label: See Reputation Management in action
+      product: reputation-management
+    relevant_sources:
+      - podium # Reviews — dominant
+      - numa # HeatCase, LiveCSI
+
+  # ── 6. Inventory & Pricing ──────────────────────────────────────────────
+  inventory:
+    name: Inventory & Pricing
+    description: >-
+      Turn times, pricing pressure, used-car trends, acquisition strategy.
+      No direct VisQuanta product — thought leadership + supporting content.
+    cooldown_days: 7 # thinner topic; longer cooldown avoids forcing weak posts
+    editorial_weight: 0.7 # de-prioritize when flagship categories are unblocked
+    cta:
+      url: https://www.visquanta.com/book-demo
+      label: Talk to our team about dealership operations
+      product: book-demo
+    relevant_sources:
+      - drivee # Car 360 Spin, Buy Agent
+      - impel # Merchandising AI
+      - cox_automotive # Manheim index + industry pricing data
+      - edmunds_industry
+
+  # ── 7. Industry Trends ──────────────────────────────────────────────────
+  industry_trends:
+    name: Industry Trends
+    description: >-
+      NADA, Pied Piper ILE, Cox reports, AI adoption curves, OEM/dealer
+      relations, market data. Broader context — no direct product. Use
+      sparingly; competes with Automotive News directly.
+    cooldown_days: 7
+    editorial_weight: 0.6 # lowest — thought leadership only
+    cta:
+      url: https://www.visquanta.com/book-demo
+      label: Talk to our team
+      product: book-demo
+    relevant_sources:
+      - cox_automotive
+      - cdk_global
+      - nada
+      - edmunds_industry
+      - dealership_guy
+      - automotive_news
+      - cbt_news
+      - digital_dealer
+
+# ---------------------------------------------------------------------------
+# GLOBAL RULES
+# ---------------------------------------------------------------------------
+
+rules:
+  # Minimum source/quote bar for a topic cluster to proceed to drafting.
+  # If a cluster has fewer than min_primary_sources primary citations
+  # available in its bundle, the pipeline skips the day rather than draft
+  # against thin research.
+  research_density:
+    min_primary_sources: 3
+    min_quotes_per_source: 2
+
+  # Mirror/originate split — 80% of weekly runs come from competitor-signal
+  # topic selection, 20% from operator-voice seeds (voice note inbox).
+  mirror_originate_split:
+    mirror_per_week: 4
+    originate_per_week: 1
+
+  # Skip-if-thin: if no category is unblocked AND has viable clusters, the
+  # day's scheduled cron no-ops instead of shipping filler content.
+  skip_if_thin: true
+
+  # Freshness cutoffs for competitor-signal clustering
+  freshness:
+    tier1_window_days: 30 # what competitors wrote in last 30d
+    tier2_window_days: 30
+    tier4_window_days: 14 # media moves faster — shorter lookback
