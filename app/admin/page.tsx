@@ -8,7 +8,26 @@ import { useState, useEffect } from 'react';
 // Rejection log. Basic auth handled by API routes.
 // ---------------------------------------------------------------------------
 
-type Tab = 'status' | 'blocked' | 'runs' | 'rejections';
+type Tab = 'trigger' | 'status' | 'blocked' | 'runs' | 'rejections';
+
+type Lane = 'daily_seo' | 'weekly_authority' | 'monthly_anonymized_case' | 'listicle';
+type Strategy = 'calendar_first' | 'feed_first' | 'curated_first';
+
+// Curated buckets per lane — mirrors config/curated_sources.yaml. Keep in
+// sync manually until we wire a /api/admin/buckets endpoint.
+const BUCKETS_BY_LANE: Record<Lane, string[]> = {
+  daily_seo: [
+    'voice_ai_dealerships',
+    'service_drive_fixed_ops',
+    'digital_retail_friction',
+    'speed_to_lead',
+    'reputation_reviews',
+    'used_car_price_spike',
+  ],
+  weekly_authority: ['leadership_lessons'],
+  monthly_anonymized_case: ['client_wins'],
+  listicle: [],
+};
 
 interface Run {
   slug: string;
@@ -57,18 +76,28 @@ function authHeaders(): HeadersInit {
 }
 
 export default function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>('status');
+  const [tab, setTab] = useState<Tab>('trigger');
   const [runs, setRuns] = useState<Run[]>([]);
   const [blocked, setBlocked] = useState<BlockedDraft[]>([]);
   const [rejections, setRejections] = useState<Rejection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Trigger form state
+  const [triggerLane, setTriggerLane] = useState<Lane>('daily_seo');
+  const [triggerStrategy, setTriggerStrategy] = useState<Strategy>('curated_first');
+  const [triggerBucket, setTriggerBucket] = useState<string>('');
+  const [triggering, setTriggering] = useState(false);
+  const [triggerResult, setTriggerResult] = useState<{ ok: boolean; message: string; actionsUrl?: string } | null>(null);
+
   useEffect(() => {
     loadData(tab);
   }, [tab]);
 
   async function loadData(activeTab: Tab) {
+    // Trigger tab is pure form — no data to fetch, no auth prompt needed
+    // until the user actually clicks submit.
+    if (activeTab === 'trigger') return;
     setLoading(true);
     setError(null);
     try {
@@ -99,7 +128,38 @@ export default function AdminDashboard() {
     }
   }
 
+  async function submitTrigger() {
+    setTriggering(true);
+    setTriggerResult(null);
+    try {
+      const headers: HeadersInit = { ...authHeaders(), 'Content-Type': 'application/json' };
+      const res = await fetch('/api/admin/trigger', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          lane: triggerLane,
+          strategy: triggerStrategy,
+          curated_bucket: triggerStrategy === 'curated_first' ? triggerBucket : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTriggerResult({ ok: false, message: data.error ?? `HTTP ${res.status}` });
+      } else {
+        setTriggerResult({ ok: true, message: data.message, actionsUrl: data.actionsUrl });
+      }
+    } catch (err) {
+      setTriggerResult({ ok: false, message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setTriggering(false);
+    }
+  }
+
+  const availableBuckets = BUCKETS_BY_LANE[triggerLane] ?? [];
+  const bucketRequired = triggerStrategy === 'curated_first' && availableBuckets.length > 0;
+
   const tabs: Array<{ id: Tab; label: string }> = [
+    { id: 'trigger', label: 'New Run' },
     { id: 'status', label: 'Pipeline Status' },
     { id: 'blocked', label: 'Blocked Drafts' },
     { id: 'runs', label: 'Run History' },
@@ -132,6 +192,115 @@ export default function AdminDashboard() {
 
       {loading && <p style={{ color: '#888' }}>Loading...</p>}
       {error && <p style={{ color: '#EF4444' }}>Error: {error}</p>}
+
+      {tab === 'trigger' && (
+        <div>
+          <h2 style={{ marginBottom: '1rem' }}>New Pipeline Run</h2>
+          <div style={{ background: '#1A1A1C', padding: '1.5rem', borderRadius: '8px', border: '1px solid #333', maxWidth: '520px', display: 'grid', gap: '1rem' }}>
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.875rem' }}>
+              <span style={{ color: '#888', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Lane</span>
+              <select
+                value={triggerLane}
+                onChange={(e) => {
+                  const next = e.target.value as Lane;
+                  setTriggerLane(next);
+                  const buckets = BUCKETS_BY_LANE[next] ?? [];
+                  setTriggerBucket(buckets[0] ?? '');
+                }}
+                style={{ background: '#08080A', color: '#E5E5E5', border: '1px solid #333', borderRadius: '6px', padding: '0.5rem', fontFamily: 'inherit' }}
+              >
+                <option value="daily_seo">daily_seo — Industry Insights</option>
+                <option value="weekly_authority">weekly_authority — Leadership</option>
+                <option value="monthly_anonymized_case">monthly_anonymized_case — Case Studies</option>
+                <option value="listicle">listicle — Guides & Roundups</option>
+              </select>
+            </label>
+
+            <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.875rem' }}>
+              <span style={{ color: '#888', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Strategy</span>
+              <select
+                value={triggerStrategy}
+                onChange={(e) => setTriggerStrategy(e.target.value as Strategy)}
+                style={{ background: '#08080A', color: '#E5E5E5', border: '1px solid #333', borderRadius: '6px', padding: '0.5rem', fontFamily: 'inherit' }}
+              >
+                <option value="curated_first">curated_first — use a specific bucket</option>
+                <option value="calendar_first">calendar_first — editorial calendar</option>
+                <option value="feed_first">feed_first — latest news signal</option>
+              </select>
+            </label>
+
+            {bucketRequired && (
+              <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.875rem' }}>
+                <span style={{ color: '#888', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Curated bucket</span>
+                <select
+                  value={triggerBucket}
+                  onChange={(e) => setTriggerBucket(e.target.value)}
+                  style={{ background: '#08080A', color: '#E5E5E5', border: '1px solid #333', borderRadius: '6px', padding: '0.5rem', fontFamily: 'inherit' }}
+                >
+                  <option value="">— select bucket —</option>
+                  {availableBuckets.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <button
+              onClick={submitTrigger}
+              disabled={triggering || (bucketRequired && !triggerBucket)}
+              style={{
+                marginTop: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                background: triggering || (bucketRequired && !triggerBucket) ? '#333' : '#F97316',
+                color: triggering || (bucketRequired && !triggerBucket) ? '#888' : '#08080A',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: triggering || (bucketRequired && !triggerBucket) ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {triggering ? 'Triggering…' : 'Trigger Run'}
+            </button>
+
+            {triggerResult && (
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  background: triggerResult.ok ? '#052e16' : '#2e0505',
+                  border: `1px solid ${triggerResult.ok ? '#22C55E' : '#EF4444'}`,
+                  borderRadius: '6px',
+                  color: triggerResult.ok ? '#bbf7d0' : '#fecaca',
+                  fontSize: '0.875rem',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>
+                  {triggerResult.ok ? '✓ Triggered' : '✗ Failed'}
+                </div>
+                <div>{triggerResult.message}</div>
+                {triggerResult.actionsUrl && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <a
+                      href={triggerResult.actionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#F97316' }}
+                    >
+                      Open GitHub Actions →
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+              Replaces <code style={{ color: '#999' }}>gh workflow run daily-blog.yml</code>. Run appears in GitHub Actions within 2 seconds; status shows in the Pipeline Status tab once complete.
+            </p>
+          </div>
+        </div>
+      )}
 
       {!loading && tab === 'status' && (
         <div>
