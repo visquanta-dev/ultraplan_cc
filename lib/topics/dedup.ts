@@ -352,9 +352,16 @@ export async function checkPostOverlap(args: {
         );
       }
     }
-    // Title cosine
+    // Title cosine. Dropped from 0.55 to 0.35 after the 2026-04-18 false
+    // negative: "Why Do Half of Dealers Now Nail a 15-Minute Lead Response?"
+    // (2026-04-15) vs "Why 51% of Dealers Now Reply to Web Leads in Under
+    // 15 Minutes" (today) scored 0.375 — same thesis, same Pied Piper ILE
+    // source, different vocabulary. Paraphrase-of-a-paraphrase slips past
+    // token-based similarity unless the bar is low. Risk: more false
+    // positives within a tight topic cluster, accepted as the price of
+    // catching same-stat restatements.
     const cos = titleCosine(title, post.title);
-    if (cos > 0.55) {
+    if (cos > 0.35) {
       throw new PostOverlapError(
         `title cosine ${cos.toFixed(2)} vs "${post.title}"`,
         post.slug,
