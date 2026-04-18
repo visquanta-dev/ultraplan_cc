@@ -242,8 +242,9 @@ to the metaphor-image path.
 ```
 
 Rules:
-- `headline` is the short label shown under/near the number, not the post title.
+- `headline` is the short label shown under/near the number, not the post title. **Keep it to 4-8 words, 60 chars max.** The renderer truncates longer strings with ellipsis — don't rely on that, write it short. Good: "of service customers leave frustrated". Bad: "of service customers leave their dealership visit frustrated - twice the rate of five years ago".
 - `valueLabel` is optional — provide it when the raw `value` needs formatting ("48%", "$1.5M", "2.4x"). Otherwise the renderer uses the number as-is.
+- **No em-dashes or en-dashes** in any chart field (headline, source, data labels). Use regular hyphens. The voice gate rejects em-dashes in body prose and the same rule applies to chart text.
 - `source` is required if the number has a named primary source. Omit for internal claims.
 - Numbers must come from anchor quotes in the bundle. Inventing a stat here is the same hard failure as inventing a quote_id.
 

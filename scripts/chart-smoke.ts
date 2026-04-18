@@ -33,17 +33,26 @@ async function main() {
       ],
       source: 'Dealer Teamwork',
     },
+    // Edge case: very long headline (should truncate with ellipsis)
+    {
+      type: 'delta' as const,
+      headline: "of dealers now deliver a 'perfect response' inside 15 minutes — twice the rate of five years ago",
+      data: [{ label: '2026 Pied Piper Internet Lead Effectiveness Study', value: 51, valueLabel: '51%' }],
+      source: 'Pied Piper',
+    },
   ];
 
   const outDir = path.join(os.tmpdir(), 'chart-smoke');
   fs.mkdirSync(outDir, { recursive: true });
 
-  for (const spec of specs) {
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i];
     const validated = validateChartSpec(spec);
     const png = await renderChart(validated);
-    const out = path.join(outDir, `chart-${spec.type}.png`);
+    const suffix = i >= 3 ? '-long' : '';
+    const out = path.join(outDir, `chart-${spec.type}${suffix}.png`);
     fs.writeFileSync(out, png);
-    console.log(`wrote ${out} (${png.length} bytes)`);
+    console.log(`wrote ${out} (${png.length} bytes) [headline: "${spec.headline.slice(0, 50)}${spec.headline.length > 50 ? '...' : ''}"]`);
   }
 
   console.log('\n--- validator negative tests ---');

@@ -364,16 +364,21 @@ const checks: Check[] = [
 
   // -------------------- AEO 1: Key Takeaway block at top --------------------
   (input) => {
-    // Scan the first handful of non-empty lines for the labelled blockquote.
-    // The new enrichment output may emit the Key Takeaways bullet section
-    // above the blockquote, so testing only line[0] is too strict — accept
-    // the old labels ("The Bottom Line", "TL;DR") too for backward compat.
+    // Accept EITHER format near top of body:
+    //   (a) "### Key Takeaways" bullet block (current default, shipped 2026-04-18)
+    //   (b) "> **Key Takeaway:** ..." blockquote (legacy, kept for older posts)
+    // The blockquote was dropped for new pipeline posts because it duplicated
+    // the bullet list. Both are high-value AEO extraction targets, so either
+    // satisfies the check.
     const body = extractBody(input.markdown).trimStart();
     const topLines = body.split('\n').slice(0, 30);
+    const hasBulletBlock = topLines.some((l) => /^###\s+Key Takeaways\b/i.test(l));
     const blockquoteLine = topLines.find((l) => l.startsWith('> '));
-    const passed =
+    const hasBlockquote =
       blockquoteLine !== undefined &&
       /\*\*(Key Takeaway|The Bottom Line|TL;DR)/i.test(blockquoteLine);
+    const passed = hasBulletBlock || hasBlockquote;
+    const which = hasBulletBlock ? 'bullet' : hasBlockquote ? 'blockquote' : 'none';
     return {
       id: 'aeo/tldr-block-at-top',
       category: 'aeo',
@@ -381,8 +386,8 @@ const checks: Check[] = [
       score: passed ? 2 : 0,
       passed,
       reason: passed
-        ? 'Key Takeaway blockquote present near top of body'
-        : 'no Key Takeaway blockquote near top of body - LLMs will not reliably extract a summary',
+        ? `Key Takeaways block present near top of body (${which})`
+        : 'no Key Takeaways bullet block or blockquote near top of body - LLMs will not reliably extract a summary',
     };
   },
 

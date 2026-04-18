@@ -245,7 +245,21 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     if (outline.chart) {
       console.log(`[pipeline]   chart path: ${outline.chart.type} (${outline.chart.data.length} pts)`);
       try {
-        const chartPng = await renderChart(outline.chart);
+        // Strip em-dashes from every chart-visible string. The drafter pipeline
+        // does this for body prose but the chart spec bypasses that normalizer;
+        // without this step, em-dashes render verbatim in the PNG and violate
+        // the voice rule enforced by seo/no-em-dashes.
+        const cleanedChart = {
+          ...outline.chart,
+          headline: stripEmDashes(outline.chart.headline),
+          source: outline.chart.source ? stripEmDashes(outline.chart.source) : undefined,
+          data: outline.chart.data.map((d) => ({
+            ...d,
+            label: stripEmDashes(d.label),
+            ...(d.valueLabel ? { valueLabel: stripEmDashes(d.valueLabel) } : {}),
+          })),
+        };
+        const chartPng = await renderChart(cleanedChart);
         const chartDir = path.join(process.cwd(), 'public', 'images', 'blog', slug);
         fs.mkdirSync(chartDir, { recursive: true });
         const chartAbsPath = path.join(chartDir, 'chart-hero.png');

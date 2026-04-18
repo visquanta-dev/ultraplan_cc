@@ -53,11 +53,35 @@ export async function renderChart(spec: ChartSpec): Promise<Buffer> {
   return await sharp(Buffer.from(svg)).png().toBuffer();
 }
 
+// Single-line SVG text doesn't wrap. Long headlines from the drafter would
+// clip off both sides of the 1200px canvas (seen live on PR 40). Cap at
+// the safe width for the largest headline font we render (~36pt) and append
+// ellipsis. Prompt guidance in outline.md pushes the drafter toward <60
+// char headlines, but this renderer-side cap is the safety net.
+const MAX_HEADLINE_CHARS = 60;
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  // Prefer word boundary where possible
+  const sliced = s.slice(0, max - 1);
+  const lastSpace = sliced.lastIndexOf(' ');
+  const cutAt = lastSpace > max * 0.6 ? lastSpace : max - 1;
+  return `${s.slice(0, cutAt).trimEnd()}…`;
+}
+
+function normalizeForRender(spec: ChartSpec): ChartSpec {
+  return {
+    ...spec,
+    headline: truncate(spec.headline, MAX_HEADLINE_CHARS),
+  };
+}
+
 function buildSVG(spec: ChartSpec): string {
+  const s = normalizeForRender(spec);
   let body = '';
-  if (spec.type === 'bar') body = buildBar(spec);
-  else if (spec.type === 'delta') body = buildDelta(spec);
-  else if (spec.type === 'trendline') body = buildTrendline(spec);
+  if (s.type === 'bar') body = buildBar(s);
+  else if (s.type === 'delta') body = buildDelta(s);
+  else if (s.type === 'trendline') body = buildTrendline(s);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
   <rect width="${WIDTH}" height="${HEIGHT}" fill="${PALETTE.bg}"/>
