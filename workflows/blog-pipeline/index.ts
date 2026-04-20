@@ -11,6 +11,7 @@ import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib
 import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete } from '../../lib/notify';
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
+import { insertBrandLinks } from '../../lib/stages/brand-links';
 import { enrichContent, renderKeyTakeaways, renderBottomLine, renderMondayDirective, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
 import { routeAuthorForPost } from '../../lib/authors';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
@@ -388,7 +389,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         flatSections.push(sIdx);
       }
     }
-    const linkedTexts = insertInternalLinks(flatTexts);
+    const linkedTexts = insertBrandLinks(insertInternalLinks(flatTexts));
     bodyBySection.clear();
     linkedTexts.forEach((text, i) => {
       const sIdx = flatSections[i];

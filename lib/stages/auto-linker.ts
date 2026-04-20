@@ -47,12 +47,23 @@ function loadLinkConfig(): LinkConfig {
  * Find the best internal link for a paragraph based on keyword matching.
  * Returns null if no match or the link was already used.
  */
+// Escape regex metacharacters so keywords with punctuation (e.g. "speed-to-lead"
+// or "24/7 coverage") don't silently break the boundary match.
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Word-boundary match — prevents "staff" from matching inside "staffing"
+// (PR 42 bug). Case-insensitive.
+function keywordRegex(kw: string): RegExp {
+  return new RegExp(String.raw`\b` + escapeRegExp(kw) + String.raw`\b`, 'i');
+}
+
 function findBestInternalLink(
   text: string,
   usedUrls: Set<string>,
   config: LinkConfig,
 ): LinkEntry | null {
-  const lower = text.toLowerCase();
   const allLinks = [...config.pages, ...config.blog];
 
   let bestMatch: LinkEntry | null = null;
@@ -63,7 +74,7 @@ function findBestInternalLink(
 
     let score = 0;
     for (const kw of entry.keywords) {
-      if (lower.includes(kw.toLowerCase())) score++;
+      if (keywordRegex(kw).test(text)) score++;
     }
 
     if (score > bestScore) {
@@ -80,22 +91,17 @@ function findBestInternalLink(
  * Only links once per paragraph — finds the best keyword match and wraps it.
  */
 function insertInternalLink(text: string, entry: LinkEntry): string {
-  // Find which keyword appears in the text
-  const lower = text.toLowerCase();
   for (const kw of entry.keywords) {
-    const idx = lower.indexOf(kw.toLowerCase());
-    if (idx !== -1) {
-      // Find the actual case-preserved text at that position
-      const original = text.slice(idx, idx + kw.length);
-      // Only replace the first occurrence
+    const re = keywordRegex(kw);
+    const m = text.match(re);
+    if (m && m.index !== undefined) {
       return (
-        text.slice(0, idx) +
-        `[${original}](https://www.visquanta.com${entry.url})` +
-        text.slice(idx + kw.length)
+        text.slice(0, m.index) +
+        `[${m[0]}](https://www.visquanta.com${entry.url})` +
+        text.slice(m.index + m[0].length)
       );
     }
   }
-  // Fallback: append as a natural reference
   return text;
 }
 
