@@ -11,12 +11,8 @@ on:
         description: 'Editorial lane (daily_seo, weekly_authority, monthly_anonymized_case, listicle)'
         required: false
         default: 'daily_seo'
-      strategy:
-        description: 'Topic strategy (calendar_first, feed_first, curated_first)'
-        required: false
-        default: 'calendar_first'
       curated_bucket:
-        description: 'Curated bucket name (optional, only for curated_first)'
+        description: 'Curated bucket name (optional). If empty, pipeline runs signal-driven — scrapes 19 competitor sitemaps, scores clusters, picks highest in a non-cooldown category.'
         required: false
       originate_seed_b64:
         description: 'Base64-encoded operator-voice seed (originate path only). 3-5 sentences of first-hand observation.'
@@ -64,13 +60,8 @@ jobs:
           ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}
         run: |
           LANE="${{ github.event.inputs.lane || 'daily_seo' }}"
-          STRATEGY="${{ github.event.inputs.strategy || 'calendar_first' }}"
           BUCKET="${{ github.event.inputs.curated_bucket }}"
 
-          # Originate mode: decode the base64-encoded seed to a file and set
-          # ORIGINATE_SEED_FILE + ORIGINATE_CATEGORY for the pipeline runner.
-          # Base64 is used to cleanly carry multi-line text through the
-          # workflow_dispatch input layer without escaping headaches.
           if [ -n "$ORIGINATE_SEED_B64" ]; then
             mkdir -p tmp
             echo "$ORIGINATE_SEED_B64" | base64 -d > tmp/originate-seed.txt
@@ -81,8 +72,6 @@ jobs:
           ARGS="$LANE"
           if [ -n "$BUCKET" ] && [ -z "$ORIGINATE_SEED_B64" ]; then
             ARGS="$ARGS $BUCKET"
-          elif [ "$STRATEGY" != "feed_first" ] && [ -z "$ORIGINATE_SEED_B64" ]; then
-            ARGS="$ARGS --strategy $STRATEGY"
           fi
 
           echo "Running: npx tsx scripts/run-pipeline-local.ts $ARGS"
