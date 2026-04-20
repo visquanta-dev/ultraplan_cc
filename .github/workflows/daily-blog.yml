@@ -101,19 +101,12 @@ jobs:
         env:
           N8N_WEBHOOK_URL: ${{ secrets.N8N_BLOG_WEBHOOK_URL }}
         run: |
-          # Read result from file if available, fall back to GitHub output
-          if [ -f pipeline-result.json ]; then
-            RESULT=$(cat pipeline-result.json)
-          else
-            RESULT='${{ steps.pipeline.outputs.result }}'
+          if [ ! -f pipeline-result.json ]; then
+            printf '%s' '{"slug":"unknown","verdict":"error","error":"Pipeline failed before producing output"}' > pipeline-result.json
           fi
-
-          # If still no result, create error payload
-          if [ -z "$RESULT" ] || [ "$RESULT" = "" ]; then
-            RESULT='{"slug":"unknown","verdict":"error","error":"Pipeline failed before producing output"}'
-          fi
-
-          echo "Sending to webhook: $RESULT"
+          echo "Sending to webhook:"
+          cat pipeline-result.json
+          echo
           curl -s -X POST "$N8N_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "$RESULT" || echo "Webhook notification failed (non-fatal)"
+            --data-binary @pipeline-result.json || echo "Webhook notification failed (non-fatal)"
