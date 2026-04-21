@@ -64,7 +64,8 @@ jobs:
 
           if [ -n "$ORIGINATE_SEED_B64" ]; then
             mkdir -p tmp
-            echo "$ORIGINATE_SEED_B64" | base64 -d > tmp/originate-seed.txt
+            # -i tolerates whitespace/newlines injected by GH Actions input rendering
+            printf '%s' "$ORIGINATE_SEED_B64" | tr -d '[:space:]' | base64 -d > tmp/originate-seed.txt
             export ORIGINATE_SEED_FILE="tmp/originate-seed.txt"
             echo "Originate mode: seed=$(wc -c < tmp/originate-seed.txt) chars, category=$ORIGINATE_CATEGORY"
           fi
