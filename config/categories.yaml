@@ -95,12 +95,9 @@ sources:
     sitemap_path: /blog/sitemap.xml
     freshness: weekly
 
-  drivee:
-    name: Drivee AI
-    tier: 2
-    url: https://drivee.ai
-    sitemap_path: /blog/sitemap.xml
-    freshness: weekly
+  # drivee: REMOVED 2026-04-21 — no sitemap or RSS feed exists at any path.
+  # Scraping would require HTML blog-index parsing, which the signal pipeline
+  # doesn't support. Site is tiny; dropping costs no meaningful signal.
 
   dealeron:
     name: DealerOn
@@ -145,8 +142,8 @@ sources:
   dealership_guy:
     name: Car Dealership Guy
     tier: 4
-    url: https://dealershipguy.com
-    sitemap_path: /blog/sitemap.xml
+    url: https://www.dealershipguy.com # www required — bare domain returns 503 for non-browser UAs
+    sitemap_path: /sitemap.xml
     freshness: daily
     notes: 55K+ daily newsletter — leading indicator for dealer attention
 
@@ -172,13 +169,10 @@ sources:
     sitemap_path: /post-sitemap.xml
     freshness: daily
 
-  digital_dealer:
-    name: Digital Dealer
-    tier: 4
-    url: https://digitaldealer.com
-    sitemap_path: /post-sitemap.xml
-    freshness: daily
-    notes: Conference + magazine; surfaces NADA/20 Group circle narratives
+  # digital_dealer: REMOVED 2026-04-21 — WordPress sitemap is a graveyard
+  # (last post 2015-07-01, pagination stops at post-sitemap9.xml). Their
+  # current magazine/news/insights content is HTML-only with no feed.
+  # Re-add when we support HTML-index scraping.
 
 # ---------------------------------------------------------------------------
 # CATEGORIES — 7 product-aligned editorial lanes
@@ -240,7 +234,6 @@ categories:
       - tecobi
       - dealerai
       - stella
-      - drivee
 
   # ── 3. Service Drive ────────────────────────────────────────────────────
   service_drive:
@@ -282,7 +275,6 @@ categories:
       - tecobi # website widgets
       - fullpath # web personalization
       - dealerai # chat/email/SMS
-      - drivee
       - dealeron # dealer websites + SEO advice
 
   # ── 5. Reputation & Reviews ─────────────────────────────────────────────
@@ -315,7 +307,6 @@ categories:
       label: Talk to our team about dealership operations
       product: book-demo
     relevant_sources:
-      - drivee # Car 360 Spin, Buy Agent
       - impel # Merchandising AI
       - cox_automotive # Manheim index + industry pricing data
       - edmunds_industry
@@ -341,7 +332,6 @@ categories:
       - dealership_guy
       - automotive_news
       - cbt_news
-      - digital_dealer
 
 # ---------------------------------------------------------------------------
 # GLOBAL RULES

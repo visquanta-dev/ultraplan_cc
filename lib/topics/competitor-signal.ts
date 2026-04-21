@@ -137,11 +137,17 @@ function parseSitemapIndex(xml: string): string[] {
 
 // ---------------------------------------------------------------------------
 // Fetch + filter per source
+// Common bot-friendly UA — some hosts (e.g. Heroku's default filter on
+// dealershipguy.com) 503 unknown UAs. Browser UA is universally allowed
+// and sitemaps are public SEO assets explicitly published for crawling.
+const SIGNAL_UA =
+  'Mozilla/5.0 (compatible; UltraPlanBot/1.0; +https://visquanta.com)';
+
 // ---------------------------------------------------------------------------
 
 async function fetchSitemap(url: string): Promise<SitemapEntry[]> {
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'UltraPlan-Signal/1.0 (+https://visquanta.com)' },
+    headers: { 'User-Agent': SIGNAL_UA },
   });
   if (!res.ok) {
     throw new Error(`sitemap fetch failed: ${res.status} ${url}`);
@@ -152,7 +158,29 @@ async function fetchSitemap(url: string): Promise<SitemapEntry[]> {
   // merge. Cap at 5 children to avoid runaway fan-out on sites with
   // paginated sitemaps like wordpress-post-sitemap1.xml, 2.xml, ...
   if (/<sitemapindex\b/.test(xml)) {
-    const children = parseSitemapIndex(xml).slice(0, 5);
+    // Some CMSes (Drupal in NADA's case) leak internal hostnames into
+    // sitemap-index child URLs — e.g. live-drupal.nada.org instead of
+    // www.nada.org. The same paths serve fine on the public origin, so
+    // rewrite any child whose hostname differs from the parent's.
+    const parentHost = (() => {
+      try { return new URL(url).hostname; } catch { return null; }
+    })();
+    const children = parseSitemapIndex(xml)
+      .map((child) => {
+        if (!parentHost) return child;
+        try {
+          const u = new URL(child);
+          if (u.hostname !== parentHost) {
+            u.hostname = parentHost;
+            u.protocol = 'https:';
+            return u.toString();
+          }
+          return child;
+        } catch {
+          return child;
+        }
+      })
+      .slice(0, 5);
     const all: SitemapEntry[] = [];
     for (const child of children) {
       try {
@@ -175,7 +203,7 @@ async function fetchSitemap(url: string): Promise<SitemapEntry[]> {
 async function discoverSitemapsFromRobots(origin: string): Promise<string[]> {
   try {
     const res = await fetch(`${origin.replace(/\/+$/, '')}/robots.txt`, {
-      headers: { 'User-Agent': 'UltraPlan-Signal/1.0 (+https://visquanta.com)' },
+      headers: { 'User-Agent': SIGNAL_UA },
     });
     if (!res.ok) return [];
     const txt = await res.text();
