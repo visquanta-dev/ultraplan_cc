@@ -115,6 +115,38 @@ JSON object with:
    paragraph. If a section needs to combine two data points, write two
    paragraphs.
 
+## Vertical discipline (CRITICAL — hard gate)
+
+The post is written for franchise auto dealers. The swap test: if you could
+replace "dealership" with "dental practice" and your prose still made
+sense, your prose is failing.
+
+A hard gate scans the first ~200 words of the finished post for dealer-
+audience anchor terms. At least one of these must appear naturally in the
+opening (section 0 body, and section 1 if section 0 is tight): **dealer,
+dealers, dealership, dealerships, dealer group, dealer principal, general
+manager, BDC, BDC manager, fixed ops, service advisor, service manager,
+service drive, sales manager, sales floor, showroom, F&I, salesperson,
+franchise dealer, rooftop, rooftops, VIN, trade-in, test drive, web lead,
+aged lead, SRP, VDP, close rate, show rate, CDJR, OEM, CRM pull**.
+
+Zero matches = gate fail = the whole run regenerates. So in the opening
+paragraphs:
+
+- Name **who** the reader is ("dealer principal," "BDC manager," "fixed
+  ops director") or what they operate ("dealership," "dealer group,"
+  "franchise rooftop"), not just "you" or "teams."
+- Name the dealership **setting** where the problem lives — service drive,
+  showroom floor, F&I desk, sales floor. Generic "front office" or
+  "customer-facing team" does not pass.
+- Use dealer-insider nouns (VIN, trade-in, show rate, aged lead, CRM pull)
+  where the anchor quote supports them. These read as native, not
+  translated.
+
+If the bundle's opening quote is about "businesses" or "companies," do NOT
+copy that generic framing. Reframe it for dealers explicitly in your
+opening paragraph.
+
 ## SEO content structure rules (CRITICAL)
 
 8. **Use H3 subsections.** If the outline includes `subsections` for a section,

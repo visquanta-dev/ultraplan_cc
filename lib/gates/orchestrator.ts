@@ -13,22 +13,22 @@ import { runSlopLexiconGate } from './slop-lexicon';
 import { runAnonymizationGate } from './anonymization';
 import { runOriginalityGate } from './originality';
 import { runFactRecheckGate } from './fact-recheck';
+import { runVerticalDisciplineGate } from './vertical-discipline';
 
 // ---------------------------------------------------------------------------
-// Gate orchestrator — spec §6
-// Runs the five hard gates in cheapest-to-most-expensive order so cheap
-// failures short-circuit before we pay for expensive ones (especially
-// gate b's re-scraping costs). Anonymization (gate e) is run second
-// because it's zero-tolerance and pointless to continue on a leak.
+// Gate orchestrator — spec §6 + 2026-04-22 vertical-discipline gate
+// Runs gates in cheapest-to-most-expensive order so cheap failures
+// short-circuit before we pay for expensive ones (especially gate b's
+// re-scraping costs). Anonymization is zero-tolerance and pointless to
+// continue on a leak.
 //
 // Execution order:
-//   1. trace-back       — pure code, free, structural sanity check
-//   2. anonymization    — regex + cheap LLM, zero tolerance → short-circuit
-//   3. slop-lexicon     — regex + cheap LLM
-//   4. originality      — n-gram + GPT-5 judge
-//   5. fact-recheck     — re-scrape + GPT-5 judge (most expensive)
-//
-// All five gates are now real implementations.
+//   1.  trace-back            — pure code, free, structural sanity check
+//   1b. vertical-discipline   — pure code, cheap regex on opening 200 words
+//   2.  anonymization         — regex + cheap LLM, zero tolerance → short-circuit
+//   3.  slop-lexicon          — regex + cheap LLM
+//   4.  originality           — n-gram + GPT-5 judge
+//   5.  fact-recheck          — re-scrape + GPT-5 judge (most expensive)
 // ---------------------------------------------------------------------------
 
 export interface OrchestratorContext {
@@ -63,6 +63,10 @@ async function runGateD(ctx: OrchestratorContext): Promise<GateResult> {
 
 async function runGateE(ctx: OrchestratorContext): Promise<GateResult> {
   return runAnonymizationGate(ctx.paragraphs, ctx.headlineAndMeta);
+}
+
+async function runGateF(ctx: OrchestratorContext): Promise<GateResult> {
+  return runVerticalDisciplineGate(ctx.paragraphs);
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +111,10 @@ export async function runAllGates(
 
   // 1. Trace-back (cheapest)
   await run('trace-back', runGateA);
+
+  // 1b. Vertical discipline — pure regex, cheap, runs before anonymization
+  // so generic-reading drafts fail fast before we pay for gate e's LLM call.
+  await run('vertical-discipline', runGateF);
 
   // 2. Anonymization — zero tolerance, short-circuit on failure
   const gateE = await run('anonymization', runGateE);

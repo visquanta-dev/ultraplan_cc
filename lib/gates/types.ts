@@ -9,7 +9,14 @@
 /**
  * One of the five hard gates from spec §6.
  */
-export type GateId = 'trace-back' | 'fact-recheck' | 'slop-lexicon' | 'originality' | 'anonymization' | 'seo-aeo';
+export type GateId =
+  | 'trace-back'
+  | 'fact-recheck'
+  | 'slop-lexicon'
+  | 'originality'
+  | 'anonymization'
+  | 'seo-aeo'
+  | 'vertical-discipline';
 
 /**
  * Per-paragraph finding. Most gates operate paragraph-by-paragraph so the

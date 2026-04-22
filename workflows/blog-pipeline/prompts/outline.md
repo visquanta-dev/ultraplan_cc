@@ -153,6 +153,29 @@ paragraph.
    what the section does: "establish problem with stat", "refute common
    objection", "introduce formula", "call reader to action", etc.
 
+## Vertical discipline (CRITICAL — hard gate)
+
+Every post on visquanta.com is written for franchise auto dealers. Not for
+"businesses," not for "sales teams," not for "service providers." The swap
+test: if you could replace "dealership" with "dental practice" and the post
+still made sense, the post is failing.
+
+1. **The headline or the first section heading must name the dealership
+   audience.** Use one of: dealer, dealership, dealer group, general manager,
+   BDC, fixed ops, service advisor, service manager, sales floor, F&I,
+   showroom, rooftop, franchise dealer. Not "businesses," not "companies,"
+   not "teams."
+2. **The first section's intent must describe a dealership moment**, not a
+   generic workflow. Good: "establish why BDC reps lose aged leads after
+   90 days." Bad: "explain why lead follow-up matters."
+3. **If the bundle is genuinely cross-vertical** (rare — usually a Cox
+   Automotive macro study), still frame the outline for dealers. The
+   reader is always a dealer.
+
+This rule is enforced by a hard gate (`vertical-discipline`) that scans the
+first ~200 words of the finished post for dealer-audience anchor terms.
+Zero matches = the run fails and regenerates.
+
 ## AI vocabulary rules (CRITICAL — applies to the headline AND every section heading)
 
 Dealership readers are exhausted by "AI this, AI that" marketing. The post

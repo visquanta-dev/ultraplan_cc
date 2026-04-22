@@ -1,0 +1,82 @@
+# Audience anchor list — vertical-discipline gate (2026-04-22)
+#
+# The first ~200 words of every post must contain at least one of these
+# terms. Zero matches = gate fail. The post reads generic, could be for any
+# vertical. visquanta.com writes for franchise auto dealers — that audience
+# must be visible up front or the post fails the swap test ("could I replace
+# 'dealership' with 'dental practice' and have the post still make sense?").
+#
+# Match rules:
+#   - Case-insensitive
+#   - Loose word boundaries — terms can sit against whitespace, punctuation,
+#     or string edges. Works for hyphenated terms and F&I.
+#   - Multi-word terms match as a whole phrase.
+#
+# Discipline for adding entries:
+#   - Every term must be audience-defining, not just topical.
+#   - "Customer" and "business" are OUT — they match every vertical.
+#   - "CRM" alone is OUT — it matches any SaaS post. "CRM pull" is IN
+#     because it's dealership-specific (a pull of aged leads from a DMS).
+#   - When in doubt, leave it out. Better to fail a borderline post and
+#     have the drafter add a real anchor term than to pass a generic post.
+#
+# One term per line. Blank lines and # comments ignored.
+
+# ---- role / buyer anchors (strongest signal) ----
+dealer
+dealers
+dealership
+dealerships
+dealer group
+dealer principal
+dealer body
+general manager
+BDC
+BDC manager
+BDC rep
+fixed ops
+fixed-ops
+fixed operations
+service advisor
+service advisors
+service manager
+service director
+service drive
+sales manager
+sales floor
+showroom
+F&I
+F&I manager
+salesperson
+sales consultant
+used-car manager
+pre-owned manager
+new-car manager
+parts manager
+franchise dealer
+franchise store
+rooftop
+rooftops
+
+# ---- dealer-world objects and workflows (secondary, but narrow enough to
+# still disambiguate — none of these match a dentist or a SaaS blog) ----
+service lane
+service bay
+test drive
+trade-in
+VIN
+VIN-specific
+CRM pull
+aged lead
+aged leads
+lead aggregator
+web lead
+web leads
+SRP
+VDP
+close rate
+show rate
+RO
+ROs
+CDJR
+OEM
