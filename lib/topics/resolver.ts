@@ -234,31 +234,38 @@ async function resolveSignalPath(
     );
   }
 
-  // Pick the winner — highest score among unblocked + competitor-backed clusters
-  const winner = signal.clusters[0];
+  // Walk ranked clusters top-down, picking the first that survives dedup.
+  // signal.clusters is pre-sorted by score, so the first survivor is the
+  // highest-scored non-colliding candidate. Bailing on cluster #0 wastes
+  // the other 15 viable picks and turns routine dedup hits into skip days.
+  const ranked = signal.clusters.map((c) => ({ signal: c, legacy: adaptSignalCluster(c) }));
+  const { filtered, removed } = await filterDuplicateClusters(ranked.map((r) => r.legacy));
+
+  for (const { reason, cluster } of removed) {
+    console.log(`[resolver]   rejected "${cluster.label}" — ${reason}`);
+  }
+
+  if (filtered.length === 0) {
+    throw new SkipRunError(
+      `all ${ranked.length} viable clusters collided with existing posts — skipping`,
+    );
+  }
+
+  const winnerLegacy = filtered[0];
+  const winner = ranked.find((r) => r.legacy === winnerLegacy)!.signal;
   console.log(
     `[resolver] Winning cluster: "${winner.representative_title}" ` +
       `(category: ${winner.suggested_category}, score: ${winner.score.toFixed(2)}, ` +
-      `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4})`,
+      `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4}` +
+      (removed.length ? `, bypassed ${removed.length} collision${removed.length > 1 ? 's' : ''}` : '') +
+      `)`,
   );
-
-  // Adapt the signal cluster shape to the legacy TopicCluster the bundle pipeline expects
-  const legacyCluster = adaptSignalCluster(winner);
-  options.onCluster?.(legacyCluster);
-
-  // Check dedup — the signal module already filters cooldown, but dedup
-  // catches slug-level collisions (same post about to be drafted twice)
-  const { filtered } = await filterDuplicateClusters([legacyCluster]);
-  if (filtered.length === 0) {
-    throw new SkipRunError(
-      `winning cluster "${winner.representative_title}" collides with an existing post — skipping`,
-    );
-  }
+  options.onCluster?.(winnerLegacy);
 
   // Scrape the cluster URLs and assemble a bundle, propagating category_id
   // so downstream stages (CTA routing, cooldown accounting) know which
   // product category this post belongs to.
-  return scrapeAndAssemble(filtered[0], lane, {
+  return scrapeAndAssemble(winnerLegacy, lane, {
     ...options,
     category_id: winner.suggested_category,
   });
