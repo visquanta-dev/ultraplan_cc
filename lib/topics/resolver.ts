@@ -49,6 +49,16 @@ export class SkipRunError extends Error {
   }
 }
 
+// Thrown inside scrapeAndAssemble when a cluster is too thin to draft from.
+// Distinct from SkipRunError so the signal-path loop can catch it and try
+// the next ranked cluster instead of ending the whole run.
+class ThinClusterError extends Error {
+  constructor(msg: string) {
+    super(msg);
+    this.name = 'ThinClusterError';
+  }
+}
+
 /**
  * Resolve a topic slot for the given lane.
  *
@@ -251,24 +261,40 @@ async function resolveSignalPath(
     );
   }
 
-  const winnerLegacy = filtered[0];
-  const winner = ranked.find((r) => r.legacy === winnerLegacy)!.signal;
-  console.log(
-    `[resolver] Winning cluster: "${winner.representative_title}" ` +
-      `(category: ${winner.suggested_category}, score: ${winner.score.toFixed(2)}, ` +
-      `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4}` +
-      (removed.length ? `, bypassed ${removed.length} collision${removed.length > 1 ? 's' : ''}` : '') +
-      `)`,
-  );
-  options.onCluster?.(winnerLegacy);
+  // Walk survivors in score order, scraping each. First one that yields ≥3
+  // fresh sources wins. Prior behaviour picked #0 and threw on thin research,
+  // wasting any remaining ranked candidates even after the dedup-bypass fix.
+  const thinReasons: string[] = [];
+  for (const winnerLegacy of filtered) {
+    const winner = ranked.find((r) => r.legacy === winnerLegacy)!.signal;
+    console.log(
+      `[resolver] Trying cluster: "${winner.representative_title}" ` +
+        `(category: ${winner.suggested_category}, score: ${winner.score.toFixed(2)}, ` +
+        `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4}` +
+        (removed.length ? `, bypassed ${removed.length} collision${removed.length > 1 ? 's' : ''}` : '') +
+        `)`,
+    );
+    options.onCluster?.(winnerLegacy);
 
-  // Scrape the cluster URLs and assemble a bundle, propagating category_id
-  // so downstream stages (CTA routing, cooldown accounting) know which
-  // product category this post belongs to.
-  return scrapeAndAssemble(winnerLegacy, lane, {
-    ...options,
-    category_id: winner.suggested_category,
-  });
+    try {
+      return await scrapeAndAssemble(winnerLegacy, lane, {
+        ...options,
+        category_id: winner.suggested_category,
+      });
+    } catch (err) {
+      if (err instanceof ThinClusterError) {
+        const msg = `${winner.representative_title} — ${err.message}`;
+        console.log(`[resolver]   thin, skipping to next: ${msg}`);
+        thinReasons.push(msg);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new SkipRunError(
+    `all ${filtered.length} dedup-survivors scraped thin — ${thinReasons.join(' | ')}`,
+  );
 }
 
 function adaptSignalCluster(signal: SignalCluster): TopicCluster {
@@ -371,7 +397,7 @@ async function scrapeAndAssemble(
   console.log(`[resolver] Scraped ${succeeded}/${urls.length} successfully`);
 
   if (succeeded === 0) {
-    throw new Error('[resolver] All scrapes failed. Check FIRECRAWL_API_KEY and source URLs.');
+    throw new ThinClusterError('all scrapes failed');
   }
 
   // Freshness filter: lane cutoff (18mo daily_seo, 36mo otherwise) +
@@ -409,8 +435,8 @@ async function scrapeAndAssemble(
   // on one or two shaky sources.
   const MIN_PRIMARY_SOURCES = 3;
   if (freshCount < MIN_PRIMARY_SOURCES) {
-    throw new SkipRunError(
-      `only ${freshCount} fresh source${freshCount === 1 ? '' : 's'} after scrape + filter (need ≥${MIN_PRIMARY_SOURCES}) — research too thin to draft`,
+    throw new ThinClusterError(
+      `only ${freshCount} fresh source${freshCount === 1 ? '' : 's'} after scrape + filter (need ≥${MIN_PRIMARY_SOURCES})`,
     );
   }
 
