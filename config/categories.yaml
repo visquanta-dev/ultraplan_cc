@@ -131,6 +131,17 @@ sources:
       Management Group) are strong editorial fodder. No sitemap lastmod;
       T2 tolerates.
 
+  owini:
+    name: Owini
+    tier: 2
+    url: https://owini.ai
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: >-
+      Dealer AI vendor — conversational AI, voice AI, AI BDC, paid ads,
+      review-boost content. 141 URLs, root sitemap with lastmod. Blog
+      posts live at /post/<slug>; URL filter handles non-blog pages.
+
   # drivee: REMOVED 2026-04-21 — no sitemap or RSS feed exists at any path.
   # Scraping would require HTML blog-index parsing, which the signal pipeline
   # doesn't support. Site is tiny; dropping costs no meaningful signal.
