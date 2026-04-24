@@ -87,14 +87,15 @@ sources:
     freshness: weekly
     notes: Promoted to T1 on 2026-04-25 — directly in the sales-battle set, not adjacent
 
-  # ── T2: adjacent competitors ────────────────────────────────────────────
   tecobi:
     name: TECOBI
-    tier: 2
+    tier: 1
     url: https://www.tecobi.com
     sitemap_path: /automotive-advertising-technology-blog/sitemap.xml
     freshness: weekly
+    notes: Promoted to T1 on 2026-04-25 — sales-battle competitor, not adjacent
 
+  # ── T2: adjacent competitors ────────────────────────────────────────────
   dealerai:
     name: DealerAI
     tier: 2
