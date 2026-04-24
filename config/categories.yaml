@@ -79,14 +79,15 @@ sources:
       CSI. Deepgram partner. ID prefixed with "_labs" to disambiguate from
       the Body Kinetics voice agent also named Mia (unrelated).
 
-  # ── T2: adjacent competitors ────────────────────────────────────────────
   matador:
     name: Matador AI
-    tier: 2
+    tier: 1
     url: https://matador.ai
     sitemap_path: /blog/sitemap.xml
     freshness: weekly
+    notes: Promoted to T1 on 2026-04-25 — directly in the sales-battle set, not adjacent
 
+  # ── T2: adjacent competitors ────────────────────────────────────────────
   tecobi:
     name: TECOBI
     tier: 2
@@ -107,18 +108,22 @@ sources:
     url: https://www.stellaautomotive.com
     sitemap_path: /blog/sitemap.xml
     freshness: weekly
+    notes: Voice AI vendor for dealerships — moved back to T2 on 2026-04-25 (T3 strict-lastmod was dropping all their entries)
+
+  gubagoo:
+    name: Gubagoo
+    tier: 2
+    url: https://www.gubagoo.com
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: Chat/messaging + virtual retailing vendor for dealerships — ~40 blog URLs, root sitemap has lastmod
 
   # drivee: REMOVED 2026-04-21 — no sitemap or RSS feed exists at any path.
   # Scraping would require HTML blog-index parsing, which the signal pipeline
   # doesn't support. Site is tiny; dropping costs no meaningful signal.
 
-  dealeron:
-    name: DealerOn
-    tier: 2
-    url: https://www.dealeron.com
-    sitemap_path: /blog/sitemap_index.xml
-    freshness: weekly
-    notes: Dealer-website vendor, heavy SEO-advice blog, 4-8 posts/month
+  # dealeron MOVED to T3 on 2026-04-25 — dealer-website vendor content reads
+  # as authority (SEO advice, best-practice), not positional counter-selling.
 
   # ── T3: authority sources (cite, don't compete) ─────────────────────────
   cox_automotive:
@@ -150,6 +155,14 @@ sources:
     sitemap_path: /industry-center/sitemap.xml
     freshness: on_demand
     notes: Real industry data hidden at /industry-center, /car-news, /car-reviews
+
+  dealeron:
+    name: DealerOn
+    tier: 3
+    url: https://www.dealeron.com
+    sitemap_path: /blog/sitemap_index.xml
+    freshness: on_demand
+    notes: Dealer-website vendor, heavy SEO-advice blog, 4-8 posts/month — authority for dealer-digital best-practice topics
 
   # ── T4: dealer media (topic-signal leading indicator) ───────────────────
   dealership_guy:
@@ -292,6 +305,7 @@ categories:
       - fullpath # web personalization
       - dealerai # chat/email/SMS
       - dealeron # dealer websites + SEO advice
+      - gubagoo # chat + messaging + virtual retailing
 
   # ── 5. Reputation & Reviews ─────────────────────────────────────────────
   reputation:
