@@ -95,9 +95,14 @@ sources:
     name: TECOBI
     tier: 1
     url: https://www.tecobi.com
-    sitemap_path: /automotive-advertising-technology-blog/sitemap.xml
+    sitemap_path: /post-sitemap.xml
     freshness: weekly
-    notes: Promoted to T1 on 2026-04-25 — sales-battle competitor, not adjacent
+    notes: >-
+      Promoted to T1 on 2026-04-25. Sitemap path corrected on 2026-04-25 —
+      old /automotive-advertising-technology-blog/sitemap.xml was a soft-404
+      (server returned homepage, XML parse failed silently). Real path is
+      /post-sitemap.xml (Rank Math SEO plugin). 114 posts, monthly-ish
+      publishing cadence (1 post within 30d of 2026-04-25 smoke test).
 
   # ── T2: adjacent competitors ────────────────────────────────────────────
   dealerai:
