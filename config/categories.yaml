@@ -66,6 +66,19 @@ sources:
     freshness: weekly
     notes: Smart Inbox, Opportunities, HeatCase sentiment, LiveCSI — unique angles
 
+  mia_labs:
+    name: Mia (Mia Labs)
+    tier: 1
+    url: https://www.mia.inc
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: >-
+      Direct competitor — conversational AI voice/SMS for dealerships.
+      350+ rooftops, $29M total raised (Series A closed 2026). Blog themes:
+      voice AI latency, after-hours coverage, outbound campaigns, AI texting,
+      CSI. Deepgram partner. ID prefixed with "_labs" to disambiguate from
+      the Body Kinetics voice agent also named Mia (unrelated).
+
   # ── T2: adjacent competitors ────────────────────────────────────────────
   matador:
     name: Matador AI
@@ -212,6 +225,7 @@ categories:
       - dealerai # REACH
       - stella # Catalyst outbound
       - numa
+      - mia_labs # Outbound Campaigns, proactive outreach
 
   # ── 2. Speed to Lead ────────────────────────────────────────────────────
   speed_to_lead:
@@ -234,6 +248,7 @@ categories:
       - tecobi
       - dealerai
       - stella
+      - mia_labs # Voice AI latency, after-hours, inbound SMS, never-miss-a-call
 
   # ── 3. Service Drive ────────────────────────────────────────────────────
   service_drive:
@@ -255,6 +270,7 @@ categories:
       - stella # Service, Reception
       - numa # Opportunities, LiveCSI
       - dealerai
+      - mia_labs # service appointments, 24/7 phone coverage, CSI angle
 
   # ── 4. Web Capture ──────────────────────────────────────────────────────
   web_capture:
