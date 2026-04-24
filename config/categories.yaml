@@ -118,6 +118,18 @@ sources:
     freshness: weekly
     notes: Chat/messaging + virtual retailing vendor for dealerships — ~40 blog URLs, root sitemap has lastmod
 
+  toma:
+    name: Toma
+    tier: 2
+    url: https://www.toma.com
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: >-
+      AI agents for dealerships — fixed-ops automation, service-drive focus.
+      Named case studies (Hyundai of St. Augustine, Middletown Honda, Martin
+      Management Group) are strong editorial fodder. No sitemap lastmod;
+      T2 tolerates.
+
   # drivee: REMOVED 2026-04-21 — no sitemap or RSS feed exists at any path.
   # Scraping would require HTML blog-index parsing, which the signal pipeline
   # doesn't support. Site is tiny; dropping costs no meaningful signal.
@@ -284,6 +296,7 @@ categories:
       - numa # Opportunities, LiveCSI
       - dealerai
       - mia_labs # service appointments, 24/7 phone coverage, CSI angle
+      - toma # fixed-ops AI agents, 30hrs-of-calls automation, 180-appts/mo case studies
 
   # ── 4. Web Capture ──────────────────────────────────────────────────────
   web_capture:
