@@ -83,9 +83,13 @@ sources:
     name: Matador AI
     tier: 1
     url: https://matador.ai
-    sitemap_path: /blog/sitemap.xml
+    sitemap_path: /sitemap-1.xml
     freshness: weekly
-    notes: Promoted to T1 on 2026-04-25 — directly in the sales-battle set, not adjacent
+    notes: >-
+      Promoted to T1 on 2026-04-25. Sitemap path corrected on 2026-04-25
+      — old /blog/sitemap.xml 404'd; current path is /sitemap-1.xml (flat,
+      has lastmod, ~78 blog URLs mixed with site pages, URL filter handles
+      non-blog pages).
 
   tecobi:
     name: TECOBI
