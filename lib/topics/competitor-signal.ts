@@ -495,23 +495,48 @@ export function clusterCandidates(candidates: CandidateURL[]): TopicCluster[] {
 // ---------------------------------------------------------------------------
 
 export function scoreCluster(cluster: TopicCluster, availableCategoryWeights: Record<string, number>): number {
-  // Require at least one competitor signal (tier 1 or 2) — clusters made
-  // entirely of authority/media tier without competitors aren't competitive
-  // signal, they're archive noise or trade-press coverage we shouldn't chase.
-  if (cluster.tier_counts.tier1 === 0 && cluster.tier_counts.tier2 === 0) return 0;
+  // Qualifying signal — cluster is real signal if EITHER:
+  //   (a) PRIMARY: any T1/T2 competitor is in it (full multiplier), OR
+  //   (b) ALTERNATIVE: ≥3 DISTINCT trade-press/analyst sources (T3+T4) are
+  //       in it — applies a 0.6× score haircut so T1/T2-led clusters still
+  //       rank above when both qualify.
+  // Counts use distinct source domains, not raw URL counts. Otherwise a
+  // single big crawl (e.g. 64 NADA footer-link URLs) would qualify on
+  // sheer volume — not corroboration.
+  const distinctByTier = { tier1: new Set<string>(), tier2: new Set<string>(), tier3: new Set<string>(), tier4: new Set<string>() };
+  for (const u of cluster.urls) {
+    const key = `tier${u.tier}` as keyof typeof distinctByTier;
+    if (distinctByTier[key]) distinctByTier[key].add(u.source_id);
+  }
+  const d1 = distinctByTier.tier1.size;
+  const d2 = distinctByTier.tier2.size;
+  const d3 = distinctByTier.tier3.size;
+  const d4 = distinctByTier.tier4.size;
 
-  // Tier coverage: tier 1 competitors weight highest because they're direct
-  // threats; tier 4 dealer media shift topic attention but don't compete.
+  const hasPrimary = d1 > 0 || d2 > 0;
+  const tradePressDistinct = d3 + d4;
+  const hasTradePressCorroboration = tradePressDistinct >= 3;
+  if (!hasPrimary && !hasTradePressCorroboration) return 0;
+  const qualificationMultiplier = hasPrimary ? 1.0 : 0.6;
+
+  // Tier coverage on DISTINCT sources: tier 1 competitors weight highest
+  // because they're direct threats; tier 4 dealer media shift topic
+  // attention but don't compete. Distinct-source counting also makes one
+  // domain's bulk-crawl unable to dominate scoring.
   const tierWeight =
-    cluster.tier_counts.tier1 * 5 +
-    cluster.tier_counts.tier2 * 3 +
-    cluster.tier_counts.tier4 * 2 +
-    cluster.tier_counts.tier3 * 1;
+    d1 * 5 +
+    d2 * 3 +
+    d4 * 2 +
+    d3 * 1;
 
-  // Bonus when 2+ competitors in the same tier are covering — shows the
-  // topic is actively in the air, not a one-off.
+  // Bonus when multiple distinct sources in the same lane are covering —
+  // shows the topic is actively in the air, not a one-off. Trade-press
+  // concurrency bonus mirrors the competitor-side bonuses so a real news
+  // cycle shows up.
   const concurrencyBonus =
-    (cluster.tier_counts.tier1 >= 2 ? 3 : 0) + (cluster.tier_counts.tier2 >= 3 ? 2 : 0);
+    (d1 >= 2 ? 3 : 0) +
+    (d2 >= 3 ? 2 : 0) +
+    (tradePressDistinct >= 4 ? 2 : 0);
 
   // Freshness: linear decay over 30 days.
   let freshnessMultiplier = 1.0;
@@ -524,7 +549,7 @@ export function scoreCluster(cluster: TopicCluster, availableCategoryWeights: Re
   // category is in cooldown — effectively removes the cluster from the pool.
   const categoryMultiplier = cluster.category_blocked ? 0 : (availableCategoryWeights[cluster.suggested_category] ?? 0.5);
 
-  return (tierWeight + concurrencyBonus) * freshnessMultiplier * categoryMultiplier;
+  return (tierWeight + concurrencyBonus) * freshnessMultiplier * categoryMultiplier * qualificationMultiplier;
 }
 
 // ---------------------------------------------------------------------------
