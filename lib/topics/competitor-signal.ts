@@ -393,6 +393,10 @@ const CLUSTER_STOPWORDS = new Set([
   'dealerships', 'sales', 'new', 'tips', 'guide', 'best', 'top', 'ways',
   'blog', 'post', 'article', 'read', 'more', 'get', 'make', 'need',
 ]);
+// Note: titleTokens() also strips tokens shorter than 3 chars, which
+// already neutralises 'ai', 'cx', 'ev', etc. as cluster magnets. If a
+// future change lowers that minimum length, those should join this list
+// — they're corpus-wide descriptors, not topical signal.
 
 function titleTokens(title: string): Set<string> {
   return new Set(
@@ -412,7 +416,14 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union > 0 ? shared / union : 0;
 }
 
-const CLUSTER_JACCARD_THRESHOLD = 0.4; // two posts cluster together if >=40% token overlap
+// Jaccard threshold for cross-publisher cluster merging. 0.30 was selected
+// empirically via scripts/smoke-jaccard-sweep.ts against the cached pool —
+// 0.40 left ~99% of articles as singletons (4 multi-publisher clusters);
+// 0.25 produced a ~300-URL "AI in dealerships" megacluster; 0.30 yields
+// ~11 multi-publisher clusters with no megacluster. Adjust together with
+// CLUSTER_STOPWORDS — narrowing token vocabulary effectively raises Jaccard
+// at any constant threshold.
+const CLUSTER_JACCARD_THRESHOLD = 0.30;
 
 export function clusterCandidates(candidates: CandidateURL[]): TopicCluster[] {
   // Filter candidates whose titles have fewer than 3 meaningful tokens —
