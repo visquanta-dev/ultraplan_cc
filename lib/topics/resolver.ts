@@ -6,6 +6,7 @@ import type { Bundle, ScrapedInput, Source } from '../bundle/types';
 import { loadCuratedSources, pickCuratedBucket, resolveFromCurated, bucketToCluster } from './curated-sources';
 import { getSignalCandidates, type TopicCluster as SignalCluster } from './competitor-signal';
 import { getCategoryStatus, getAvailableCategories } from './category-cooldown';
+import { filterBlockedTopics } from './topic-blocklist';
 import { getFreshnessDaysForUrl } from '../sources/crawl-index';
 import type { SourceStrategy } from '../config/topics-config';
 
@@ -244,11 +245,28 @@ async function resolveSignalPath(
     );
   }
 
+  // Topic blocklist — kill editorially-dead clusters (e.g. NADA event spam)
+  // before they consume retry budget downstream. See config/topic_blocklist.yaml.
+  const { kept: blocklistKept, rejected: blocklistRejected } = filterBlockedTopics(signal.clusters);
+  for (const { reason } of blocklistRejected) {
+    const detail = reason.match_kind === 'rep_title'
+      ? `rep_title match on "${reason.matched_variant}"`
+      : `${reason.saturation_pct}% URL-title saturation on "${reason.matched_variant}"`;
+    console.log(
+      `[resolver]   blocklisted "${reason.cluster_label}" — ${reason.matched_term} (${detail})`,
+    );
+  }
+  if (blocklistKept.length === 0) {
+    throw new SkipRunError(
+      `all ${signal.clusters.length} viable clusters hit the topic blocklist — skipping`,
+    );
+  }
+
   // Walk ranked clusters top-down, picking the first that survives dedup.
   // signal.clusters is pre-sorted by score, so the first survivor is the
   // highest-scored non-colliding candidate. Bailing on cluster #0 wastes
   // the other 15 viable picks and turns routine dedup hits into skip days.
-  const ranked = signal.clusters.map((c) => ({ signal: c, legacy: adaptSignalCluster(c) }));
+  const ranked = blocklistKept.map((c) => ({ signal: c, legacy: adaptSignalCluster(c) }));
   const { filtered, removed } = await filterDuplicateClusters(ranked.map((r) => r.legacy));
 
   for (const { reason, cluster } of removed) {

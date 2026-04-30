@@ -1,0 +1,41 @@
+# ============================================================================
+# UltraPlan — topic blocklist
+# Resolver-level kill list: any cluster whose representative_title contains
+# a blocked variant (or whose URL titles contain it past the configured
+# saturation %) is dropped before dedup runs. Substring case-insensitive.
+#
+# This is editorial guard rails, not anonymization. For client-name leaks
+# see config/clients_blocklist.yaml.
+# ============================================================================
+
+version: 1
+
+blocked_terms:
+  - term: "NADA"
+    reason: |
+      NADA Show is a January/February event. The corpus carries vendor
+      retrospectives all year, producing single-domain bulk clusters
+      (CDK, Cox, etc.) that pass tier gating but are editorially dead.
+      Permanently blocked 2026-04-30 after three NADA picks in 48h.
+    variants:
+      - "NADA"
+      - "NADA Show"
+      - "NADA 2025"
+      - "NADA 2026"
+      - "NADA 2027"
+      - "National Automobile Dealers Association"
+
+enforcement:
+  # All matching is case-insensitive substring against the candidate strings.
+  # NOTE: variants are matched as whole-word tokens (split on non-alphanumerics)
+  # so the Spanish word "nada" inside English prose won't false-positive on
+  # the all-caps acronym. See lib/topics/topic-blocklist.ts.
+  match_mode: case_insensitive_token
+
+  # Always reject if the cluster's representative_title contains any variant.
+  reject_on_rep_title: true
+
+  # Also reject if >= this % of the cluster's URL titles contain a variant.
+  # 30% is the saturation point above which a cluster is "about" the blocked
+  # topic even if the representative title doesn't say so.
+  url_title_saturation_pct: 30
