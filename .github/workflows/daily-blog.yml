@@ -59,6 +59,7 @@ jobs:
           ORIGINATE_SEED_B64: ${{ github.event.inputs.originate_seed_b64 }}
           ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}
         run: |
+          set -o pipefail
           LANE="${{ github.event.inputs.lane || 'daily_seo' }}"
           BUCKET="${{ github.event.inputs.curated_bucket }}"
 
