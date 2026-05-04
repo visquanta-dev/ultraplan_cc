@@ -380,7 +380,8 @@ function buildFaqSection(headline: string, paragraphs: string[]): string {
 function choosePostEntities(text: string): TopicalEntity[] {
   const lower = text.toLowerCase();
   const picks = ['Car dealership'];
-  if (/review|reputation|csi|satisfaction/.test(lower)) picks.push('Reputation management', 'Customer review');
+  if (/cost|payroll|salary|budget|margin|roi|return on investment|\$|profit/.test(lower)) picks.push('Return on investment', 'Call centre');
+  else if (/review|reputation|csi|satisfaction/.test(lower)) picks.push('Reputation management', 'Customer review');
   else if (/service|fixed ops|advisor|repair/.test(lower)) picks.push('Automobile repair shop', 'Customer experience');
   else if (/lead|bdc|sms|follow-up|crm/.test(lower)) picks.push('Lead generation', 'Customer relationship management');
   else if (/call|voice|phone/.test(lower)) picks.push('Voice user interface', 'Call centre');
