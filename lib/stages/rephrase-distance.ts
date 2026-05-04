@@ -19,7 +19,7 @@ const MODEL_NAME = 'voyage-3-large';
 // Keep the lower drift guard strict, but use originality/ngram gates to catch
 // source-copying above this semantic ceiling.
 const MIN_DISTANCE = 0.40;
-const MAX_DISTANCE = 0.90;
+const MAX_DISTANCE = 0.92;
 
 async function voyageEmbed(texts: string[]): Promise<Float32Array[]> {
   const apiKey = process.env.VOYAGE_API_KEY;
