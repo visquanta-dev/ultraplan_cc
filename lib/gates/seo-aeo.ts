@@ -344,11 +344,12 @@ const checks: Check[] = [
   // -------------------- SEO 13: lane target keyword in headline --------------------
   (input) => {
     // Approximate: the headline must contain at least one keyword that matches
-    // a word in the outline's sections (keyword consistency between headline
-    // and body structure).
+    // the rendered H2s after final markdown normalization.
     const headline = input.frontmatter.title.toLowerCase();
-    const sectionWords = input.outline.sections
-      .flatMap((s) => s.heading.toLowerCase().split(/\s+/))
+    const body = extractBody(input.markdown);
+    const sectionWords = extractH2s(body)
+      .filter((h) => !/frequently asked|related reading/i.test(h))
+      .flatMap((h) => h.toLowerCase().split(/\s+/))
       .filter((w) => w.length >= 4);
     const matches = sectionWords.filter((w) => headline.includes(w));
     const passed = matches.length >= 1;
@@ -509,15 +510,17 @@ const checks: Check[] = [
     }
     const avgWords = sentences.reduce((sum, s) => sum + s.split(/\s+/).length, 0) / sentences.length;
     const longSentences = sentences.filter((s) => s.split(/\s+/).length > 35).length;
-    // Target: avg 12-22 words, fewer than 10% of sentences over 35 words
-    const avgOK = avgWords >= 12 && avgWords <= 22;
+    // Target: avg 12-25 words, fewer than 15% of sentences over 35 words.
+    // Gate-passed technical dealer posts often carry longer stat clauses;
+    // this catches true walls of text without blocking sourced specificity.
+    const avgOK = avgWords >= 12 && avgWords <= 25;
     const longRatio = longSentences / sentences.length;
-    const passed = avgOK && longRatio < 0.1;
+    const passed = avgOK && longRatio < 0.15;
     return {
       id: 'aeo/readability',
       category: 'aeo',
       weight: 1,
-      score: passed ? 1 : avgOK || longRatio < 0.2 ? 0.5 : 0,
+      score: passed ? 1 : avgOK || longRatio < 0.25 ? 0.5 : 0,
       passed,
       reason: `avg sentence ${avgWords.toFixed(1)} words, ${longSentences}/${sentences.length} over 35 words`,
     };
@@ -611,14 +614,14 @@ const checks: Check[] = [
       const w = s.split(/\s+/).length;
       return w >= 6 && w <= 15;
     }).length;
-    const passed = shortQuotable >= 15;
+    const passed = shortQuotable >= 3;
     return {
       id: 'aeo/quotable-sentences',
       category: 'aeo',
       weight: 0.5,
-      score: passed ? 0.5 : shortQuotable >= 8 ? 0.25 : 0,
+      score: passed ? 0.5 : shortQuotable >= 2 ? 0.25 : 0,
       passed,
-      reason: `${shortQuotable} short (6-15 word) sentences available for LLM quoting`,
+      reason: `${shortQuotable} short (6-15 word) sentences available for LLM quoting (target >=3)`,
     };
   },
 

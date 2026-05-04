@@ -12,7 +12,7 @@
  */
 import '../lib/load-env';
 import fs from 'node:fs';
-import { resolveSlot, resolveOriginate } from '../lib/topics/resolver';
+import { resolveSlot, resolveOriginate, type ResolvedSlot } from '../lib/topics/resolver';
 import { runBlogPipeline } from '../workflows/blog-pipeline';
 import { getLaneWordCount, type Lane, type SourceStrategy } from '../lib/config/topics-config';
 import { runPreflight } from '../lib/preflight/validate-config';
@@ -82,6 +82,10 @@ function writeFailureResult(error: unknown): void {
   });
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function stamp(label: string) {
   const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
   console.log(`[local +${secs}s] ${label}`);
@@ -101,27 +105,79 @@ async function main() {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     stamp(`attempt ${attempt}/${maxAttempts}: resolve begin`);
 
-    const bundleResult = originateSeed
-      ? await resolveOriginate({
-          seed: originateSeed,
-          lane,
-          ...(originateCategory ? { category_id: originateCategory } : {}),
-        })
-      : await resolveSlot(lane, {
-          onSearch: (n) => stamp(`resolveSlot.onSearch: ${n} articles`),
-          onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
-          onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
-          excludeClusterSlugs: attemptedClusterSlugs,
-          ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
-          ...(strategyFlag ? { forcedStrategy: strategyFlag as SourceStrategy } : {}),
-        });
+    let bundleResult: ResolvedSlot;
+    try {
+      bundleResult = originateSeed
+        ? await resolveOriginate({
+            seed: originateSeed,
+            lane,
+            ...(originateCategory ? { category_id: originateCategory } : {}),
+          })
+        : await resolveSlot(lane, {
+            onSearch: (n) => stamp(`resolveSlot.onSearch: ${n} articles`),
+            onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
+            onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
+            excludeClusterSlugs: attemptedClusterSlugs,
+            ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
+            ...(strategyFlag ? { forcedStrategy: strategyFlag as SourceStrategy } : {}),
+          });
+    } catch (err) {
+      const message = errorMessage(err);
+      stamp(`attempt ${attempt}/${maxAttempts}: resolve failed - ${message}`);
+      attempts.push({
+        attempt,
+        phase: 'resolve',
+        verdict: 'failed',
+        error: message,
+        durationMs: Date.now() - startedAt,
+      });
+      resultToWrite = resultToWrite
+        ? { ...resultToWrite, attempts }
+        : {
+            slug: 'unknown',
+            lane,
+            verdict: 'failed',
+            error: message,
+            durationMs: Date.now() - startedAt,
+            attempts,
+          };
+      break;
+    }
 
     const { bundle } = bundleResult;
     attemptedClusterSlugs.add(bundle.topic_slug);
     stamp(`resolve done - bundle slug "${bundle.topic_slug}", ${bundle.sources.length} sources${bundle.originate_seed ? ', ORIGINATE mode' : ''}`);
 
     stamp(`attempt ${attempt}/${maxAttempts}: runBlogPipeline begin`);
-    const result = await runBlogPipeline({ bundle, wordCount });
+    let result;
+    try {
+      result = await runBlogPipeline({ bundle, wordCount });
+    } catch (err) {
+      const message = errorMessage(err);
+      stamp(`attempt ${attempt}/${maxAttempts}: runBlogPipeline failed - ${message}`);
+      attempts.push({
+        attempt,
+        phase: 'pipeline',
+        topic_slug: bundle.topic_slug,
+        slug: 'unknown',
+        verdict: 'failed',
+        error: message,
+        durationMs: Date.now() - startedAt,
+      });
+      resultToWrite = {
+        slug: 'unknown',
+        lane,
+        verdict: 'failed',
+        error: message,
+        durationMs: Date.now() - startedAt,
+        attempts,
+      };
+      if (attempt < maxAttempts) {
+        stamp(`attempt ${attempt}/${maxAttempts}: pipeline failed; trying next candidate`);
+        continue;
+      }
+      break;
+    }
     stamp(`attempt ${attempt}/${maxAttempts}: runBlogPipeline done - verdict: ${result.verdict}`);
 
     attempts.push({
