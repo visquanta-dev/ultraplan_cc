@@ -15,7 +15,10 @@ import path from 'node:path';
 // exhausted, return the last report with verdict 'blocked'.
 // ---------------------------------------------------------------------------
 
-const MAX_RETRIES = 3; // spec §6: at most 3 regeneration attempts
+// The gates now run in staged order: structural/style failures are repaired
+// before expensive fact-check runs. Keep enough total budget for late fact
+// failures after earlier stages consume attempts.
+const MAX_RETRIES = 5;
 
 const REGEN_PROMPT_PATH = path.join(
   process.cwd(),
@@ -160,7 +163,7 @@ export interface RetryLoopResult {
 }
 
 export interface RetryLoopOptions extends OrchestratorOptions {
-  /** Max retry attempts. Defaults to MAX_RETRIES (3). */
+  /** Max retry attempts. Defaults to MAX_RETRIES (5). */
   maxRetries?: number;
   /** Called when a retry starts. */
   onRetryStart?: (attempt: number, failingIndices: number[]) => void;
