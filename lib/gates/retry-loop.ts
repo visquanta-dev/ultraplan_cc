@@ -251,10 +251,14 @@ export async function runWithRetry(
 
   // If we exhausted retries and still failing, mark as blocked
   if (report.verdict === 'retry') {
+    const failedGates = report.results
+      .filter((r) => !r.passed)
+      .map((r) => `${r.gate}: ${r.summary}`)
+      .join(' | ');
     report = {
       ...report,
       verdict: 'blocked',
-      blocked_reason: `Retry budget exhausted after ${maxRetries} attempts. Failing paragraphs: ${report.failing_paragraph_indices.join(', ')}`,
+      blocked_reason: `Retry budget exhausted after ${maxRetries} attempts. Failing paragraphs: ${report.failing_paragraph_indices.join(', ')}${failedGates ? `. Failed gates: ${failedGates}` : ''}`,
     };
   }
 

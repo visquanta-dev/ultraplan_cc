@@ -15,10 +15,11 @@ import type { Bundle } from '../bundle/types';
 // ---------------------------------------------------------------------------
 
 const MODEL_NAME = 'voyage-3-large';
-// Spec band: too far from the quote is likely drift; too close is likely
-// source-copying.
+// Voyage embeddings score paraphrases higher than the old local MiniLM path.
+// Keep the lower drift guard strict, but use originality/ngram gates to catch
+// source-copying above this semantic ceiling.
 const MIN_DISTANCE = 0.40;
-const MAX_DISTANCE = 0.85;
+const MAX_DISTANCE = 0.90;
 
 async function voyageEmbed(texts: string[]): Promise<Float32Array[]> {
   const apiKey = process.env.VOYAGE_API_KEY;

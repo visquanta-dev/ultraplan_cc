@@ -202,7 +202,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       { paragraphs: transformed.paragraphs, bundle, outline, attempt: 1 },
       {
         onGateStart: (gate) => console.log(`[pipeline]   gate: ${gate}...`),
-        onGateFinish: (r) => console.log(`[pipeline]   ${r.gate}: ${r.passed ? 'PASS' : 'FAIL'}`),
+        onGateFinish: (r) => {
+          const failing = r.failing_paragraph_indices.length
+            ? ` failing=[${r.failing_paragraph_indices.join(', ')}]`
+            : '';
+          console.log(`[pipeline]   ${r.gate}: ${r.passed ? 'PASS' : 'FAIL'} — ${r.summary}${failing}`);
+        },
         onRetryStart: (attempt, indices) =>
           console.log(`[pipeline]   retry ${attempt}: regenerating paragraphs [${indices.join(', ')}]`),
       },

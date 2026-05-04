@@ -97,10 +97,9 @@ async function judgeParagraphClaim(
   bundleSourceBlocks: string[],
   systemPrompt: string,
 ): Promise<FactCheckJudgeResponse> {
-  // Cap total context to ~8000 chars shared across sources to avoid token
-  // blow-up. If we have 5 sources, each gets ~1600 chars — enough for
-  // stats, too short for deep-context verification.
-  const MAX_TOTAL_CHARS = 8000;
+  // Keep enough context for current Firecrawl markdown. The old 8k total cap
+  // created false negatives when supporting text appeared after the intro.
+  const MAX_TOTAL_CHARS = 30000;
   const perSource = Math.floor(MAX_TOTAL_CHARS / Math.max(bundleSourceBlocks.length, 1));
   const trimmed = bundleSourceBlocks.map((block) => block.slice(0, perSource));
 

@@ -80,16 +80,31 @@ export interface OrchestratorOptions {
   onGateFinish?: (result: GateResult) => void;
 }
 
+function buildReport(
+  attempt: number,
+  results: GateResult[],
+  verdict: GateVerdict = computeVerdict(results),
+  blockedReason?: string,
+): GateReport {
+  return {
+    attempt,
+    verdict,
+    results,
+    failing_paragraph_indices: collectFailingParagraphIndices(results),
+    ...(blockedReason ? { blocked_reason: blockedReason } : {}),
+    generated_at: new Date().toISOString(),
+  };
+}
+
 /**
- * Run all five gates in the cheapest-to-most-expensive order, short-circuit
+ * Run gates in the cheapest-to-most-expensive order, short-circuit
  * on gate e (anonymization) failure, aggregate into a GateReport.
  *
  * Short-circuit behavior:
- *  - Gate a fails → still run all other gates (we want the full picture
- *    for the admin dashboard)
- *  - Gate e fails → stop immediately and mark the draft blocked, no point
- *    running b/c/d after a client-name leak
- *  - Any other failure → still run remaining gates, verdict decides retry
+ *  - Trace-back / vertical discipline fail → retry before paid gates.
+ *  - Anonymization fails → block immediately.
+ *  - Slop/originality fail → retry before fact recheck.
+ *  - Fact recheck runs only after cheaper gates pass.
  */
 export async function runAllGates(
   ctx: OrchestratorContext,
@@ -110,42 +125,38 @@ export async function runAllGates(
   }
 
   // 1. Trace-back (cheapest)
-  await run('trace-back', runGateA);
+  const gateA = await run('trace-back', runGateA);
+  if (!gateA.passed) {
+    return buildReport(attempt, results, 'retry');
+  }
 
   // 1b. Vertical discipline — pure regex, cheap, runs before anonymization
   // so generic-reading drafts fail fast before we pay for gate e's LLM call.
-  await run('vertical-discipline', runGateF);
+  const gateF = await run('vertical-discipline', runGateF);
+  if (!gateF.passed) {
+    return buildReport(attempt, results, 'retry');
+  }
 
   // 2. Anonymization — zero tolerance, short-circuit on failure
   const gateE = await run('anonymization', runGateE);
   if (!gateE.passed) {
-    return {
-      attempt,
-      verdict: 'blocked',
-      results,
-      failing_paragraph_indices: [],
-      blocked_reason: `Gate e (anonymization) failed: ${gateE.summary}`,
-      generated_at: new Date().toISOString(),
-    };
+    return buildReport(attempt, results, 'blocked', `Gate e (anonymization) failed: ${gateE.summary}`);
   }
 
   // 3. Slop lexicon
-  await run('slop-lexicon', runGateC);
+  const gateC = await run('slop-lexicon', runGateC);
+  if (!gateC.passed) {
+    return buildReport(attempt, results, 'retry');
+  }
 
   // 4. Originality
-  await run('originality', runGateD);
+  const gateD = await run('originality', runGateD);
+  if (!gateD.passed) {
+    return buildReport(attempt, results, 'retry');
+  }
 
   // 5. Fact recheck (most expensive)
   await run('fact-recheck', runGateB);
 
-  const verdict: GateVerdict = computeVerdict(results);
-  const failingIndices = collectFailingParagraphIndices(results);
-
-  return {
-    attempt,
-    verdict,
-    results,
-    failing_paragraph_indices: failingIndices,
-    generated_at: new Date().toISOString(),
-  };
+  return buildReport(attempt, results);
 }
