@@ -79,6 +79,7 @@ export async function resolveSlot(
     preferCurated?: boolean;
     /** Legacy flag — ignored unless it's curated_first with a bucket */
     forcedStrategy?: SourceStrategy;
+    excludeClusterSlugs?: Iterable<string>;
   } = {},
 ): Promise<ResolvedSlot> {
   // ------------------------------------------------------------------
@@ -215,6 +216,7 @@ async function resolveSignalPath(
     onSearch?: (count: number) => void;
     onCluster?: (cluster: TopicCluster) => void;
     onScrape?: (total: number, succeeded: number) => void;
+    excludeClusterSlugs?: Iterable<string>;
   },
 ): Promise<ResolvedSlot> {
   console.log('[resolver] Signal-driven resolution');
@@ -266,7 +268,21 @@ async function resolveSignalPath(
   // signal.clusters is pre-sorted by score, so the first survivor is the
   // highest-scored non-colliding candidate. Bailing on cluster #0 wastes
   // the other 15 viable picks and turns routine dedup hits into skip days.
-  const ranked = blocklistKept.map((c) => ({ signal: c, legacy: adaptSignalCluster(c) }));
+  const excludedSlugs = new Set(options.excludeClusterSlugs ?? []);
+  const ranked = blocklistKept
+    .map((c) => ({ signal: c, legacy: adaptSignalCluster(c) }))
+    .filter((r) => {
+      const excluded = excludedSlugs.has(r.legacy.slug);
+      if (excluded) {
+        console.log(`[resolver]   excluded by current batch: "${r.legacy.label}" (${r.legacy.slug})`);
+      }
+      return !excluded;
+    });
+
+  if (ranked.length === 0) {
+    throw new SkipRunError('all viable clusters were already attempted in this batch');
+  }
+
   const { filtered, removed } = await filterDuplicateClusters(ranked.map((r) => r.legacy));
 
   for (const { reason, cluster } of removed) {

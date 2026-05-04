@@ -1,19 +1,14 @@
 /**
- * Run the full blog pipeline locally — same code path as the cron route,
+ * Run the full blog pipeline locally - same code path as the cron route,
  * but free from serverless timeouts. Opens a real PR on success.
  *
  * Usage:
  *   npx tsx scripts/run-pipeline-local.ts [lane] [curatedBucket]
- *     Signal-driven (default): lane=daily_seo, picks via competitor-signal
- *     Curated override:        lane=daily_seo service_drive_fixed_ops
+ *   npx tsx scripts/run-pipeline-local.ts daily_seo --max-attempts=2
  *
- *   Originate path (via env vars — keeps multi-line seeds clean):
- *     ORIGINATE_SEED="..." ORIGINATE_CATEGORY=reputation \
- *       npx tsx scripts/run-pipeline-local.ts daily_seo
- *
- *   Originate path (via file — for seeds that don't fit the shell):
- *     ORIGINATE_SEED_FILE=tmp/seed.txt ORIGINATE_CATEGORY=reputation \
- *       npx tsx scripts/run-pipeline-local.ts daily_seo
+ *   Signal-driven attempts exclude earlier failed clusters within the same
+ *   process. That lets GitHub Actions try the next viable topic without
+ *   weakening any content gate.
  */
 import '../lib/load-env';
 import fs from 'node:fs';
@@ -24,11 +19,14 @@ import { runPreflight } from '../lib/preflight/validate-config';
 
 const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case', 'listicle'];
 const lane = (process.argv[2] as Lane) ?? 'daily_seo';
-const curatedBucket = process.argv[3] ?? undefined;
+const curatedBucket = process.argv[3]?.startsWith('--') ? undefined : process.argv[3] ?? undefined;
 const strategyFlag = process.argv.find(a => a.startsWith('--strategy='))?.split('=')[1]
   ?? (process.argv.includes('--strategy') ? process.argv[process.argv.indexOf('--strategy') + 1] : undefined);
+const maxAttemptsFlag = process.argv.find(a => a.startsWith('--max-attempts='))?.split('=')[1]
+  ?? (process.argv.includes('--max-attempts') ? process.argv[process.argv.indexOf('--max-attempts') + 1] : undefined)
+  ?? process.env.MAX_PIPELINE_ATTEMPTS;
 
-// Originate path detection — either inline seed or seed-file reference
+// Originate path detection - either inline seed or seed-file reference.
 const originateSeedFile = process.env.ORIGINATE_SEED_FILE;
 const originateSeedInline = process.env.ORIGINATE_SEED;
 const originateCategory = process.env.ORIGINATE_CATEGORY || undefined;
@@ -67,6 +65,8 @@ if (!VALID_LANES.includes(lane)) {
 
 const wordCount = getLaneWordCount(lane);
 const startedAt = Date.now();
+const requestedMaxAttempts = Math.max(1, Math.min(5, Number.parseInt(maxAttemptsFlag ?? '1', 10) || 1));
+const maxAttempts = originateSeed || curatedBucket ? 1 : requestedMaxAttempts;
 
 function writePipelineResult(result: Record<string, unknown>): void {
   fs.writeFileSync('pipeline-result.json', JSON.stringify(result));
@@ -89,44 +89,79 @@ function stamp(label: string) {
 
 async function main() {
   const mode = originateSeed ? 'originate' : curatedBucket ? 'curated' : 'signal';
-  stamp(`Starting pipeline — lane: ${lane}, mode: ${mode}, word count: ${wordCount.min}-${wordCount.max}${curatedBucket ? `, bucket: ${curatedBucket}` : ''}${originateSeed ? `, seed: ${originateSeed.length} chars` : ''}`);
+  stamp(`Starting pipeline - lane: ${lane}, mode: ${mode}, word count: ${wordCount.min}-${wordCount.max}${curatedBucket ? `, bucket: ${curatedBucket}` : ''}${originateSeed ? `, seed: ${originateSeed.length} chars` : ''}, max attempts: ${maxAttempts}`);
 
   stamp('preflight: begin');
   runPreflight();
 
-  let bundleResult;
-  if (originateSeed) {
-    stamp('resolveOriginate: begin');
-    bundleResult = await resolveOriginate({
-      seed: originateSeed,
-      lane,
-      ...(originateCategory ? { category_id: originateCategory } : {}),
-    });
-  } else {
-    stamp('resolveSlot: begin');
-    bundleResult = await resolveSlot(lane, {
-      onSearch: (n) => stamp(`resolveSlot.onSearch: ${n} articles`),
-      onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
-      onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
-      ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
-      ...(strategyFlag ? { forcedStrategy: strategyFlag as SourceStrategy } : {}),
-    });
-  }
-  const { bundle } = bundleResult;
-  stamp(`resolve done — bundle slug "${bundle.topic_slug}", ${bundle.sources.length} sources${bundle.originate_seed ? ', ORIGINATE mode' : ''}`);
+  const attemptedClusterSlugs = new Set<string>();
+  const attempts: Array<Record<string, unknown>> = [];
+  let resultToWrite: Record<string, unknown> | null = null;
 
-  stamp('runBlogPipeline: begin');
-  const result = await runBlogPipeline({ bundle, wordCount });
-  stamp(`runBlogPipeline: done — verdict: ${result.verdict}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    stamp(`attempt ${attempt}/${maxAttempts}: resolve begin`);
+
+    const bundleResult = originateSeed
+      ? await resolveOriginate({
+          seed: originateSeed,
+          lane,
+          ...(originateCategory ? { category_id: originateCategory } : {}),
+        })
+      : await resolveSlot(lane, {
+          onSearch: (n) => stamp(`resolveSlot.onSearch: ${n} articles`),
+          onCluster: (c) => stamp(`resolveSlot.onCluster: "${c.label}" (${c.articles.length} articles)`),
+          onScrape: (total, ok) => stamp(`resolveSlot.onScrape: ${ok}/${total} succeeded`),
+          excludeClusterSlugs: attemptedClusterSlugs,
+          ...(curatedBucket ? { curatedBucket, forcedStrategy: 'curated_first' as const } : {}),
+          ...(strategyFlag ? { forcedStrategy: strategyFlag as SourceStrategy } : {}),
+        });
+
+    const { bundle } = bundleResult;
+    attemptedClusterSlugs.add(bundle.topic_slug);
+    stamp(`resolve done - bundle slug "${bundle.topic_slug}", ${bundle.sources.length} sources${bundle.originate_seed ? ', ORIGINATE mode' : ''}`);
+
+    stamp(`attempt ${attempt}/${maxAttempts}: runBlogPipeline begin`);
+    const result = await runBlogPipeline({ bundle, wordCount });
+    stamp(`attempt ${attempt}/${maxAttempts}: runBlogPipeline done - verdict: ${result.verdict}`);
+
+    attempts.push({
+      attempt,
+      topic_slug: bundle.topic_slug,
+      slug: result.slug,
+      verdict: result.verdict,
+      ...(result.prUrl ? { prUrl: result.prUrl } : {}),
+      ...(result.error ? { error: result.error } : {}),
+      durationMs: result.durationMs,
+    });
+
+    resultToWrite = {
+      ...result,
+      attempts,
+    } as unknown as Record<string, unknown>;
+
+    if (result.verdict === 'published') break;
+    if (attempt < maxAttempts) {
+      stamp(`attempt ${attempt}/${maxAttempts}: not published (${result.verdict}); trying next candidate`);
+    }
+  }
+
+  const finalResult = resultToWrite ?? {
+    slug: 'unknown',
+    lane,
+    verdict: 'failed',
+    error: 'No pipeline attempt completed',
+    durationMs: Date.now() - startedAt,
+    attempts,
+  };
 
   console.log('\n=== RESULT ===');
-  console.log(JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(finalResult, null, 2));
   console.log(`\nTotal wall time: ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 
-  // Write result to file for CI consumption (GitHub Actions reads this)
-  writePipelineResult(result as unknown as Record<string, unknown>);
+  // Write result to file for CI consumption (GitHub Actions reads this).
+  writePipelineResult(finalResult);
 
-  if (result.verdict !== 'published') {
+  if (finalResult.verdict !== 'published') {
     process.exitCode = 1;
   }
 }

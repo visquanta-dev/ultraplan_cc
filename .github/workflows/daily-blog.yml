@@ -5,6 +5,7 @@ on:
     # 9:30 AM America/Chicago = 14:30 UTC (CDT, UTC-5) or 15:30 UTC (CST, UTC-6)
     # Using 14:30 UTC for CDT (summer). Adjust to 15:30 for CST (winter).
     - cron: '30 14 * * 1-5'  # Mon-Fri at 9:30 AM Chicago time (CDT)
+    - cron: '30 20 * * 1-5'  # Mon-Fri at 3:30 PM Chicago time (CDT)
   workflow_dispatch:  # Allow manual triggering from GitHub UI
     inputs:
       lane:
@@ -20,11 +21,15 @@ on:
       originate_category:
         description: 'Category id for the originate post (e.g. reputation, lead_reactivation) — required when originate_seed_b64 is set.'
         required: false
+      max_attempts:
+        description: 'Signal candidates to try before giving up (1-5; ignored for curated/originate)'
+        required: false
+        default: '2'
 
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Pipeline takes ~15 min, give it headroom
+    timeout-minutes: 60  # Two signal attempts can take 30-45 min when gates retry
 
     steps:
       - name: Checkout ultraplan_cc
@@ -56,6 +61,7 @@ jobs:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          MAX_PIPELINE_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
           ORIGINATE_SEED_B64: ${{ github.event.inputs.originate_seed_b64 }}
           ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}
         run: |
