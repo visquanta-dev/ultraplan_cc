@@ -39,6 +39,12 @@ You will receive:
      source actually says. Don't extrapolate beyond the cited claim.
    - If a paragraph failed **trace-back**: ensure the rewritten text
      clearly connects to and paraphrases (not copies) the anchor quote.
+     If the reason says `too_close`, do not mirror the quote's sentence
+     structure or word order. Keep the same factual claim, but rewrite it
+     as dealer-facing analysis: consequence first, supporting detail
+     second, with different nouns and verbs. If the reason says `too_far`,
+     remove unsupported inference and make the anchor quote's concrete
+     claim visible again.
 4. **Maintain coherence** with the surrounding paragraphs. Read the
    full_post context to ensure your rewrite flows naturally.
 5. **Each paragraph must be at least 50 characters.**

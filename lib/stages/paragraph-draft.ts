@@ -43,6 +43,8 @@ const PARAGRAPH_SCHEMA = {
   },
 };
 
+const MAX_DRAFT_ATTEMPTS = 3;
+
 function loadSystemPrompt(): string {
   const promptPath = path.join(
     process.cwd(),
@@ -80,6 +82,26 @@ function indexSectionAnchors(outline: Outline): Map<number, Set<string>> {
   return index;
 }
 
+function buildSectionQuoteContract(outline: Outline, bundle: Bundle): Array<{
+  section_index: number;
+  heading: string;
+  allowed_quotes: Array<{ quote_id: string; source_id: string; text: string }>;
+}> {
+  const quoteIndex = indexBundleQuotes(bundle);
+  return outline.sections.map((section, sectionIndex) => ({
+    section_index: sectionIndex,
+    heading: section.heading,
+    allowed_quotes: section.anchor_quotes.map((quoteId) => {
+      const quote = quoteIndex.get(quoteId);
+      return {
+        quote_id: quoteId,
+        source_id: quote?.source_id ?? '',
+        text: quote?.text ?? '',
+      };
+    }),
+  }));
+}
+
 /**
  * Draft paragraphs for the outline. Every paragraph is required to:
  *  - bind to a quote_id that exists in the bundle,
@@ -99,24 +121,27 @@ export async function draftParagraphs(
   const quoteIndex = indexBundleQuotes(bundle);
   const sectionAnchors = indexSectionAnchors(outline);
 
-  const user = JSON.stringify(
-    {
-      outline,
-      bundle,
-      lane: bundle.lane,
-      word_count: wordCount,
-    },
-    null,
-    2,
-  );
+  function buildUser(previousError?: string): string {
+    return JSON.stringify(
+      {
+        outline,
+        section_quote_contract: buildSectionQuoteContract(outline, bundle),
+        bundle,
+        lane: bundle.lane,
+        word_count: wordCount,
+        ...(previousError
+          ? {
+              repair_instruction:
+                `The previous draft was rejected: ${previousError}. Return a COMPLETE replacement paragraphs array. Every paragraph in section N must use only quote_ids from section_quote_contract[N].allowed_quotes.`,
+            }
+          : {}),
+      },
+      null,
+      2,
+    );
+  }
 
-  return await callLLMStructured<DraftedParagraphs>({
-    system,
-    user,
-    schema: PARAGRAPH_SCHEMA,
-    model: MODELS.DRAFTER,
-    maxTokens: 8192,
-    parse: (raw: unknown): DraftedParagraphs => {
+  function parseDraft(raw: unknown): DraftedParagraphs {
       if (!raw || typeof raw !== 'object') {
         throw new Error('[paragraph-draft] response was not an object');
       }
@@ -182,6 +207,30 @@ export async function draftParagraphs(
       });
 
       return { paragraphs };
-    },
-  });
+  }
+
+  let previousError: string | undefined;
+  for (let attempt = 1; attempt <= MAX_DRAFT_ATTEMPTS; attempt += 1) {
+    try {
+      return await callLLMStructured<DraftedParagraphs>({
+        system:
+          attempt === 1
+            ? system
+            : `${system}\n\n## Repair mode\n\nYour previous output failed structural validation. Fix the exact issue described in the user message. Do not change the schema. Do not return partial output.`,
+        user: buildUser(previousError),
+        schema: PARAGRAPH_SCHEMA,
+        model: MODELS.DRAFTER,
+        maxTokens: 8192,
+        parse: parseDraft,
+      });
+    } catch (err) {
+      previousError = err instanceof Error ? err.message : String(err);
+      if (attempt === MAX_DRAFT_ATTEMPTS) {
+        throw err;
+      }
+      console.warn(`[paragraph-draft] attempt ${attempt} rejected: ${previousError}`);
+    }
+  }
+
+  throw new Error('[paragraph-draft] exhausted draft attempts');
 }

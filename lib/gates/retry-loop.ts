@@ -212,6 +212,21 @@ export async function runWithRetry(
         `[retry-loop] paragraph regen returned ${regenRaw.length} paragraphs for ${failingIndices.length} failing indices`,
       );
     }
+    regenRaw.forEach((regen, localIdx) => {
+      const original = paragraphs[failingIndices[localIdx]];
+      if (
+        regen.section_index !== original.section_index ||
+        regen.source_id !== original.source_id ||
+        regen.anchor_quote_id !== original.anchor_quote_id
+      ) {
+        throw new Error(
+          `[retry-loop] paragraph regen metadata drift at failing index ${failingIndices[localIdx]}: ` +
+            `section ${regen.section_index}!=${original.section_index}, ` +
+            `source ${regen.source_id}!=${original.source_id}, ` +
+            `quote ${regen.anchor_quote_id}!=${original.anchor_quote_id}`,
+        );
+      }
+    });
 
     // Voice-transform the regenerated paragraphs
     const regenResult = await voiceTransform(

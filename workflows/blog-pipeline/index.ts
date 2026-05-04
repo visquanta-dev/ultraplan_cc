@@ -187,11 +187,8 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const draftDistances = await checkRephraseDistances(drafted.paragraphs, bundle);
     const draftDistanceFailures = draftDistances.filter((d) => !d.in_band);
     if (draftDistanceFailures.length > 0) {
-      const detail = draftDistanceFailures
-        .map((d) => `p${d.paragraph_index}:${d.similarity.toFixed(3)}:${d.reason}`)
-        .join(', ');
-      throw new Error(
-        `[pipeline] draft rephrase-distance failed before voice transform (${draftDistanceFailures.length}/${draftDistances.length}): ${detail}`,
+      console.warn(
+        `[pipeline]   draft rephrase-distance warnings before voice transform (${draftDistanceFailures.length}/${draftDistances.length}); trace-back gate will enforce after voice transform`,
       );
     }
 
