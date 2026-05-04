@@ -18,7 +18,7 @@ import path from 'node:path';
 // before expensive fact-check runs. Keep enough total budget for late fact
 // failures after earlier stages consume attempts.
 const MAX_RETRIES = 5;
-const MAX_FACT_DROP_PARAGRAPHS = 2;
+const MAX_FACT_DROP_PARAGRAPHS = 3;
 
 const REGEN_PROMPT_PATH = path.join(
   process.cwd(),
@@ -253,23 +253,28 @@ export async function runWithRetry(
 
   // If we exhausted retries and still failing, mark as blocked
   if (report.verdict === 'retry') {
-    const failedResults = report.results.filter((r) => !r.passed);
-    const factOnlyFailure =
-      failedResults.length === 1 && failedResults[0].gate === 'fact-recheck';
-    const removableFactFailures =
-      factOnlyFailure &&
-      report.failing_paragraph_indices.length > 0 &&
-      report.failing_paragraph_indices.length <= MAX_FACT_DROP_PARAGRAPHS &&
-      paragraphs.length - report.failing_paragraph_indices.length >= 8;
+    let droppedFactParagraphs = 0;
+    while (report.verdict === 'retry') {
+      const failedResults = report.results.filter((r) => !r.passed);
+      const factOnlyFailure =
+        failedResults.length === 1 && failedResults[0].gate === 'fact-recheck';
+      const nextDropCount = report.failing_paragraph_indices.length;
+      const removableFactFailures =
+        factOnlyFailure &&
+        nextDropCount > 0 &&
+        droppedFactParagraphs + nextDropCount <= MAX_FACT_DROP_PARAGRAPHS &&
+        paragraphs.length - nextDropCount >= 8;
 
-    if (removableFactFailures) {
+      if (!removableFactFailures) break;
+
       const drop = new Set(report.failing_paragraph_indices);
+      droppedFactParagraphs += drop.size;
       console.warn(
-        `[retry-loop] dropping unsupported fact-check paragraphs after retry budget: [${[...drop].join(', ')}]`,
+        `[retry-loop] dropping unsupported fact-check paragraphs after retry budget: [${[...drop].join(', ')}] (${droppedFactParagraphs}/${MAX_FACT_DROP_PARAGRAPHS})`,
       );
       paragraphs = paragraphs.filter((_, idx) => !drop.has(idx));
       report = await runAllGates(
-        { ...ctx, paragraphs, attempt: retries + 2 },
+        { ...ctx, paragraphs, attempt: retries + 1 + droppedFactParagraphs },
         options,
       );
       if (report.verdict !== 'retry') {
