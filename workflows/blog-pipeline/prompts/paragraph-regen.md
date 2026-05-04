@@ -35,6 +35,10 @@ You will receive:
      reuse that phrase, its sentence shape, or any "having sold cars..."
      construction. Regeneration output is already final voice, so do not
      add operator-voice palette lines just to sound first-hand.
+     Do not use generic consulting pivots like "the honest truth is",
+     "that's the combination", or "that's exactly what". Replace them
+     with the concrete number, operational consequence, or source-backed
+     claim that makes the paragraph worth keeping.
    - If a paragraph failed **originality**: add analytical value beyond
      what the source quote says. Don't just rearrange the source — draw
      a new conclusion, add industry context, or contrast with another

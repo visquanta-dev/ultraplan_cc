@@ -19,6 +19,7 @@ import path from 'node:path';
 // failures after earlier stages consume attempts.
 const MAX_RETRIES = 5;
 const MAX_FACT_DROP_PARAGRAPHS = 5;
+const MAX_POST_DROP_CLEANUP_RETRIES = 2;
 
 const REGEN_PROMPT_PATH = path.join(
   process.cwd(),
@@ -149,6 +150,53 @@ function spliceParagraphs(
   return result;
 }
 
+async function regenerateAndSplice(
+  paragraphs: TransformedParagraph[],
+  failingIndices: number[],
+  ctx: OrchestratorContext,
+  report: GateReport,
+): Promise<TransformedParagraph[]> {
+  const regenRaw = await regenerateFailingParagraphs(
+    paragraphs,
+    failingIndices,
+    ctx.bundle,
+    report,
+  );
+
+  if (regenRaw.length !== failingIndices.length) {
+    throw new Error(
+      `[retry-loop] paragraph regen returned ${regenRaw.length} paragraphs for ${failingIndices.length} failing indices`,
+    );
+  }
+  regenRaw.forEach((regen, localIdx) => {
+    const original = paragraphs[failingIndices[localIdx]];
+    if (
+      regen.section_index !== original.section_index ||
+      regen.source_id !== original.source_id ||
+      regen.anchor_quote_id !== original.anchor_quote_id
+    ) {
+      throw new Error(
+        `[retry-loop] paragraph regen metadata drift at failing index ${failingIndices[localIdx]}: ` +
+          `section ${regen.section_index}!=${original.section_index}, ` +
+          `source ${regen.source_id}!=${original.source_id}, ` +
+          `quote ${regen.anchor_quote_id}!=${original.anchor_quote_id}`,
+      );
+    }
+  });
+
+  // paragraph-regen writes final voice directly. Do not run voiceTransform
+  // on a tiny subset: that prompt is calibrated for whole-post context and
+  // was re-injecting repeated operator-voice openers during late retries.
+  const regenTransformed: TransformedParagraph[] = regenRaw.map((p) => ({
+    text: p.text,
+    section_index: p.section_index,
+    source_id: p.source_id,
+    anchor_quote_id: p.anchor_quote_id,
+  }));
+
+  return spliceParagraphs(paragraphs, regenTransformed, failingIndices);
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -202,47 +250,7 @@ export async function runWithRetry(
 
     options.onRetryStart?.(retries, failingIndices);
 
-    // Regenerate failing paragraphs
-    const regenRaw = await regenerateFailingParagraphs(
-      paragraphs,
-      failingIndices,
-      ctx.bundle,
-      report,
-    );
-
-    if (regenRaw.length !== failingIndices.length) {
-      throw new Error(
-        `[retry-loop] paragraph regen returned ${regenRaw.length} paragraphs for ${failingIndices.length} failing indices`,
-      );
-    }
-    regenRaw.forEach((regen, localIdx) => {
-      const original = paragraphs[failingIndices[localIdx]];
-      if (
-        regen.section_index !== original.section_index ||
-        regen.source_id !== original.source_id ||
-        regen.anchor_quote_id !== original.anchor_quote_id
-      ) {
-        throw new Error(
-          `[retry-loop] paragraph regen metadata drift at failing index ${failingIndices[localIdx]}: ` +
-            `section ${regen.section_index}!=${original.section_index}, ` +
-            `source ${regen.source_id}!=${original.source_id}, ` +
-            `quote ${regen.anchor_quote_id}!=${original.anchor_quote_id}`,
-        );
-      }
-    });
-
-    // paragraph-regen writes final voice directly. Do not run voiceTransform
-    // on a tiny subset: that prompt is calibrated for whole-post context and
-    // was re-injecting repeated operator-voice openers during late retries.
-    const regenTransformed: TransformedParagraph[] = regenRaw.map((p) => ({
-      text: p.text,
-      section_index: p.section_index,
-      source_id: p.source_id,
-      anchor_quote_id: p.anchor_quote_id,
-    }));
-
-    // Splice back
-    paragraphs = spliceParagraphs(paragraphs, regenTransformed, failingIndices);
+    paragraphs = await regenerateAndSplice(paragraphs, failingIndices, ctx, report);
 
     // Re-run all gates
     report = await runAllGates(
@@ -252,6 +260,7 @@ export async function runWithRetry(
   }
 
   // If we exhausted retries and still failing, mark as blocked
+  let postDropCleanupRetries = 0;
   if (report.verdict === 'retry') {
     let droppedFactParagraphs = 0;
     while (report.verdict === 'retry') {
@@ -280,16 +289,44 @@ export async function runWithRetry(
       if (report.verdict !== 'retry') {
         return { report, paragraphs, retries };
       }
+
+      const postDropFailedResults = report.results.filter((r) => !r.passed);
+      const postDropFactOnlyFailure =
+        postDropFailedResults.length === 1 && postDropFailedResults[0].gate === 'fact-recheck';
+      if (
+        !postDropFactOnlyFailure &&
+        postDropCleanupRetries < MAX_POST_DROP_CLEANUP_RETRIES &&
+        report.failing_paragraph_indices.length > 0
+      ) {
+        postDropCleanupRetries += 1;
+        retries += 1;
+        console.warn(
+          `[retry-loop] cleanup retry after unsupported fact-drop: [${report.failing_paragraph_indices.join(', ')}] ` +
+            `(${postDropCleanupRetries}/${MAX_POST_DROP_CLEANUP_RETRIES})`,
+        );
+        options.onRetryStart?.(retries, report.failing_paragraph_indices);
+        paragraphs = await regenerateAndSplice(paragraphs, report.failing_paragraph_indices, ctx, report);
+        report = await runAllGates(
+          { ...ctx, paragraphs, attempt: retries + 1 + droppedFactParagraphs },
+          options,
+        );
+        if (report.verdict !== 'retry') {
+          return { report, paragraphs, retries };
+        }
+      }
     }
 
     const failedGates = report.results
       .filter((r) => !r.passed)
       .map((r) => `${r.gate}: ${r.summary}`)
       .join(' | ');
+    const retryBudgetSummary = postDropCleanupRetries > 0
+      ? `${maxRetries} attempts plus ${postDropCleanupRetries} post-drop cleanup attempt${postDropCleanupRetries === 1 ? '' : 's'}`
+      : `${maxRetries} attempts`;
     report = {
       ...report,
       verdict: 'blocked',
-      blocked_reason: `Retry budget exhausted after ${maxRetries} attempts. Failing paragraphs: ${report.failing_paragraph_indices.join(', ')}${failedGates ? `. Failed gates: ${failedGates}` : ''}`,
+      blocked_reason: `Retry budget exhausted after ${retryBudgetSummary}. Failing paragraphs: ${report.failing_paragraph_indices.join(', ')}${failedGates ? `. Failed gates: ${failedGates}` : ''}`,
     };
   }
 
