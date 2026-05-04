@@ -125,6 +125,10 @@ async function main() {
 
   // Write result to file for CI consumption (GitHub Actions reads this)
   writePipelineResult(result as unknown as Record<string, unknown>);
+
+  if (result.verdict !== 'published') {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {
