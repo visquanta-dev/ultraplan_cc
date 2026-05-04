@@ -18,7 +18,7 @@ import path from 'node:path';
 // before expensive fact-check runs. Keep enough total budget for late fact
 // failures after earlier stages consume attempts.
 const MAX_RETRIES = 5;
-const MAX_FACT_DROP_PARAGRAPHS = 3;
+const MAX_FACT_DROP_PARAGRAPHS = 5;
 
 const REGEN_PROMPT_PATH = path.join(
   process.cwd(),
