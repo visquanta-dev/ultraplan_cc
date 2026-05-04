@@ -19,6 +19,7 @@ import { findAvailableSlug, SlugCollisionError, checkPostOverlap, PostOverlapErr
 import { runPreflight } from '../../lib/preflight/validate-config';
 import { runSeoAeoGate } from '../../lib/gates/seo-aeo';
 import { callLLMStructured } from '../../lib/llm/openrouter';
+import { ALLOWED_ENTITIES, type TopicalEntity } from '../../lib/entities';
 import matter from 'gray-matter';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -95,6 +96,263 @@ async function generateMetaDescription(headline: string, openingText: string): P
   }
 }
 
+function cleanDashChars(text: string): string {
+  return text.replace(/\s*[\u2013\u2014]\s*/g, ' - ');
+}
+
+function normalizeHeadlineForSeo(headline: string): string {
+  let cleaned = cleanDashChars(headline).replace(/\s+/g, ' ').trim();
+  if (cleaned.length > 60) {
+    cleaned = cleaned.slice(0, 60).replace(/\s+\S*$/, '').replace(/[,:;!?-]+$/g, '').trim();
+  }
+  if (cleaned.length < 30 && !/\bdealer|dealership|BDC|fixed ops|service\b/i.test(cleaned)) {
+    const suffix = ' for Dealerships';
+    if (cleaned.length + suffix.length <= 60) cleaned += suffix;
+  }
+  return cleaned || headline.trim();
+}
+
+function normalizeMetaDescriptionForSeo(description: string, headline: string, openingText: string): string {
+  let cleaned = cleanDashChars(description).replace(/\s+/g, ' ').trim();
+  if (cleaned.length >= 120 && cleaned.length <= 160) return cleaned;
+
+  const opening = cleanDashChars(openingText)
+    .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  cleaned = `${headline}: ${opening}`.replace(/\s+/g, ' ').trim();
+  if (cleaned.length > 155) {
+    cleaned = cleaned.slice(0, 155).replace(/\s+\S*$/, '').replace(/[,:;!?-]+$/g, '').trim();
+  }
+  while (cleaned.length < 120) {
+    const addition = cleaned.length < 95
+      ? ' See the dealer numbers, risks, and next steps for 2026.'
+      : ' Built for dealer operators in 2026.';
+    if (cleaned.length + addition.length > 160) break;
+    cleaned += addition;
+  }
+  return cleaned;
+}
+
+const SEO_STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+  'of', 'with', 'by', 'from', 'is', 'are', 'do', 'does', 'this', 'that',
+  'these', 'those', 'still', 'why', 'how', 'what', 'here', 'after',
+]);
+
+function headlineTokens(headline: string): string[] {
+  return headline
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 4 && !SEO_STOPWORDS.has(w))
+    .slice(0, 3);
+}
+
+function sentenceSplit(text: string): string[] {
+  return text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 20);
+}
+
+function plainText(markdown: string): string {
+  return cleanDashChars(markdown)
+    .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+    .replace(/[*_`>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function decapitalize(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function buildSeoOpening(headline: string, opening: string): string {
+  const tokens = headlineTokens(headline);
+  const first100 = opening.split(/\s+/).slice(0, 100).join(' ').toLowerCase();
+  const matched = tokens.filter((t) => first100.includes(t)).length;
+  const hasNumber = /\d/.test(opening);
+  if (matched >= 2 && hasNumber) return opening;
+
+  const prefix = `In 2026, the core answer behind "${headline}" is operational:`;
+  return `${prefix} ${decapitalize(opening.trim())}`;
+}
+
+function isQuestionHeadingText(heading: string): boolean {
+  const first = heading.replace(/[#\s]+/, '').split(/\s/)[0]?.toLowerCase() ?? '';
+  return heading.trim().endsWith('?') ||
+    ['what', 'why', 'how', 'when', 'where', 'which', 'who', 'is', 'are', 'does', 'do', 'can', 'should', 'will'].includes(first);
+}
+
+function topicPhraseFromHeadline(headline: string): string {
+  const words = headline
+    .replace(/[$%]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !SEO_STOPWORDS.has(w.toLowerCase()))
+    .slice(0, 5);
+  return words.join(' ') || 'the dealership issue';
+}
+
+function normalizeRenderedHeadings(headline: string, headings: string[], lane: string): string[] {
+  const topic = topicPhraseFromHeadline(headline);
+  if (lane === 'listicle') {
+    const rendered = headings.map((h) => cleanDashChars(h));
+    const hasWhatIs = rendered.some((h) => /\bwhat\s+is\b/i.test(h));
+    if (!hasWhatIs && rendered.length > 0) {
+      const introIdx = rendered.findIndex((h) => !/^\d+\.\s+/.test(h.trim()));
+      const idx = introIdx >= 0 ? introIdx : 0;
+      const number = rendered[idx].match(/^(\d+\.\s+)/)?.[1] ?? '';
+      rendered[idx] = `${number}What is ${topic}?`;
+    }
+    return rendered;
+  }
+
+  let questionCount = headings.filter(isQuestionHeadingText).length;
+  const hasWhatIs = headings.some((h) => /\bwhat\s+is\b/i.test(h));
+
+  return headings.map((raw, idx) => {
+    const heading = cleanDashChars(raw);
+    if (idx === 0 && !hasWhatIs) {
+      if (!isQuestionHeadingText(heading)) questionCount += 1;
+      return `What is ${topic}?`;
+    }
+    if (questionCount >= 4 || isQuestionHeadingText(heading)) return heading;
+
+    questionCount += 1;
+    const base = heading.replace(/[?!.]+$/g, '').trim();
+    const templates = [
+      `Why does ${base} matter to dealers?`,
+      `How should dealers read ${base}?`,
+      `What should dealers do about ${base}?`,
+      `When does ${base} start costing the store?`,
+    ];
+    return templates[idx % templates.length];
+  });
+}
+
+function fallbackSubsections(heading: string, count: number): string[] {
+  const base = heading.replace(/[?!.]+$/g, '').replace(/^(what|why|how|when|where|which|who|is|are|does|do|can|should|will)\s+/i, '').trim();
+  return [
+    `Dealer impact`,
+    `Evidence behind ${base || 'the pattern'}`,
+    `What to measure next`,
+  ].slice(0, Math.max(1, Math.min(3, count)));
+}
+
+function renderSectionWithSubsections(heading: string, subsections: string[] | undefined, paragraphs: string[]): string {
+  const parts = [`## ${heading}\n`];
+  if (paragraphs.length === 0) return parts.join('\n');
+
+  const h3s = (subsections && subsections.length > 0 ? subsections : fallbackSubsections(heading, paragraphs.length))
+    .map((h) => cleanDashChars(h))
+    .slice(0, Math.max(1, Math.min(3, paragraphs.length)));
+
+  paragraphs.forEach((paragraph, idx) => {
+    const h3 = h3s[Math.min(idx, h3s.length - 1)];
+    if (idx < h3s.length) parts.push(`### ${h3}\n`);
+    parts.push(paragraph);
+    parts.push('');
+  });
+  return parts.join('\n');
+}
+
+function buildKeyTakeaways(paragraphs: string[]): string {
+  const sentences = paragraphs.flatMap((p) => sentenceSplit(plainText(p)).slice(0, 1));
+  const dealerSentences = sentences.filter((s) => /\bdealer|dealership|BDC|service|lead|store|rooftop|customer/i.test(s));
+  const bullets: string[] = [];
+  for (const sentence of [...dealerSentences, ...sentences]) {
+    if (!bullets.includes(sentence)) bullets.push(sentence);
+    if (bullets.length === 5) break;
+  }
+  if (bullets.length < 5) return '';
+  return ['', '### Key Takeaways', '', ...bullets.map((b) => `- ${b}`), ''].join('\n');
+}
+
+function sourceNameById(bundle: Bundle): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const source of bundle.sources) {
+    const domain = source.domain.replace(/^www\./, '');
+    const siteName = domain.split('.')[0] || domain;
+    map.set(source.source_id, siteName.charAt(0).toUpperCase() + siteName.slice(1));
+  }
+  return map;
+}
+
+function escapeTableCell(text: string): string {
+  return plainText(text).replace(/\|/g, '/').slice(0, 180);
+}
+
+function buildEvidenceTable(paragraphs: Array<{ text: string; section_index: number; source_id?: string }>, outline: { sections: Array<{ heading: string }> }, bundle: Bundle): string {
+  const sources = sourceNameById(bundle);
+  const rows = paragraphs.slice(0, 6).map((p) => {
+    const heading = outline.sections[p.section_index]?.heading ?? 'Dealer operations';
+    const sentence = sentenceSplit(plainText(p.text))[0] ?? plainText(p.text);
+    return [
+      escapeTableCell(heading),
+      escapeTableCell(sentence),
+      escapeTableCell(sources.get(p.source_id ?? '') ?? p.source_id ?? 'Source'),
+    ];
+  });
+  if (rows.length < 4) return '';
+
+  const header = '| Dealer question | Evidence anchor | Source |';
+  const separator = '| --- | --- | --- |';
+  return [
+    '',
+    '### Evidence Map',
+    '',
+    header,
+    separator,
+    ...rows.map((r) => `| ${r.join(' | ')} |`),
+    '',
+  ].join('\n');
+}
+
+function buildFaqSection(headline: string, paragraphs: string[]): string {
+  const answers = paragraphs
+    .flatMap((p) => sentenceSplit(p))
+    .filter((s) => plainText(s).split(/\s+/).length >= 12)
+    .slice(0, 5);
+  if (answers.length < 5) return '';
+
+  const topic = topicPhraseFromHeadline(headline).toLowerCase();
+  const questions = [
+    `What should dealers take from ${topic}?`,
+    `How does this change BDC or showroom follow-up?`,
+    `What numbers should a general manager watch first?`,
+    `When does this become an ROI problem?`,
+    `How should a dealership act on this in 2026?`,
+  ];
+
+  return [
+    '',
+    '## Frequently Asked Questions',
+    '',
+    ...questions.map((q, i) => [`### ${q}`, '', answers[i], ''].join('\n')),
+  ].join('\n');
+}
+
+function choosePostEntities(text: string): TopicalEntity[] {
+  const lower = text.toLowerCase();
+  const picks = ['Car dealership'];
+  if (/review|reputation|csi|satisfaction/.test(lower)) picks.push('Reputation management', 'Customer review');
+  else if (/service|fixed ops|advisor|repair/.test(lower)) picks.push('Automobile repair shop', 'Customer experience');
+  else if (/lead|bdc|sms|follow-up|crm/.test(lower)) picks.push('Lead generation', 'Customer relationship management');
+  else if (/call|voice|phone/.test(lower)) picks.push('Voice user interface', 'Call centre');
+  else picks.push('Automotive industry', 'Business process automation');
+
+  const byName = new Map(ALLOWED_ENTITIES.map((e) => [e.name, e]));
+  const out: TopicalEntity[] = [];
+  for (const name of picks) {
+    const entity = byName.get(name);
+    if (entity && !out.some((e) => e.sameAs === entity.sameAs)) out.push(entity);
+  }
+  return out.slice(0, 3);
+}
+
 export interface PipelineInput {
   bundle: Bundle;
   wordCount: { min: number; max: number };
@@ -132,6 +390,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // Step 1: Generate outline
     console.log('[pipeline] Step 1/7: Generating outline');
     const outline = await generateOutline(bundle, input.wordCount);
+    outline.headline = normalizeHeadlineForSeo(outline.headline);
     console.log(`[pipeline]   headline: "${outline.headline}"`);
 
     // Re-derive the post slug from the headline. The cluster slug (e.g.
@@ -351,7 +610,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     // Replace em dashes with regular dashes
     function stripEmDashes(text: string): string {
-      return text.replace(/\s*—\s*/g, ' - ').replace(/\s*–\s*/g, ' - ');
+      return cleanDashChars(text);
     }
 
     // Deduplicate paragraphs that share >60% of the same sentences
@@ -378,13 +637,21 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // External links: convert (src_XXX) markers into inline source links
     console.log('[pipeline] Step 5b/7: Inserting external + internal links');
     const withExternalLinks = insertExternalLinks(dedupedParagraphs, bundle);
+    const sanitizedParagraphs = withExternalLinks.map((para) => ({
+      ...para,
+      text: stripEmDashes(stripCitations(para.text)),
+    }));
+    const introSource = sanitizedParagraphs[0];
+    const introParagraph = introSource
+      ? buildSeoOpening(outline.headline, introSource.text)
+      : '';
 
     // Render markdown by section
     const bodyBySection = new Map<number, string[]>();
-    for (const para of withExternalLinks) {
+    for (const para of sanitizedParagraphs.slice(1)) {
       const sIdx: number = para.section_index;
       const arr = bodyBySection.get(sIdx) ?? [];
-      arr.push(stripEmDashes(stripCitations(para.text)));
+      arr.push(para.text);
       bodyBySection.set(sIdx, arr);
     }
 
@@ -393,16 +660,21 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // not per-section (which is how posts were shipping with 14+ internal links).
     const flatTexts: string[] = [];
     const flatSections: number[] = [];
+    const flatSources: Array<string | undefined> = [];
     for (const [sIdx, paras] of bodyBySection.entries()) {
       for (const p of paras) {
         flatTexts.push(p);
         flatSections.push(sIdx);
+        const source = sanitizedParagraphs.slice(1).find((para) => para.section_index === sIdx && para.text === p)?.source_id;
+        flatSources.push(source);
       }
     }
     const linkedTexts = insertBrandLinks(insertInternalLinks(flatTexts));
+    const linkedParagraphs: Array<{ text: string; section_index: number; source_id?: string }> = [];
     bodyBySection.clear();
     linkedTexts.forEach((text, i) => {
       const sIdx = flatSections[i];
+      linkedParagraphs.push({ text, section_index: sIdx, source_id: flatSources[i] });
       const arr = bodyBySection.get(sIdx) ?? [];
       arr.push(text);
       bodyBySection.set(sIdx, arr);
@@ -410,12 +682,39 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     const sectionCount = outline.sections.length;
     const midPoint = Math.floor(sectionCount / 2);
+    const renderedHeadings = normalizeRenderedHeadings(
+      outline.headline,
+      outline.sections.map((s) => s.heading),
+      lane,
+    );
+    const allRenderedParagraphs = [
+      introParagraph,
+      ...linkedParagraphs.map((p) => p.text),
+    ].filter((p) => p.trim().length > 0);
 
     const bodyParts: string[] = [];
+    if (introParagraph) {
+      bodyParts.push(introParagraph);
+      bodyParts.push('');
+    }
+    const keyTakeaways = buildKeyTakeaways(allRenderedParagraphs);
+    if (keyTakeaways) bodyParts.push(keyTakeaways);
+
     outline.sections.forEach((section, i) => {
-      bodyParts.push(`## ${stripEmDashes(section.heading)}\n`);
       const paras = bodyBySection.get(i) ?? [];
-      bodyParts.push(paras.join('\n\n'));
+      bodyParts.push(renderSectionWithSubsections(renderedHeadings[i] ?? stripEmDashes(section.heading), section.subsections, paras));
+
+      if (i === 0) {
+        const evidenceTable = buildEvidenceTable(
+          [
+            ...(introSource ? [{ text: introParagraph || introSource.text, section_index: introSource.section_index, source_id: introSource.source_id }] : []),
+            ...linkedParagraphs,
+          ],
+          outline,
+          bundle,
+        );
+        if (evidenceTable) bodyParts.push(evidenceTable);
+      }
 
       // Insert mid-article CTA after the middle section. Routed by the
       // bundle's category_id so a reputation post pitches Reputation
@@ -428,12 +727,13 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       bodyParts.push('');
     });
 
-    // Post-gate LLM enrichment is disabled until those additions can run
-    // through the same source-binding gates as article paragraphs. Adding
-    // TL;DRs, tables, FAQs, or bottom-line copy here would mutate a passed
-    // draft after the hard gates.
-    const postEntities: Array<{ name: string; sameAs: string }> = [];
-    console.log('[pipeline] Step 5c/7: Skipping post-gate LLM enrichment until enrichment is gate-covered');
+    const faqSection = buildFaqSection(outline.headline, allRenderedParagraphs);
+    if (faqSection) bodyParts.push(faqSection);
+
+    const postEntities = choosePostEntities(bodyParts.join('\n'));
+    console.log(
+      `[pipeline] Step 5c/7: Added source-bound SEO/AEO sections (keyTakeaways=${Boolean(keyTakeaways)}, faq=${Boolean(faqSection)}, entities=${postEntities.length})`,
+    );
 
     // Insert contextual calculator/tool embed via topic classifier
     console.log('[pipeline] Step 5d/7: Classifying + inserting tool embed');
@@ -443,7 +743,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       .join(' ');
     const embedResult = await insertToolEmbeds(bodyParts, {
       headline: outline.headline,
-      sectionHeadings: outline.sections.map((s) => s.heading),
+      sectionHeadings: renderedHeadings,
       introText,
     });
     bodyParts.length = 0;
@@ -507,9 +807,11 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const readingTime = Math.max(1, Math.ceil(wordCount2 / 200));
 
     // Generate LLM-crafted meta description for SERP + AI snippet extraction
-    const metaDescription = await generateMetaDescription(
+    const metaSeed = dedupedParagraphs.slice(0, 4).map(p => stripEmDashes(stripCitations(p.text))).join(' ');
+    const metaDescription = normalizeMetaDescriptionForSeo(
+      await generateMetaDescription(outline.headline, metaSeed),
       outline.headline,
-      dedupedParagraphs.slice(0, 4).map(p => stripEmDashes(stripCitations(p.text))).join(' '),
+      metaSeed,
     );
 
     const LANE_TITLES: Record<string, string> = {
@@ -598,10 +900,8 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const markdownContent = matter.stringify(body, frontmatter);
 
     // Step 5e/7: SEO + AEO gate
-    // Runs a deterministic rubric against the finished markdown. Tiered
-    // enforcement: >=85% passes silently, 70-84% adds a warning label,
-    // <70% demotes verdict to blocked. This is the layer that makes
-    // "10/10 going forward" actually enforceable.
+    // Runs a deterministic rubric against the finished markdown. This is
+    // strict now: anything below 100% blocks before PR creation.
     console.log('[pipeline] Step 5e/7: Running SEO + AEO gate');
     const seoAeoResult = await runSeoAeoGate({
       markdown: markdownContent,
@@ -620,12 +920,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       if (!f.passed) console.log(`[pipeline]     x  ${f.reason}`);
     }
 
-    const seoAeoBlocked = seoAeoScore < 70;
-    const seoAeoWarning = seoAeoScore >= 70 && seoAeoScore < 85;
+    const seoAeoBlocked = seoAeoScore < 100;
+    const seoAeoWarning = false;
 
     if (seoAeoBlocked) {
       console.error(
-        `[pipeline]   SEO+AEO score ${seoAeoScore}% is below blocking threshold (70%). Refusing to ship.`,
+        `[pipeline]   SEO+AEO score ${seoAeoScore}% is below blocking threshold (100%). Refusing to ship.`,
       );
       const blockRecord: RunRecord = {
         slug,

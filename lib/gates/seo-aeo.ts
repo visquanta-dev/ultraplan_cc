@@ -11,9 +11,8 @@ import type { TransformedParagraph } from '../stages/voice-transform';
 // is "retriable" in the sense that the retry loop could regenerate failing
 // paragraphs — but most checks aren't paragraph-level, they're post-level,
 // so the retry will probably not fix them. Intended enforcement: tiered.
-//   - score >= 36/40 (90%) → passed silently
-//   - score 30-35/40 → passed with warning (hero-missing-style label)
-//   - score < 30/40 → blocked, verdict demoted
+//   - score 100% -> passed
+//   - anything below 100% -> blocked before PR creation
 //
 // Spec source: the 40-point checklist negotiated in the Phase 2 audit.
 // Adding/removing checks: edit the `checks` array below. Every check is
@@ -216,17 +215,21 @@ const checks: Check[] = [
   (input) => {
     const body = extractBody(input.markdown);
     const wc = countWords(body);
-    // Target 1500-3000 — tighter would be 1500-2500 but the enrichment
-    // stage (TL;DR + tables + FAQ + Related Reading) adds ~200-400 words
-    // on top of the drafter's target, so 3000 is realistic.
-    const passed = wc >= 1500 && wc <= 3000;
+    const ranges: Record<string, { min: number; max: number; softMin: number; softMax: number }> = {
+      daily_seo: { min: 1500, max: 3000, softMin: 1200, softMax: 3500 },
+      weekly_authority: { min: 2000, max: 3400, softMin: 1800, softMax: 3700 },
+      monthly_anonymized_case: { min: 2500, max: 3800, softMin: 2200, softMax: 4200 },
+      listicle: { min: 1800, max: 2600, softMin: 1600, softMax: 3000 },
+    };
+    const range = ranges[input.outline.lane] ?? ranges.daily_seo;
+    const passed = wc >= range.min && wc <= range.max;
     return {
       id: 'seo/word-count',
       category: 'seo',
       weight: 1,
-      score: passed ? 1 : wc >= 1200 && wc <= 3500 ? 0.5 : 0,
+      score: passed ? 1 : wc >= range.softMin && wc <= range.softMax ? 0.5 : 0,
       passed,
-      reason: `${wc} words (target 1500-3000)`,
+      reason: `${wc} words (target ${range.min}-${range.max} for ${input.outline.lane})`,
     };
   },
 
@@ -398,15 +401,15 @@ const checks: Check[] = [
     // Exclude the FAQ heading itself from this count — it's always "Frequently Asked Questions"
     const contentH2s = h2s.filter((h) => !/frequently asked|related reading/i.test(h));
     const questionH2s = contentH2s.filter(isQuestionHeading);
-    const ratio = contentH2s.length > 0 ? questionH2s.length / contentH2s.length : 0;
-    const passed = questionH2s.length >= 4;
+    const target = input.outline.lane === 'listicle' ? 3 : 4;
+    const passed = questionH2s.length >= target;
     return {
       id: 'aeo/question-phrased-h2s',
       category: 'aeo',
       weight: 2, // double-weighted
-      score: questionH2s.length >= 4 ? 2 : questionH2s.length >= 2 ? 1 : 0,
+      score: passed ? 2 : questionH2s.length >= 2 ? 1 : 0,
       passed,
-      reason: `${questionH2s.length}/${contentH2s.length} content H2s are question-phrased (target >=4)`,
+      reason: `${questionH2s.length}/${contentH2s.length} content H2s are question-phrased (target >=${target})`,
     };
   },
 
@@ -694,7 +697,7 @@ const checks: Check[] = [
 // ---------------------------------------------------------------------------
 
 const MAX_SCORE = 20; // computed from check weights below
-const PASS_THRESHOLD = 0.85; // 85% or better = passed
+const PASS_THRESHOLD = 1; // 100% required before PR creation
 
 export async function runSeoAeoGate(
   input: SeoAeoInput,
@@ -709,7 +712,7 @@ export async function runSeoAeoGate(
   const findings: GateParagraphFinding[] = results.map((r, i) => ({
     paragraph_index: i, // using index as a stable id for the check
     passed: r.passed,
-    score: Math.round((r.score / r.weight) * 100) / 100,
+    score: r.weight > 0 ? Math.round((r.score / r.weight) * 100) / 100 : 1,
     reason: `[${r.id}] ${r.reason}`,
   }));
 

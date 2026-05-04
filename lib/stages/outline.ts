@@ -196,10 +196,18 @@ export async function generateOutline(
           return q;
         });
 
+        const subsections = Array.isArray(sec.subsections)
+          ? sec.subsections
+              .filter((h): h is string => typeof h === 'string' && h.trim().length > 0)
+              .map((h) => h.trim())
+              .slice(0, 3)
+          : [];
+
         return {
           heading: sec.heading,
           anchor_quotes: anchorIds,
           intent: sec.intent,
+          ...(subsections.length > 0 ? { subsections } : {}),
         };
       });
 
