@@ -94,10 +94,8 @@ export async function runTraceBackGate(
   const failingIndices = findings.filter((f) => !f.passed).map((f) => f.paragraph_index);
   const passCount = findings.filter((f) => f.passed).length;
 
-  // Allow up to 10% of paragraphs to fail trace-back (transitions,
-  // introductions, conclusions may not bind to a specific source quote)
   const passRate = paragraphs.length > 0 ? passCount / paragraphs.length : 1;
-  const allPassed = passRate >= 0.85;
+  const allPassed = passRate === 1;
 
   const avgScore =
     findings.filter((f) => typeof f.score === 'number').reduce((sum, f) => sum + (f.score ?? 0), 0) /

@@ -1,7 +1,7 @@
 import type { Bundle, Source } from '../bundle/types';
 import type { TransformedParagraph } from '../stages/voice-transform';
 import type { GateParagraphFinding, GateResult } from './types';
-import { scrape, type ScrapedArticle } from '../sources/firecrawl';
+import { scrape } from '../sources/firecrawl';
 import { callLLMStructured, MODELS } from '../llm/openrouter';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,16 +14,12 @@ import path from 'node:path';
 //   3. Ask GPT-5: "Does this re-scraped text still support the claim
 //      made in this paragraph?"
 //
-// Pass criterion: ≥70% of paragraphs have their claims supported.
-// Lowered from 85% to 70% — the 85% threshold was blocking posts that
-// a human reviewer would approve. The drafter synthesizes across sources
-// and makes reasonable inferences that the judge flags as "unsupported"
-// even when the logic is sound. 70% still catches genuine hallucination
-// (where multiple paragraphs are fabricated) without blocking legitimate
-// editorial synthesis.
+// Pass criterion: every paragraph claim must be supported by the current
+// source corpus. This is intentionally strict: "no source = no sentence" is
+// the core publishing contract.
 // ---------------------------------------------------------------------------
 
-const MIN_SUPPORT_RATIO = 0.70;
+const MIN_SUPPORT_RATIO = 1;
 
 // ---------------------------------------------------------------------------
 // Source re-scraping with per-run cache
@@ -200,15 +196,14 @@ export async function runFactRecheckGate(
       continue;
     }
 
-    // If every bundle source failed to re-scrape, we can't verify anything
-    // — pass with a warning. The original scrape already confirmed the
-    // sources existed; a transient batch failure shouldn't block an
-    // otherwise-legitimate draft.
+    // If every bundle source failed to re-scrape, we can't verify anything.
+    // Fail closed so source outages and allowlist mistakes cannot become a
+    // pass-all fact gate.
     if (bundleSourceBlocks.length === 0) {
       findings.push({
         paragraph_index: i,
-        passed: true,
-        reason: 'all bundle sources unavailable for re-scrape — trusting original scrape',
+        passed: false,
+        reason: 'all bundle sources unavailable for re-scrape — cannot verify claim',
       });
       continue;
     }

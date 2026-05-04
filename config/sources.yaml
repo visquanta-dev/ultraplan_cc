@@ -41,6 +41,20 @@ trade_press:
     - numa.com
     - bdc.ai
     - useflai.com
+    # Category resolver sources from config/categories.yaml. These are explicit
+    # publishable-evidence domains; preflight refuses category sources that are
+    # not listed here.
+    - podium.com
+    - impel.ai
+    - mia.inc
+    - matador.ai
+    - tecobi.com
+    - dealerai.com
+    - gubagoo.com
+    - toma.com
+    - owini.ai
+    - edmunds.com
+    - dealeron.com
     # Added for used-car-price coverage (Apr 2026)
     - kbb.com
     - cnbc.com

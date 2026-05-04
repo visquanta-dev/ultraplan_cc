@@ -15,13 +15,12 @@
  *     ORIGINATE_SEED_FILE=tmp/seed.txt ORIGINATE_CATEGORY=reputation \
  *       npx tsx scripts/run-pipeline-local.ts daily_seo
  */
-import { config } from 'dotenv';
-config({ path: '.env.cron.tmp' });
-
+import '../lib/load-env';
 import fs from 'node:fs';
 import { resolveSlot, resolveOriginate } from '../lib/topics/resolver';
 import { runBlogPipeline } from '../workflows/blog-pipeline';
 import { getLaneWordCount, type Lane, type SourceStrategy } from '../lib/config/topics-config';
+import { runPreflight } from '../lib/preflight/validate-config';
 
 const VALID_LANES: Lane[] = ['daily_seo', 'weekly_authority', 'monthly_anonymized_case', 'listicle'];
 const lane = (process.argv[2] as Lane) ?? 'daily_seo';
@@ -38,7 +37,15 @@ if (originateSeedFile) {
   try {
     originateSeed = fs.readFileSync(originateSeedFile, 'utf-8').trim();
   } catch (err) {
-    console.error(`[local] failed to read ORIGINATE_SEED_FILE=${originateSeedFile}: ${err instanceof Error ? err.message : String(err)}`);
+    const message = `[local] failed to read ORIGINATE_SEED_FILE=${originateSeedFile}: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(message);
+    fs.writeFileSync('pipeline-result.json', JSON.stringify({
+      slug: 'unknown',
+      lane,
+      verdict: 'failed',
+      error: message,
+      durationMs: 0,
+    }));
     process.exit(1);
   }
 } else if (originateSeedInline) {
@@ -46,12 +53,34 @@ if (originateSeedFile) {
 }
 
 if (!VALID_LANES.includes(lane)) {
-  console.error(`Unknown lane: ${lane}. Valid: ${VALID_LANES.join(', ')}`);
+  const message = `Unknown lane: ${lane}. Valid: ${VALID_LANES.join(', ')}`;
+  console.error(message);
+  fs.writeFileSync('pipeline-result.json', JSON.stringify({
+    slug: 'unknown',
+    lane,
+    verdict: 'failed',
+    error: message,
+    durationMs: 0,
+  }));
   process.exit(1);
 }
 
 const wordCount = getLaneWordCount(lane);
 const startedAt = Date.now();
+
+function writePipelineResult(result: Record<string, unknown>): void {
+  fs.writeFileSync('pipeline-result.json', JSON.stringify(result));
+}
+
+function writeFailureResult(error: unknown): void {
+  writePipelineResult({
+    slug: 'unknown',
+    lane,
+    verdict: 'failed',
+    error: error instanceof Error ? error.message : String(error),
+    durationMs: Date.now() - startedAt,
+  });
+}
 
 function stamp(label: string) {
   const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
@@ -61,6 +90,9 @@ function stamp(label: string) {
 async function main() {
   const mode = originateSeed ? 'originate' : curatedBucket ? 'curated' : 'signal';
   stamp(`Starting pipeline — lane: ${lane}, mode: ${mode}, word count: ${wordCount.min}-${wordCount.max}${curatedBucket ? `, bucket: ${curatedBucket}` : ''}${originateSeed ? `, seed: ${originateSeed.length} chars` : ''}`);
+
+  stamp('preflight: begin');
+  runPreflight();
 
   let bundleResult;
   if (originateSeed) {
@@ -92,13 +124,13 @@ async function main() {
   console.log(`\nTotal wall time: ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 
   // Write result to file for CI consumption (GitHub Actions reads this)
-  const fs = await import('node:fs');
-  fs.writeFileSync('pipeline-result.json', JSON.stringify(result));
+  writePipelineResult(result as unknown as Record<string, unknown>);
 }
 
 main().catch((err) => {
   const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
   console.error(`\n[local +${secs}s] FATAL: ${err instanceof Error ? err.message : String(err)}`);
   if (err instanceof Error && err.stack) console.error(err.stack);
+  writeFailureResult(err);
   process.exit(1);
 });

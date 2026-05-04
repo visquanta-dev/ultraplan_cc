@@ -1,5 +1,4 @@
 import type { Bundle } from '../bundle/types';
-import type { Outline } from '../stages/outline';
 import type { TransformedParagraph } from '../stages/voice-transform';
 import type { GateReport } from './types';
 import { runAllGates, type OrchestratorContext, type OrchestratorOptions } from './orchestrator';
@@ -16,7 +15,7 @@ import path from 'node:path';
 // exhausted, return the last report with verdict 'blocked'.
 // ---------------------------------------------------------------------------
 
-const MAX_RETRIES = 2; // spec §6: at most 2 regeneration attempts
+const MAX_RETRIES = 3; // spec §6: at most 3 regeneration attempts
 
 const REGEN_PROMPT_PATH = path.join(
   process.cwd(),
@@ -161,7 +160,7 @@ export interface RetryLoopResult {
 }
 
 export interface RetryLoopOptions extends OrchestratorOptions {
-  /** Max retry attempts. Defaults to MAX_RETRIES (2). */
+  /** Max retry attempts. Defaults to MAX_RETRIES (3). */
   maxRetries?: number;
   /** Called when a retry starts. */
   onRetryStart?: (attempt: number, failingIndices: number[]) => void;
@@ -189,6 +188,15 @@ export async function runWithRetry(
     retries++;
     const failingIndices = report.failing_paragraph_indices;
 
+    if (failingIndices.length === 0) {
+      report = {
+        ...report,
+        verdict: 'blocked',
+        blocked_reason: 'Gate requested retry but did not identify failing paragraph indices',
+      };
+      break;
+    }
+
     options.onRetryStart?.(retries, failingIndices);
 
     // Regenerate failing paragraphs
@@ -198,6 +206,12 @@ export async function runWithRetry(
       ctx.bundle,
       report,
     );
+
+    if (regenRaw.length !== failingIndices.length) {
+      throw new Error(
+        `[retry-loop] paragraph regen returned ${regenRaw.length} paragraphs for ${failingIndices.length} failing indices`,
+      );
+    }
 
     // Voice-transform the regenerated paragraphs
     const regenResult = await voiceTransform(

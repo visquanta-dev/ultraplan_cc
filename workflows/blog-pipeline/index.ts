@@ -4,7 +4,7 @@ import { draftParagraphs } from '../../lib/stages/paragraph-draft';
 import { checkRephraseDistances } from '../../lib/stages/rephrase-distance';
 import { voiceTransform } from '../../lib/stages/voice-transform';
 import { runWithRetry } from '../../lib/gates/retry-loop';
-import { runImagePipeline, runMultiOptionImagePipeline, type ImagePipelineResult, type MultiOptionImageResult } from '../../lib/image/pipeline';
+import { runMultiOptionImagePipeline, type ImagePipelineResult, type MultiOptionImageResult } from '../../lib/image/pipeline';
 import { renderChart } from '../../lib/image/chart-renderer';
 import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
@@ -12,7 +12,6 @@ import { notifyPipelineBlocked, notifyPRCreationFailed, notifyPipelineComplete }
 import { withRetry } from '../../lib/retry';
 import { insertExternalLinks, insertInternalLinks, buildMidArticleCTA, buildRelatedPosts } from '../../lib/stages/auto-linker';
 import { insertBrandLinks } from '../../lib/stages/brand-links';
-import { enrichContent, renderKeyTakeaways, renderBottomLine, renderMondayDirective, renderTable, renderFAQ, insertTables } from '../../lib/stages/enrich-content';
 import { routeAuthorForPost } from '../../lib/authors';
 import { insertToolEmbeds } from '../../lib/stages/embed-tools';
 import { slugifyHeadline } from '../../lib/topics/cluster';
@@ -185,7 +184,16 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     // Step 3: Rephrase distance check
     console.log('[pipeline] Step 3/7: Checking rephrase distances');
-    await checkRephraseDistances(drafted.paragraphs, bundle);
+    const draftDistances = await checkRephraseDistances(drafted.paragraphs, bundle);
+    const draftDistanceFailures = draftDistances.filter((d) => !d.in_band);
+    if (draftDistanceFailures.length > 0) {
+      const detail = draftDistanceFailures
+        .map((d) => `p${d.paragraph_index}:${d.similarity.toFixed(3)}:${d.reason}`)
+        .join(', ');
+      throw new Error(
+        `[pipeline] draft rephrase-distance failed before voice transform (${draftDistanceFailures.length}/${draftDistances.length}): ${detail}`,
+      );
+    }
 
     // Step 4: Voice transform
     console.log('[pipeline] Step 4/7: Voice transform');
@@ -418,67 +426,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       bodyParts.push('');
     });
 
-    // Enrichment: TL;DR, tables, FAQ, entities
-    // Entities hoisted out of try{} so the frontmatter builder below can
-    // embed them even if (non-fatal) downstream enrichment steps throw.
-    let postEntities: Array<{ name: string; sameAs: string }> = [];
-    console.log('[pipeline] Step 5c/7: Enriching content (TL;DR + tables + FAQ + entities)');
-    try {
-      const articleText = bodyParts.join('\n');
-      const enriched = await enrichContent(articleText, bundle, outline.headline);
-      postEntities = enriched.entities;
-
-      // Above-the-fold: bullet Key Takeaways only — the earlier "Key Takeaway:"
-      // blockquote (renderTLDR) was a duplicate of the bullet block and got
-      // dropped on 2026-04-18. LLMs still preferentially extract the first
-      // block of prose under the H1, so the bullet list remains the highest-
-      // value citation target.
-      if (enriched.key_takeaways.length > 0) {
-        const cleanBullets = enriched.key_takeaways.map(stripEmDashes);
-        bodyParts.unshift(renderKeyTakeaways(cleanBullets));
-      }
-
-      // Insert tables at target positions
-      if (enriched.tables.length > 0) {
-        const headings = outline.sections.map(s => s.heading);
-        const withTables = insertTables(bodyParts, enriched.tables, headings);
-        bodyParts.length = 0;
-        bodyParts.push(...withTables);
-      }
-
-      // Closer — per-lane branching. Listicles get a punchier "Monday Morning
-      // Directive" (one action step, no synthesis recap). All other lanes
-      // render the fuller Bottom Line block. Both are second only to the
-      // opener for LLM extraction.
-      const bl = enriched.bottom_line;
-      if (bl && (bl.synthesis || bl.what_this_means.length || bl.closer)) {
-        if (lane === 'listicle') {
-          bodyParts.push(renderMondayDirective(stripEmDashes(bl.closer)));
-        } else {
-          bodyParts.push(renderBottomLine({
-            synthesis: stripEmDashes(bl.synthesis),
-            what_this_means: bl.what_this_means.map(stripEmDashes),
-            closer: stripEmDashes(bl.closer),
-          }));
-        }
-      }
-
-      // Append FAQ before Related Reading. Inline FAQPage JSON-LD was removed
-      // on 2026-04-18 because the site layout already emits the schema from
-      // parsed frontmatter — embedding it here too caused double-emission,
-      // which some Google validators flag as duplicate structured data.
-      if (enriched.faqs.length > 0) {
-        const cleanFaqs = enriched.faqs.map(f => ({
-          question: stripEmDashes(f.question),
-          answer: stripEmDashes(f.answer),
-        }));
-        bodyParts.push(renderFAQ(cleanFaqs));
-      }
-
-      console.log(`[pipeline]   enriched: ${enriched.key_takeaways.length} takeaway bullets, ${enriched.tables.length} tables, ${enriched.faqs.length} FAQs, bottom-line: ${bl?.what_this_means.length ?? 0} points`);
-    } catch (err) {
-      console.warn('[pipeline]   enrichment failed (non-fatal):', (err as Error).message);
-    }
+    // Post-gate LLM enrichment is disabled until those additions can run
+    // through the same source-binding gates as article paragraphs. Adding
+    // TL;DRs, tables, FAQs, or bottom-line copy here would mutate a passed
+    // draft after the hard gates.
+    const postEntities: Array<{ name: string; sameAs: string }> = [];
+    console.log('[pipeline] Step 5c/7: Skipping post-gate LLM enrichment until enrichment is gate-covered');
 
     // Insert contextual calculator/tool embed via topic classifier
     console.log('[pipeline] Step 5d/7: Classifying + inserting tool embed');
@@ -509,9 +462,9 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     // Post-draft overlap gate — catches the CSI-style cannibalization where
     // two posts share 3+ entities or citation fingerprints despite different
-    // slugs. Runs after enrichment (entities known) and after body assembly
-    // (citation fingerprints extractable). Throws PostOverlapError on hit;
-    // the outer pipeline catch records it as blocked + notifies.
+    // slugs. Runs after body assembly so citation fingerprints are
+    // extractable. Throws PostOverlapError on hit; the outer pipeline catch
+    // records it as blocked + notifies.
     try {
       await checkPostOverlap({
         title: stripEmDashes(outline.headline),

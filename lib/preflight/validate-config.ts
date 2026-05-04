@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { isAllowed } from '../sources/allowlist';
 
 // ---------------------------------------------------------------------------
 // Preflight integrity check
@@ -37,6 +38,79 @@ export class PreflightFailure extends Error {
     super(`${header}\n${body}`);
     this.name = 'PreflightFailure';
   }
+}
+
+/**
+ * Check 0 — every category resolver source must be scrape-allowlisted.
+ * categories.yaml feeds the signal resolver, but Firecrawl refuses anything
+ * outside config/sources.yaml. Catch drift before the run spends time on
+ * topic discovery and then fails during scrape.
+ */
+function checkCategorySourcesAllowlisted(): PreflightError[] {
+  const filePath = path.join(process.cwd(), 'config', 'categories.yaml');
+  if (!fs.existsSync(filePath)) {
+    return [
+      {
+        check: 'category-sources-allowlist',
+        reason: 'config/categories.yaml does not exist',
+        file: filePath,
+      },
+    ];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(fs.readFileSync(filePath, 'utf-8'));
+  } catch (err) {
+    return [
+      {
+        check: 'category-sources-allowlist',
+        reason: `failed to parse categories.yaml: ${err instanceof Error ? err.message : String(err)}`,
+        file: 'config/categories.yaml',
+      },
+    ];
+  }
+
+  const errors: PreflightError[] = [];
+  const sources = (parsed as { sources?: unknown })?.sources;
+  if (!sources || typeof sources !== 'object' || Array.isArray(sources)) {
+    return [
+      {
+        check: 'category-sources-allowlist',
+        reason: 'categories.yaml has no sources map for the resolver',
+        file: 'config/categories.yaml',
+      },
+    ];
+  }
+
+  for (const [id, rawSource] of Object.entries(sources as Record<string, unknown>)) {
+    const source = rawSource as Record<string, unknown>;
+    if (typeof source.url !== 'string' || source.url.trim().length === 0) {
+      errors.push({
+        check: 'category-sources-allowlist',
+        reason: `source "${id}" is missing a url`,
+        file: 'config/categories.yaml',
+      });
+      continue;
+    }
+
+    if (!isAllowed(source.url)) {
+      let hostname = source.url;
+      try {
+        hostname = new URL(source.url).hostname;
+      } catch {
+        // Keep the raw value in the error below.
+      }
+      errors.push({
+        check: 'category-sources-allowlist',
+        reason: `source "${id}" uses ${hostname}, which Firecrawl will reject because it is not in config/sources.yaml`,
+        file: 'config/categories.yaml',
+        fix: 'Add the domain to config/sources.yaml or remove the source from config/categories.yaml.',
+      });
+    }
+  }
+
+  return errors;
 }
 
 /**
@@ -289,6 +363,8 @@ function checkRegenPrompt(): PreflightError | null {
  */
 export function runPreflight(): void {
   const errors: PreflightError[] = [];
+
+  errors.push(...checkCategorySourcesAllowlisted());
 
   const classifyErr = checkClassifyEmbedPrompt();
   if (classifyErr) errors.push(classifyErr);

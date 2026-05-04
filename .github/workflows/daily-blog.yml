@@ -76,7 +76,7 @@ jobs:
           fi
 
           echo "Running: npx tsx scripts/run-pipeline-local.ts $ARGS"
-          npx tsx scripts/run-pipeline-local.ts $ARGS 2>&1 | tee pipeline.log || true
+          npx tsx scripts/run-pipeline-local.ts $ARGS 2>&1 | tee pipeline.log
 
           # Pipeline writes result to pipeline-result.json
           if [ -f pipeline-result.json ]; then

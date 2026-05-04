@@ -15,11 +15,10 @@ import type { Bundle } from '../bundle/types';
 // ---------------------------------------------------------------------------
 
 const MODEL_NAME = 'voyage-3-large';
-// Bands recalibrated for voyage-3-large (distribution differs from MiniLM).
-// Starting loose to avoid over-rejecting on the first real run; tighten
-// once we have observed similarities from ~20 paragraph/quote pairs.
-const MIN_DISTANCE = 0.35;
-const MAX_DISTANCE = 0.91;
+// Spec band: too far from the quote is likely drift; too close is likely
+// source-copying.
+const MIN_DISTANCE = 0.40;
+const MAX_DISTANCE = 0.85;
 
 async function voyageEmbed(texts: string[]): Promise<Float32Array[]> {
   const apiKey = process.env.VOYAGE_API_KEY;
