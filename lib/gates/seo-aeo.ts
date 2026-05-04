@@ -484,15 +484,23 @@ const checks: Check[] = [
       (m) => !m[1].includes('visquanta.com'),
     ).length;
     const sections = input.outline.sections.length;
-    // Target: at least one external citation per 2 sections
-    const passed = externalLinks >= Math.ceil(sections / 2);
+    const uniqueSourceIds = new Set(
+      input.paragraphs
+        .map((p) => p.source_id)
+        .filter((sourceId): sourceId is string => Boolean(sourceId)),
+    ).size;
+    // Target: at least one external citation per 2 sections, capped by
+    // the unique sources available to the draft. A valid 3-source bundle
+    // cannot produce 4 unique external citations without repeating URLs.
+    const target = Math.max(1, Math.min(Math.ceil(sections / 2), uniqueSourceIds));
+    const passed = externalLinks >= target;
     return {
       id: 'aeo/citation-density',
       category: 'aeo',
       weight: 1,
       score: passed ? 1 : externalLinks >= 1 ? 0.5 : 0,
       passed,
-      reason: `${externalLinks} external citations across ${sections} sections`,
+      reason: `${externalLinks} external citations across ${sections} sections (target >=${target})`,
     };
   },
 
