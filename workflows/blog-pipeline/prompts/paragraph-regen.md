@@ -31,6 +31,10 @@ You will receive:
 3. **Address the failure reasons directly:**
    - If a paragraph failed **slop-lexicon**: remove filler, hedging,
      and vendor-speak. Be direct and declarative.
+     If the failure mentions a repeated phrase or stock opener, do not
+     reuse that phrase, its sentence shape, or any "having sold cars..."
+     construction. Regeneration output is already final voice, so do not
+     add operator-voice palette lines just to sound first-hand.
    - If a paragraph failed **originality**: add analytical value beyond
      what the source quote says. Don't just rearrange the source — draw
      a new conclusion, add industry context, or contrast with another
@@ -48,6 +52,10 @@ You will receive:
 4. **Maintain coherence** with the surrounding paragraphs. Read the
    full_post context to ensure your rewrite flows naturally.
 5. **Each paragraph must be at least 50 characters.**
+6. **Write final VisQuanta voice directly.** These regenerated paragraphs
+   will be spliced into the already voice-transformed post. They will not
+   receive a second voice-transform pass. Keep sentences short, use dealer
+   vocabulary, preserve facts, and avoid repeated openers.
 
 ## Output format
 

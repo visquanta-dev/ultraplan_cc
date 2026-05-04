@@ -99,6 +99,12 @@ cars on the floor, now running deployments, talking to a GM who recognizes
 the language. A dealer principal should read a paragraph and think "yeah,
 that's what my BDC looks like too" — not "this is a vendor pitching me."
 
+**Anti-template rule:** never use the same operator-voice opener twice in one
+post, and never copy a phrase from the palette verbatim. In particular,
+"Having sold cars on the floor myself..." may appear at most once, and only
+if the surrounding paragraph genuinely needs first-person sales-floor context.
+Repeated operator openers read as boilerplate and fail the slop gate.
+
 ## Pre-owned, never "used cars" (brand convention — read carefully)
 
 VisQuanta brand voice never uses "used car(s)" or "used vehicle(s)" in

@@ -3,7 +3,6 @@ import type { TransformedParagraph } from '../stages/voice-transform';
 import type { GateReport } from './types';
 import { runAllGates, type OrchestratorContext, type OrchestratorOptions } from './orchestrator';
 import { callLLMStructured, MODELS } from '../llm/openrouter';
-import { voiceTransform } from '../stages/voice-transform';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -232,16 +231,15 @@ export async function runWithRetry(
       }
     });
 
-    // Voice-transform the regenerated paragraphs
-    const regenResult = await voiceTransform(
-      regenRaw.map((p) => ({
-        text: p.text,
-        section_index: p.section_index,
-        source_id: p.source_id,
-        anchor_quote_id: p.anchor_quote_id,
-      })),
-    );
-    const regenTransformed = regenResult.paragraphs;
+    // paragraph-regen writes final voice directly. Do not run voiceTransform
+    // on a tiny subset: that prompt is calibrated for whole-post context and
+    // was re-injecting repeated operator-voice openers during late retries.
+    const regenTransformed: TransformedParagraph[] = regenRaw.map((p) => ({
+      text: p.text,
+      section_index: p.section_index,
+      source_id: p.source_id,
+      anchor_quote_id: p.anchor_quote_id,
+    }));
 
     // Splice back
     paragraphs = spliceParagraphs(paragraphs, regenTransformed, failingIndices);
