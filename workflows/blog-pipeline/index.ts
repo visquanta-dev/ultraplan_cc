@@ -169,15 +169,56 @@ function decapitalize(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function wordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function splitLongSentence(sentence: string): string {
+  if (wordCount(sentence) <= 35) return sentence;
+
+  const patterns = [
+    /,\s+(and|but|because|while|which|so|then|where|when)\s+/i,
+    /;\s+/,
+    /\s+-\s+/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = sentence.match(pattern);
+    if (!match || match.index === undefined) continue;
+
+    const left = sentence.slice(0, match.index).trim();
+    let right = sentence.slice(match.index + match[0].length).trim();
+    right = right.replace(/^(and|but|so|then)\s+/i, '');
+    if (wordCount(left) >= 8 && wordCount(right) >= 8) {
+      return `${left}. ${capitalize(right)}`;
+    }
+  }
+
+  return sentence;
+}
+
+function enforceReadableSentences(text: string): string {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => splitLongSentence(sentence.trim()))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function buildSeoOpening(headline: string, opening: string): string {
   const tokens = headlineTokens(headline);
   const first100 = opening.split(/\s+/).slice(0, 100).join(' ').toLowerCase();
   const matched = tokens.filter((t) => first100.includes(t)).length;
   const hasNumber = /\d/.test(opening);
-  if (matched >= 2 && hasNumber) return opening;
+  if (matched >= 2 && hasNumber) return enforceReadableSentences(opening);
 
   const prefix = `In 2026, the core answer behind "${headline}" is operational:`;
-  return `${prefix} ${decapitalize(opening.trim())}`;
+  return enforceReadableSentences(`${prefix} ${decapitalize(opening.trim())}`);
 }
 
 function isQuestionHeadingText(heading: string): boolean {
@@ -315,6 +356,7 @@ function buildFaqSection(headline: string, paragraphs: string[]): string {
   const answers = paragraphs
     .flatMap((p) => sentenceSplit(p))
     .filter((s) => plainText(s).split(/\s+/).length >= 12)
+    .map(enforceReadableSentences)
     .slice(0, 5);
   if (answers.length < 5) return '';
 
@@ -639,7 +681,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const withExternalLinks = insertExternalLinks(dedupedParagraphs, bundle);
     const sanitizedParagraphs = withExternalLinks.map((para) => ({
       ...para,
-      text: stripEmDashes(stripCitations(para.text)),
+      text: enforceReadableSentences(stripEmDashes(stripCitations(para.text))),
     }));
     const introSource = sanitizedParagraphs[0];
     const introParagraph = introSource

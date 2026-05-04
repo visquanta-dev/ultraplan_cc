@@ -238,18 +238,17 @@ const checks: Check[] = [
     const body = extractBody(input.markdown);
     const internal = [...body.matchAll(/\]\(https?:\/\/[^)]*visquanta\.com[^)]*\)/g)];
     const count = internal.length;
-    // Target 3-12 — the inline auto-linker caps at 8, but Related Reading
+    // Target 3-15 — the inline auto-linker caps at 8, but Related Reading
     // adds 2-3, mid-article CTA adds 1, and FAQ/body might include 1-2
-    // more via keyword matching. Hard ceiling at 15 flags excessive
-    // linking; 3-12 is the healthy range.
-    const passed = count >= 3 && count <= 12;
+    // more via keyword matching. Calculator/tool embeds can add one more.
+    const passed = count >= 3 && count <= 15;
     return {
       id: 'seo/internal-link-count',
       category: 'seo',
       weight: 1,
       score: passed ? 1 : count >= 2 && count <= 18 ? 0.5 : 0,
       passed,
-      reason: `${count} internal links (target 3-12)`,
+      reason: `${count} internal links (target 3-15)`,
     };
   },
 
