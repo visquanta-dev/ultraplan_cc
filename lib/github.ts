@@ -230,9 +230,9 @@ export async function createDraftPR(input: CreateDraftPRInput): Promise<CreateDr
 
   const seoAeoWarning = input.seoAeoWarning
     ? [
-        `> 📉 **SEO+AEO score ${input.seoAeoScore ?? '?'}% — below 85% target**`,
+        `> 📉 **SEO+AEO score ${input.seoAeoScore ?? '?'}% - below perfect target**`,
         '> ',
-        '> The post passed the minimum gate (70%) but is in the warning band. Review the gate findings in the metadata JSON and fix any obvious weaknesses (missing TL;DR, non-question H2s, keyword density) before merging.',
+        '> The post passed the publishing floor (95%) but is in the warning band. Review the gate findings in the metadata JSON and fix any obvious weakness before merging.',
         '',
       ].join('\n')
     : '';

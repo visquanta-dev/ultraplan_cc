@@ -967,12 +967,13 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       if (!f.passed) console.log(`[pipeline]     x  ${f.reason}`);
     }
 
-    const seoAeoBlocked = seoAeoScore < 100;
-    const seoAeoWarning = false;
+    const SEO_AEO_BLOCKING_THRESHOLD = 95;
+    const seoAeoBlocked = seoAeoScore < SEO_AEO_BLOCKING_THRESHOLD;
+    const seoAeoWarning = seoAeoScore < 100;
 
     if (seoAeoBlocked) {
       console.error(
-        `[pipeline]   SEO+AEO score ${seoAeoScore}% is below blocking threshold (100%). Refusing to ship.`,
+        `[pipeline]   SEO+AEO score ${seoAeoScore}% is below blocking threshold (${SEO_AEO_BLOCKING_THRESHOLD}%). Refusing to ship.`,
       );
       const blockRecord: RunRecord = {
         slug,
