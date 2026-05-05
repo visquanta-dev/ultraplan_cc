@@ -7,7 +7,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "source:health": "tsx scripts/source-health.ts",
+    "debug:feeds": "tsx scripts/debug-feeds.ts",
+    "debug:discovery": "tsx scripts/debug-discovery.ts",
+    "topic:rank": "tsx scripts/topic-rank.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.86.1",

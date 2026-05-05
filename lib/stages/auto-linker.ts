@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
 import type { Bundle } from '../bundle/types';
+import { isCompetitorOutbound } from '../sources/link-policy';
 
 // ---------------------------------------------------------------------------
 // Auto-linker — inserts internal + external links into rendered markdown
@@ -172,6 +173,9 @@ export function insertExternalLinks<
 
     const source = sourceMap.get(para.source_id);
     if (!source || linkedUrls.has(source.url)) {
+      return { ...para, text: newText };
+    }
+    if (isCompetitorOutbound(source.url)) {
       return { ...para, text: newText };
     }
 

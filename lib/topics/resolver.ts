@@ -8,6 +8,7 @@ import { getSignalCandidates, type TopicCluster as SignalCluster } from './compe
 import { getCategoryStatus, getAvailableCategories } from './category-cooldown';
 import { filterBlockedTopics } from './topic-blocklist';
 import { getFreshnessDaysForUrl } from '../sources/crawl-index';
+import { isCompetitorOutbound } from '../sources/link-policy';
 import type { SourceStrategy } from '../config/topics-config';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,8 @@ class ThinClusterError extends Error {
     this.name = 'ThinClusterError';
   }
 }
+
+const MAX_CLUSTER_URLS_TO_SCRAPE = 12;
 
 /**
  * Resolve a topic slot for the given lane.
@@ -234,7 +237,10 @@ async function resolveSignalPath(
   }
 
   // Fetch ranked signal clusters (cached 6h; pass bypassCache if a fresh run is needed)
-  const signal = await getSignalCandidates({ limit: 20 });
+  const signal = await getSignalCandidates({
+    limit: 20,
+    includeDiscoverySignals: process.env.ULTRAPLAN_DISCOVERY_SIGNALS === '1',
+  });
   console.log(
     `[resolver] Signal: ${signal.total_candidates} candidates from ${signal.sources_scraped}/${signal.sources_scraped + signal.sources_failed} sources → ${signal.clusters.length} viable clusters`,
   );
@@ -304,7 +310,8 @@ async function resolveSignalPath(
     console.log(
       `[resolver] Trying cluster: "${winner.representative_title}" ` +
         `(category: ${winner.suggested_category}, score: ${winner.score.toFixed(2)}, ` +
-        `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4}` +
+        `tiers: T1:${winner.tier_counts.tier1} T2:${winner.tier_counts.tier2} T3:${winner.tier_counts.tier3} T4:${winner.tier_counts.tier4}, ` +
+        `linkable:${winner.linkable_source_count} no-link:${winner.no_link_source_count}` +
         (removed.length ? `, bypassed ${removed.length} collision${removed.length > 1 ? 's' : ''}` : '') +
         `)`,
     );
@@ -349,12 +356,25 @@ function adaptSignalCluster(signal: SignalCluster): TopicCluster {
     .replace(/\s+/g, '-')
     .slice(0, 80);
 
+  const rankedUrls = signal.urls
+    .slice()
+    .sort((a, b) => {
+      const aLinkable = isCompetitorOutbound(a.url) ? 0 : 1;
+      const bLinkable = isCompetitorOutbound(b.url) ? 0 : 1;
+      if (aLinkable !== bLinkable) return bLinkable - aLinkable;
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      const ta = a.lastmod ? Date.parse(a.lastmod) : 0;
+      const tb = b.lastmod ? Date.parse(b.lastmod) : 0;
+      return tb - ta;
+    })
+    .slice(0, MAX_CLUSTER_URLS_TO_SCRAPE);
+
   return {
     label: signal.representative_title,
     slug,
     keywords,
-    sourceCount: new Set(signal.urls.map((u) => u.source_id)).size,
-    articles: signal.urls.map((u) => ({
+    sourceCount: new Set(rankedUrls.map((u) => u.source_id)).size,
+    articles: rankedUrls.map((u) => ({
       url: u.url,
       title: u.title,
       description: `${u.source_name} · ${u.suggested_category}`,
@@ -490,6 +510,15 @@ async function scrapeAndAssemble(
   console.log(
     `[resolver] Bundle assembled: ${bundle.sources.length} sources, ${bundle.sources.reduce((n, s) => n + s.quotes.length, 0)} quotes`,
   );
+
+  const linkableSources = bundle.sources.filter((source) => !isCompetitorOutbound(source.url));
+  const minLinkableSources = lane === 'weekly_authority' ? 2 : 1;
+  if (linkableSources.length < minLinkableSources) {
+    throw new ThinClusterError(
+      `only ${linkableSources.length} link-safe source${linkableSources.length === 1 ? '' : 's'} in assembled bundle (need >=${minLinkableSources})`,
+    );
+  }
+  console.log(`[resolver] Link-safe sources: ${linkableSources.length}/${bundle.sources.length}`);
 
   return { bundle, cluster };
 }

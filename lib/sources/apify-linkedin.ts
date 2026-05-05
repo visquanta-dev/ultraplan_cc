@@ -52,9 +52,9 @@ export async function scrapeHashtag(
     );
   }
 
-  const apiToken = process.env.APIFY_API_TOKEN;
+  const apiToken = process.env.APIFY_API_TOKEN ?? process.env.APIFY_TOKEN;
   if (!apiToken) {
-    throw new Error('[apify-linkedin] APIFY_API_TOKEN is not set. Add it to .env.local.');
+    throw new Error('[apify-linkedin] APIFY_API_TOKEN/APIFY_TOKEN is not set. Add it to .env.local.');
   }
 
   const { maxPosts = 30, sortBy = 'date' } = options;

@@ -23,6 +23,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
 import { categorizePost, getCategoryStatus, listCategories } from './category-cooldown';
+import { isCompetitorOutbound } from '../sources/link-policy';
+import { collectDiscoverySignals } from './discovery-signals';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +39,8 @@ interface SourceConfig {
   url: string;
   sitemap_path: string | null;
   freshness: 'daily' | 'weekly' | 'on_demand';
+  article_path_hints?: string[];
+  exclude_path_hints?: string[];
   notes?: string;
 }
 
@@ -57,6 +61,10 @@ export interface TopicCluster {
   tier_counts: { tier1: number; tier2: number; tier3: number; tier4: number };
   most_recent_lastmod: string | null;
   suggested_category: string;
+  /** Distinct source IDs that can receive outbound links in published posts */
+  linkable_source_count: number;
+  /** Distinct competitor/adjacent source IDs used only as no-link topic signal */
+  no_link_source_count: number;
   /** Computed score; higher = more worth writing about */
   score: number;
   /** True if the suggested_category is currently in cooldown — resolver filters these out */
@@ -290,13 +298,30 @@ const SKIP_URL_PATTERNS = [
   /#/,
 ];
 
-function isContentURL(u: string): boolean {
+function isContentURL(u: string, source?: SourceConfig): boolean {
   if (SKIP_URL_PATTERNS.some((re) => re.test(u))) return false;
   // Reject single-segment paths (e.g. /blog, /reviews, /retail). Real
   // articles live at >=2 segments (/blog/slug-name, /resource-center/slug).
   try {
-    const pathSegs = new URL(u).pathname.split('/').filter(Boolean);
-    if (pathSegs.length < 2) return false;
+    const pathname = new URL(u).pathname;
+    const pathLower = pathname.toLowerCase();
+    if (source?.article_path_hints?.length) {
+      const allowed = source.article_path_hints.some((hint) =>
+        pathLower.includes(hint.toLowerCase()),
+      );
+      if (!allowed) return false;
+    }
+    if (source?.exclude_path_hints?.length) {
+      const excluded = source.exclude_path_hints.some((hint) =>
+        pathLower.includes(hint.toLowerCase()),
+      );
+      if (excluded) return false;
+    }
+    const pathSegs = pathname.split('/').filter(Boolean);
+    if (pathSegs.length < 2) {
+      const only = pathSegs[0] ?? '';
+      return /-|_/.test(only) && only.length >= 20;
+    }
     // Reject URLs whose last segment is a single word (landing/section page)
     const last = pathSegs[pathSegs.length - 1];
     if (!/-|_/.test(last) && last.length < 20) return false;
@@ -319,7 +344,7 @@ async function collectFromSource(source: SourceConfig, windowDays: number): Prom
   const fresh: CandidateURL[] = [];
 
   for (const entry of entries) {
-    if (!isContentURL(entry.loc)) continue;
+    if (!isContentURL(entry.loc, source)) continue;
     if (entry.lastmod) {
       const ts = Date.parse(entry.lastmod);
       if (!Number.isNaN(ts) && ts < cutoff) continue;
@@ -461,9 +486,16 @@ export function clusterCandidates(candidates: CandidateURL[]): TopicCluster[] {
 
   return Object.values(groups).map((urls, idx) => {
     const tierCounts = { tier1: 0, tier2: 0, tier3: 0, tier4: 0 } as TopicCluster['tier_counts'];
+    const linkableSources = new Set<string>();
+    const noLinkSources = new Set<string>();
     for (const u of urls) {
       const key = `tier${u.tier}` as keyof typeof tierCounts;
       tierCounts[key]++;
+      if (isCompetitorOutbound(u.url)) {
+        noLinkSources.add(u.source_id);
+      } else {
+        linkableSources.add(u.source_id);
+      }
     }
 
     const lastmodDates = urls
@@ -495,6 +527,8 @@ export function clusterCandidates(candidates: CandidateURL[]): TopicCluster[] {
       tier_counts: tierCounts,
       most_recent_lastmod: mostRecent > 0 ? new Date(mostRecent).toISOString() : null,
       suggested_category,
+      linkable_source_count: linkableSources.size,
+      no_link_source_count: noLinkSources.size,
       score: 0, // computed by scoreCluster
       category_blocked: false, // resolver fills this in
     };
@@ -527,6 +561,21 @@ export function scoreCluster(cluster: TopicCluster, availableCategoryWeights: Re
   const hasPrimary = d1 > 0 || d2 > 0;
   const tradePressDistinct = d3 + d4;
   const hasTradePressCorroboration = tradePressDistinct >= 3;
+  const linkableDistinct = new Set(
+    cluster.urls
+      .filter((u) => !isCompetitorOutbound(u.url))
+      .map((u) => u.source_id),
+  ).size;
+  const noLinkDistinct = new Set(
+    cluster.urls
+      .filter((u) => isCompetitorOutbound(u.url))
+      .map((u) => u.source_id),
+  ).size;
+
+  // Competitor-only clusters can reveal market heat, but they cannot produce
+  // the external citations we need without sending traffic to competitors.
+  // Require at least one link-safe source before a topic can win.
+  if (linkableDistinct === 0) return 0;
   if (!hasPrimary && !hasTradePressCorroboration) return 0;
   const qualificationMultiplier = hasPrimary ? 1.0 : 0.6;
 
@@ -549,6 +598,15 @@ export function scoreCluster(cluster: TopicCluster, availableCategoryWeights: Re
     (d2 >= 3 ? 2 : 0) +
     (tradePressDistinct >= 4 ? 2 : 0);
 
+  // Prefer topics that can cite neutral/trade/data sources in the final post.
+  // One link-safe source is the minimum; two or more means the drafter has a
+  // credible external citation path even after competitor links are suppressed.
+  const linkSafeBonus =
+    (linkableDistinct >= 2 ? 3 : 0) +
+    (linkableDistinct >= 3 ? 2 : 0);
+  const competitorOnlyDrag =
+    noLinkDistinct > linkableDistinct * 2 ? 0.75 : 1.0;
+
   // Freshness: linear decay over 30 days.
   let freshnessMultiplier = 1.0;
   if (cluster.most_recent_lastmod) {
@@ -560,7 +618,11 @@ export function scoreCluster(cluster: TopicCluster, availableCategoryWeights: Re
   // category is in cooldown — effectively removes the cluster from the pool.
   const categoryMultiplier = cluster.category_blocked ? 0 : (availableCategoryWeights[cluster.suggested_category] ?? 0.5);
 
-  return (tierWeight + concurrencyBonus) * freshnessMultiplier * categoryMultiplier * qualificationMultiplier;
+  return (tierWeight + concurrencyBonus + linkSafeBonus) *
+    freshnessMultiplier *
+    categoryMultiplier *
+    qualificationMultiplier *
+    competitorOnlyDrag;
 }
 
 // ---------------------------------------------------------------------------
@@ -572,6 +634,8 @@ export interface SignalOptions {
   bypassCache?: boolean;
   /** Upper bound on clusters returned (default 20) */
   limit?: number;
+  /** Include Apify Reddit/Google Trends category boosts (cached separately) */
+  includeDiscoverySignals?: boolean;
 }
 
 export interface SignalResult {
@@ -582,6 +646,9 @@ export interface SignalResult {
   clusters: TopicCluster[];
   /** Categories currently blocked — informational */
   blocked_categories: string[];
+  /** Optional Reddit/Trends boosts applied to cluster scores */
+  discovery_boosts?: Record<string, number>;
+  discovery_errors?: string[];
 }
 
 export async function getSignalCandidates(opts: SignalOptions = {}): Promise<SignalResult> {
@@ -609,10 +676,17 @@ export async function getSignalCandidates(opts: SignalOptions = {}): Promise<Sig
   const availableWeights: Record<string, number> = {};
   for (const c of status) availableWeights[c.id] = c.editorial_weight;
   const blockedCategories = status.filter((c) => c.blocked).map((c) => c.id);
+  const discovery = opts.includeDiscoverySignals
+    ? await collectDiscoverySignals({ bypassCache: opts.bypassCache })
+    : null;
 
   for (const cluster of clusters) {
     cluster.category_blocked = blockedCategories.includes(cluster.suggested_category);
     cluster.score = scoreCluster(cluster, availableWeights);
+    const discoveryBoost = discovery?.category_boosts[cluster.suggested_category] ?? 0;
+    if (discoveryBoost > 0 && cluster.score > 0) {
+      cluster.score *= 1 + Math.min(0.35, discoveryBoost / 10);
+    }
   }
 
   const sorted = clusters
@@ -629,6 +703,7 @@ export async function getSignalCandidates(opts: SignalOptions = {}): Promise<Sig
     total_candidates: candidates.length,
     clusters: sorted,
     blocked_categories: blockedCategories,
+    ...(discovery ? { discovery_boosts: discovery.category_boosts, discovery_errors: discovery.errors } : {}),
   };
 }
 

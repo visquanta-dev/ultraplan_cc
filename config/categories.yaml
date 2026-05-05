@@ -151,6 +151,66 @@ sources:
       review-boost content. 141 URLs, root sitemap with lastmod. Blog
       posts live at /post/<slug>; URL filter handles non-blog pages.
 
+  activengage:
+    name: ActivEngage
+    tier: 2
+    url: https://www.activengage.com
+    sitemap_path: /post-sitemap.xml
+    freshness: weekly
+    notes: Live chat, SMS, web capture, human-vs-AI engagement, BDC backup.
+
+  drivecentric:
+    name: DriveCentric
+    tier: 2
+    url: https://drivecentric.com
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: Automotive CRM, AI agents, lifecycle follow-up, marketing automation.
+
+  strolid:
+    name: Strolid
+    tier: 2
+    url: https://strolid.com
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    notes: Human + AI BDC, sales/service coverage, call handling, reporting.
+
+  clearline:
+    name: Clearline AI
+    tier: 2
+    url: https://www.useclearline.com
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    article_path_hints:
+      - /blog
+    notes: AI BDC, fixed ops AI, inbound/outbound follow-up, scheduling.
+
+  dealership_accelerator:
+    name: Dealership Accelerator
+    tier: 2
+    url: https://dealershipaccelerator.io
+    sitemap_path: /sitemap.xml
+    freshness: weekly
+    article_path_hints:
+      - /resources/
+    notes: AI BDC, CRM integrations, speed-to-lead, lead handling playbooks.
+
+  carnow:
+    name: CarNow
+    tier: 2
+    url: https://www.carnow.com
+    sitemap_path: /post-sitemap.xml
+    freshness: weekly
+    notes: Digital retail, web capture, payment search, conversational retail.
+
+  autoalert:
+    name: AutoAlert
+    tier: 2
+    url: https://www.autoalert.com
+    sitemap_path: /post-sitemap.xml
+    freshness: weekly
+    notes: Equity mining, lifecycle marketing, retention, data-driven outreach.
+
   # drivee: REMOVED 2026-04-21 — no sitemap or RSS feed exists at any path.
   # Scraping would require HTML blog-index parsing, which the signal pipeline
   # doesn't support. Site is tiny; dropping costs no meaningful signal.
@@ -196,6 +256,73 @@ sources:
     sitemap_path: /blog/sitemap_index.xml
     freshness: on_demand
     notes: Dealer-website vendor, heavy SEO-advice blog, 4-8 posts/month — authority for dealer-digital best-practice topics
+
+  dealer_marketing:
+    name: Dealer Marketing Magazine
+    tier: 3
+    url: https://www.dealermarketing.com
+    sitemap_path: /sitemap.xml
+    freshness: on_demand
+    article_path_hints:
+      - /articles/
+    notes: Independent dealer marketing/ops publication; useful neutral citation source.
+
+  fuel_reyrey:
+    name: Reynolds Fuel
+    tier: 3
+    url: https://fuel.reyrey.com
+    sitemap_path: /sitemap.xml
+    freshness: on_demand
+    exclude_path_hints:
+      - /testimonial/
+      - /company/
+      - /careers/
+    notes: Reynolds & Reynolds editorial/resource hub for fixed ops, CRM, service, and dealer systems.
+
+  automotive_mastermind:
+    name: Automotive Mastermind
+    tier: 3
+    url: https://www.automotivemastermind.com
+    sitemap_path: /post-sitemap.xml
+    freshness: on_demand
+    article_path_hints:
+      - /blog/
+    notes: Sales intelligence, equity mining, service-lane revenue, customer lifecycle topics.
+
+  lotlinx:
+    name: Lotlinx
+    tier: 3
+    url: https://www.lotlinx.com
+    sitemap_path: /post-sitemap.xml
+    freshness: on_demand
+    exclude_path_hints:
+      - /co-op/
+      - /privacy
+      - /terms
+    notes: Inventory, VDP behavior, demand, turn-time, and shopper-intent signals.
+
+  tekion:
+    name: Tekion
+    tier: 3
+    url: https://tekion.com
+    sitemap_path: /sitemap.xml
+    freshness: on_demand
+    article_path_hints:
+      - /blog/
+      - /resources/
+    notes: AI-native DMS, CRM, digital retail, fixed-ops workflow, and platform modernization.
+
+  orbee:
+    name: Orbee
+    tier: 3
+    url: https://www.orbee.com
+    sitemap_path: /sitemap.xml
+    freshness: on_demand
+    article_path_hints:
+      - /media/
+      - /press/
+      - /press-release/
+    notes: First-party data, dealership CDP, marketing automation, inventory campaigns.
 
   # ── T4: dealer media (topic-signal leading indicator) ───────────────────
   dealership_guy:
@@ -272,6 +399,11 @@ categories:
       - stella # Catalyst outbound
       - numa
       - mia_labs # Outbound Campaigns, proactive outreach
+      - drivecentric
+      - strolid
+      - clearline
+      - dealership_accelerator
+      - autoalert
 
   # ── 2. Speed to Lead ────────────────────────────────────────────────────
   speed_to_lead:
@@ -295,6 +427,12 @@ categories:
       - dealerai
       - stella
       - mia_labs # Voice AI latency, after-hours, inbound SMS, never-miss-a-call
+      - drivecentric
+      - strolid
+      - clearline
+      - dealership_accelerator
+      - activengage
+      - carnow
 
   # ── 3. Service Drive ────────────────────────────────────────────────────
   service_drive:
@@ -318,6 +456,11 @@ categories:
       - dealerai
       - mia_labs # service appointments, 24/7 phone coverage, CSI angle
       - toma # fixed-ops AI agents, 30hrs-of-calls automation, 180-appts/mo case studies
+      - activengage
+      - strolid
+      - clearline
+      - fuel_reyrey
+      - automotive_mastermind
 
   # ── 4. Web Capture ──────────────────────────────────────────────────────
   web_capture:
@@ -340,6 +483,9 @@ categories:
       - dealerai # chat/email/SMS
       - dealeron # dealer websites + SEO advice
       - gubagoo # chat + messaging + virtual retailing
+      - activengage
+      - carnow
+      - orbee
 
   # ── 5. Reputation & Reviews ─────────────────────────────────────────────
   reputation:
@@ -357,6 +503,8 @@ categories:
     relevant_sources:
       - podium # Reviews — dominant
       - numa # HeatCase, LiveCSI
+      - activengage
+      - dealer_marketing
 
   # ── 6. Inventory & Pricing ──────────────────────────────────────────────
   inventory:
@@ -374,6 +522,9 @@ categories:
       - impel # Merchandising AI
       - cox_automotive # Manheim index + industry pricing data
       - edmunds_industry
+      - lotlinx
+      - orbee
+      - automotive_mastermind
 
   # ── 7. Industry Trends ──────────────────────────────────────────────────
   industry_trends:
@@ -396,6 +547,11 @@ categories:
       - dealership_guy
       - automotive_news
       - cbt_news
+      - dealer_marketing
+      - fuel_reyrey
+      - automotive_mastermind
+      - tekion
+      - orbee
 
 # ---------------------------------------------------------------------------
 # GLOBAL RULES

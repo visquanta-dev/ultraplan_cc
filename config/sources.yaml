@@ -41,6 +41,25 @@ trade_press:
     - numa.com
     - bdc.ai
     - useflai.com
+    - dealermarketing.com
+    - reyrey.com
+    - fuel.reyrey.com
+    - automotivemastermind.com
+    - activengage.com
+    - lotlinx.com
+    - drivecentric.com
+    - strolid.com
+    - useclearline.com
+    - dealershipaccelerator.io
+    - tekion.com
+    - wf.tekioncloud.com
+    - orbee.com
+    - carnow.com
+    - autoalert.com
+    - jdpower.com
+    - experian.com
+    - bls.gov
+    - fred.stlouisfed.org
     # Category resolver sources from config/categories.yaml. These are explicit
     # publishable-evidence domains; preflight refuses category sources that are
     # not listed here.

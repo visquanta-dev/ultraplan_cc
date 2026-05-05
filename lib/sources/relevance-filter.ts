@@ -20,31 +20,68 @@ import type { FeedArticle } from './crawl-index';
 // the same keywords a headline fetch would return, for zero network cost.
 // ---------------------------------------------------------------------------
 
+// Baseline dealership vocabulary broadens discovery without making generic
+// industry posts win on its own. These terms add weak context; the product and
+// pain terms below still carry the highest scores because they match multiple
+// lane-specific keywords.
+const DEALERSHIP_CONTEXT_KEYWORDS = [
+  'dealership', 'dealerships', 'dealer', 'dealers', 'car-dealer',
+  'car-dealership', 'auto-dealer', 'auto-dealership', 'franchise',
+  'rooftop', 'automotive-retail', 'automotive-industry', 'retail-automotive',
+  'fixed-ops', 'fixed-operations', 'service-lane', 'service-drive',
+  'internet-sales', 'bdc', 'crm',
+];
+
+const DEALER_PROBLEM_KEYWORDS = [
+  'missed-call', 'missed-calls', 'after-hours', 'speed-to-lead',
+  'lead-response', 'response-time', 'first-response', 'lead-management',
+  'lead-handling', 'lead-leakage', 'lost-leads', 'unsold-leads',
+  'dormant-leads', 'stale-leads', 'reactivation', 're-engagement',
+  'follow-up', 'followup', 'appointment-setting', 'appointment-scheduling',
+  'service-scheduling', 'show-rate', 'close-rate', 'contact-rate',
+  'phone-handling', 'inbound-calls', 'web-leads', 'form-fill',
+  'form-abandonment', 'chat', 'sms', 'texting', 'voice-ai',
+  'ai-agent', 'automation', 'customer-experience', 'retention',
+];
+
 // Lane-specific keyword banks. Kept in sync with the spirit of LANE_QUERIES
 // in lib/topics/search.ts but broken down to individual scoring tokens (the
 // search.ts queries are whole-phrase queries; this file scores single words).
 const LANE_KEYWORDS: Record<string, string[]> = {
   daily_seo: [
-    'dealership', 'dealer', 'automotive', 'service', 'bdc', 'rooftop',
-    'voice', 'chat', 'lead', 'follow-up', 'technology', 'digital',
+    ...DEALERSHIP_CONTEXT_KEYWORDS,
+    ...DEALER_PROBLEM_KEYWORDS,
+    'automotive', 'service', 'voice', 'lead', 'technology', 'digital',
     'retail', 'fixed-ops', 'customer', 'phone', 'missed', 'call',
     'appointment', 'scheduling', 'automation', 'ai', 'agent',
+    'service-advisor', 'repair-order', 'declined-service', 'recall',
+    'review', 'reviews', 'reputation', 'csi', 'google-reviews',
+    'vdp', 'inventory', 'turn-rate', 'merchandising', 'equity-mining',
   ],
   weekly_authority: [
+    ...DEALERSHIP_CONTEXT_KEYWORDS,
     'dealer', 'principal', 'leadership', 'management', 'strategy',
     'industry', 'trends', 'market', 'inventory', 'profit', 'margin',
     'operations', 'floor', 'sales', 'gm', 'coo', 'executive', 'opinion',
     'commentary', 'analysis', 'benchmark',
+    'affordability', 'interest-rate', 'saar', 'used-car', 'pre-owned',
+    'oem', 'retention', 'fixed-ops', 'service-absorption',
   ],
   monthly_anonymized_case: [
+    ...DEALERSHIP_CONTEXT_KEYWORDS,
+    ...DEALER_PROBLEM_KEYWORDS,
     'case', 'study', 'results', 'metrics', 'implementation', 'rollout',
     'before', 'after', 'conversion', 'close', 'show', 'rate', 'lift',
     'revenue', 'roi', 'improved', 'increase', 'reduction', 'success',
+    'appointments', 'booked', 'recovered', 'revenue-leak', 'capacity',
   ],
   listicle: [
+    ...DEALERSHIP_CONTEXT_KEYWORDS,
+    ...DEALER_PROBLEM_KEYWORDS,
     'top', 'best', 'tools', 'software', 'strategies', 'tactics', 'ways',
     'reasons', 'mistakes', 'tips', 'guide', 'roundup', 'compared',
     'dealership', 'dealer', 'automotive', 'ai', 'automation',
+    'vendors', 'platforms', 'checklist', 'playbook', 'examples',
   ],
 };
 

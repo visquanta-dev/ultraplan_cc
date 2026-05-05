@@ -60,7 +60,9 @@ jobs:
           GITHUB_PAT: ${{ secrets.GH_PAT }}
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          ULTRAPLAN_DISCOVERY_SIGNALS: ${{ vars.ULTRAPLAN_DISCOVERY_SIGNALS || '0' }}
           MAX_PIPELINE_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
           ORIGINATE_SEED_B64: ${{ github.event.inputs.originate_seed_b64 }}
           ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}

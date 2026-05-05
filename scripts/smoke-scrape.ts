@@ -12,6 +12,7 @@ import { scrapeHashtag } from '../lib/sources/apify-linkedin';
 //
 // Usage:
 //   1. Copy .env.example to .env.local and fill in FIRECRAWL_API_KEY + APIFY_API_TOKEN
+//      (APIFY_TOKEN also works as an alias).
 //   2. npx tsx scripts/smoke-scrape.ts
 // ---------------------------------------------------------------------------
 

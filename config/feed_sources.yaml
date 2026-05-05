@@ -232,3 +232,113 @@ sources:
       - https://www.useflai.com/blog/
     max_articles_per_crawl: 5
     freshness_days: 45
+
+  # ---------------------------------------------------------------------------
+  # SOURCE EXPANSION — added 2026-05-05 for 2x/day publishing capacity.
+  # Competitor/adjacent vendor sources can inform topics, but outbound links to
+  # direct competitors are suppressed in lib/stages/auto-linker.ts.
+  # ---------------------------------------------------------------------------
+  dealermarketing:
+    name: "Dealer Marketing Magazine"
+    tier: 1
+    index_urls:
+      - https://www.dealermarketing.com/articles/
+    max_articles_per_crawl: 12
+    freshness_days: 90
+
+  fuel_reyrey:
+    name: "Reynolds Fuel"
+    tier: 2
+    index_urls:
+      - https://fuel.reyrey.com/
+    max_articles_per_crawl: 8
+    freshness_days: 90
+
+  automotivemastermind:
+    name: "Automotive Mastermind Blog"
+    tier: 2
+    index_urls:
+      - https://www.automotivemastermind.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 365
+
+  activengage:
+    name: "ActivEngage Blog"
+    tier: 2
+    index_urls:
+      - https://www.activengage.com/blog/
+    max_articles_per_crawl: 8
+    freshness_days: 365
+
+  lotlinx:
+    name: "Lotlinx Insights"
+    tier: 2
+    index_urls:
+      - https://lotlinx.com/
+    max_articles_per_crawl: 8
+    freshness_days: 365
+
+  drivecentric:
+    name: "DriveCentric"
+    tier: 2
+    index_urls:
+      - https://drivecentric.com/
+    max_articles_per_crawl: 6
+    freshness_days: 365
+
+  strolid:
+    name: "Strolid"
+    tier: 2
+    index_urls:
+      - https://strolid.com/
+    max_articles_per_crawl: 6
+    freshness_days: 365
+
+  clearline:
+    name: "Clearline AI Blog"
+    tier: 2
+    index_urls:
+      - https://www.useclearline.com/blog
+    max_articles_per_crawl: 8
+    freshness_days: 60
+
+  dealershipaccelerator:
+    name: "Dealership Accelerator Resources"
+    tier: 2
+    index_urls:
+      - https://dealershipaccelerator.io/resources
+    max_articles_per_crawl: 8
+    freshness_days: 60
+
+  tekion:
+    name: "Tekion Blog"
+    tier: 2
+    index_urls:
+      - https://tekion.com/blog
+      - https://tekion.com/resources
+    max_articles_per_crawl: 8
+    freshness_days: 120
+
+  orbee:
+    name: "Orbee Media"
+    tier: 2
+    index_urls:
+      - https://www.orbee.com/media
+    max_articles_per_crawl: 6
+    freshness_days: 365
+
+  carnow:
+    name: "CarNow"
+    tier: 2
+    index_urls:
+      - https://www.carnow.com/
+    max_articles_per_crawl: 5
+    freshness_days: 120
+
+  autoalert:
+    name: "AutoAlert"
+    tier: 2
+    index_urls:
+      - https://www.autoalert.com/
+    max_articles_per_crawl: 5
+    freshness_days: 120

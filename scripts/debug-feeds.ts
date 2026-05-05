@@ -8,8 +8,7 @@
  * Usage: npx tsx scripts/debug-feeds.ts [lane]
  *   lane defaults to daily_seo
  */
-import { config } from 'dotenv';
-config({ path: '.env.cron.tmp' });
+import '../lib/load-env';
 
 import { crawlAllFeeds, loadFeedSources } from '../lib/sources/crawl-index';
 import { filterByRelevance, scoreAndRank } from '../lib/sources/relevance-filter';
