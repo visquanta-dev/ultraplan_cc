@@ -803,7 +803,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const relatedPosts = buildRelatedPosts(bodyParts.join('\n'));
     if (relatedPosts) bodyParts.push(relatedPosts);
 
-    let body = bodyParts.join('\n');
+    let body = cleanDashChars(bodyParts.join('\n'));
 
     // Post-draft overlap gate — catches the CSI-style cannibalization where
     // two posts share 3+ entities or citation fingerprints despite different
@@ -844,6 +844,8 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         console.warn('[pipeline]   chart injected at body start — no H2 found for inline placement');
       }
     }
+
+    body = cleanDashChars(body);
 
     // Calculate reading time
     const wordCount2 = body.split(/\s+/).filter(Boolean).length;
