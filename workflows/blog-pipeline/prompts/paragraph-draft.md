@@ -194,20 +194,27 @@ opening paragraph.
     - **No commas used to extend a sentence past 25 words.** If a comma
       lets you keep going, that's a split point, not a continuation.
 
-14. **Definitional sections are standalone.** If the outline includes a
+14. **No consultant correction frames.** Do not use "that reading is wrong",
+    "this is the part...", "the instinct is...", "not a people problem, a
+    physics problem", "no amount of coaching fixes...", or any "X is not Y,
+    it is Z" setup. Those read like pitch-deck copy under the slop judge.
+    State the constraint directly: who is overloaded, when it happens, what
+    gets missed, and what revenue or retention consequence follows.
+
+15. **Definitional sections are standalone.** If the outline includes a
     "What is [key term]?" section, the first paragraph of that section
     must be a complete 2-3 sentence definition that works out of context.
     A reader landing on just that paragraph from a Perplexity citation
     should fully understand what the term means. No "as we discussed
     above" or "this is why" references to other parts of the post.
 
-15. **Stats with explicit attribution and date.** When citing a statistic,
+16. **Stats with explicit attribution and date.** When citing a statistic,
     name the source AND the year in the paragraph: "a 2026 Digital Dealer
     survey of 1,200 dealership leaders found that 74%..." The year is
     critical — LLMs drop stats they can't date, and current-year stats
     are cited far more often than undated ones.
 
-16. **First body paragraph of section 0 MUST contain a number — but NEVER
+17. **First body paragraph of section 0 MUST contain a number — but NEVER
     an invented one.** The gate checks for a numeric anchor in the first
     100 words of the first body paragraph. Priority order:
     (a) use a specific number (percent, dollar amount, count) that
@@ -221,7 +228,7 @@ opening paragraph.
         block. Inventing a number to satisfy this rule is strictly
         worse than using 2026 as the fallback anchor.
 
-17. **Stat attribution language is mandatory — when a stat exists.**
+18. **Stat attribution language is mandatory — when a stat exists.**
     Whenever you cite a statistic that comes from a source quote, use
     one of these attribution markers in the same sentence or the
     sentence immediately before/after: "according to", "survey",
@@ -231,7 +238,7 @@ opening paragraph.
     ("dealers are shifting to AI"), write qualitatively; do not
     manufacture a percentage to make the paragraph feel more concrete.
 
-18. **Never cite stats from 2019-2023 without re-anchoring to 2026.** The
+19. **Never cite stats from 2019-2023 without re-anchoring to 2026.** The
     gate flags stale year references. If a source quote is from 2022,
     either skip it, or frame it as a historical comparison: "by 2022, X%
     had adopted — that figure reached Y% in 2026." Current-year framing

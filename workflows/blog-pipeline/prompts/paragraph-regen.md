@@ -39,6 +39,11 @@ You will receive:
      "that's the combination", or "that's exactly what". Replace them
      with the concrete number, operational consequence, or source-backed
      claim that makes the paragraph worth keeping.
+     Also avoid rhetorical correction frames and consultant flourishes:
+     "that reading is wrong", "this is the part...", "the instinct is...",
+     "it is not a people problem, it is a physics problem", "no amount of
+     coaching fixes...", and any "X is not Y, it is Z" setup. State the
+     operational constraint directly in plain dealership language.
    - If a paragraph failed **originality**: add analytical value beyond
      what the source quote says. Don't just rearrange the source — draw
      a new conclusion, add industry context, or contrast with another
