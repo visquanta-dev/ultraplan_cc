@@ -128,23 +128,16 @@ function hasExternalLink(text: string): boolean {
 }
 
 function appendAttribution(text: string, source: { url: string; siteName: string }, phraseIdx: number): string {
-  const phrase = ATTRIBUTION_PHRASES[phraseIdx % ATTRIBUTION_PHRASES.length];
-  const attribution = phrase(source.siteName, source.url);
   const trimmed = text.replace(/\.\s*$/, '');
-  return `${trimmed} (${attribution}).`;
+  const sentences = [
+    (name: string, url: string) => `[Research from ${name}](${url}) backs the point.`,
+    (name: string, url: string) => `[Data from ${name}](${url}) supports the pattern.`,
+    (name: string, url: string) => `[Reporting by ${name}](${url}) gives the source context.`,
+    (name: string, url: string) => `[Analysis from ${name}](${url}) supports the finding.`,
+  ];
+  const sentence = sentences[phraseIdx % sentences.length];
+  return `${trimmed}. ${sentence(source.siteName, source.url)}`;
 }
-
-// Varied attribution phrases to avoid repetition
-const ATTRIBUTION_PHRASES = [
-  (name: string, url: string) => `[according to ${name}](${url})`,
-  (name: string, url: string) => `[as reported by ${name}](${url})`,
-  (name: string, url: string) => `[per ${name}](${url})`,
-  (name: string, url: string) => `[research from ${name}](${url})`,
-  (name: string, url: string) => `[${name} reports](${url})`,
-  (name: string, url: string) => `[data from ${name}](${url})`,
-  (name: string, url: string) => `[${name} found](${url})`,
-  (name: string, url: string) => `[a ${name} analysis shows](${url})`,
-];
 
 /**
  * Insert external source links into paragraphs.

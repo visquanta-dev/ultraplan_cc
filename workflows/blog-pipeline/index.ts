@@ -178,11 +178,13 @@ function wordCount(text: string): number {
 }
 
 function splitLongSentence(sentence: string): string {
-  if (wordCount(sentence) <= 35) return sentence;
+  if (wordCount(sentence) <= 32) return sentence;
 
   const patterns = [
     /,\s+(and|but|because|while|which|so|then|where|when)\s+/i,
+    /\s+(because|while|which|where|when)\s+/i,
     /;\s+/,
+    /:\s+/,
     /\s+-\s+/,
   ];
 
@@ -194,7 +196,7 @@ function splitLongSentence(sentence: string): string {
     let right = sentence.slice(match.index + match[0].length).trim();
     right = right.replace(/^(and|but|so|then)\s+/i, '');
     if (wordCount(left) >= 8 && wordCount(right) >= 8) {
-      return `${left}. ${capitalize(right)}`;
+      return `${left}. ${capitalize(splitLongSentence(right))}`;
     }
   }
 
