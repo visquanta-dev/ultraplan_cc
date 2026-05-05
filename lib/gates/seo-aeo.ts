@@ -510,7 +510,7 @@ const checks: Check[] = [
       .replace(/^#.+$/gm, '')
       .replace(/^\|.+\|$/gm, '')
       .replace(/^>\s.+$/gm, '')
-      .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
       .replace(/[*_`]/g, '');
     const sentences = body.split(/[.!?]+\s/).map((s) => s.trim()).filter((s) => s.length > 10);
     if (sentences.length === 0) {
@@ -615,7 +615,7 @@ const checks: Check[] = [
       .replace(/^#.+$/gm, '')
       .replace(/^\|.+\|$/gm, '')
       .replace(/^>\s.+$/gm, '')
-      .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
       .replace(/[*_`]/g, '');
     const sentences = body.split(/[.!?]+\s/).map((s) => s.trim());
     const shortQuotable = sentences.filter((s) => {

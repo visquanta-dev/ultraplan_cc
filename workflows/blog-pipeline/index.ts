@@ -117,7 +117,7 @@ function normalizeMetaDescriptionForSeo(description: string, headline: string, o
   if (cleaned.length >= 120 && cleaned.length <= 160) return cleaned;
 
   const opening = cleanDashChars(openingText)
-    .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
   cleaned = `${headline}: ${opening}`.replace(/\s+/g, ' ').trim();
@@ -159,7 +159,7 @@ function sentenceSplit(text: string): string[] {
 
 function plainText(markdown: string): string {
   return cleanDashChars(markdown)
-    .replace(/\[[^\]]+\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_`>]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
