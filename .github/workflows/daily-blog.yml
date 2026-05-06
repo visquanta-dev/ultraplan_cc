@@ -25,6 +25,10 @@ on:
         required: false
         default: '5'
 
+concurrency:
+  group: daily-blog-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate:
     runs-on: ubuntu-latest

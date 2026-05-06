@@ -556,19 +556,27 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     let imageResult: ImagePipelineResult;
     let multiImageResult: MultiOptionImageResult | null = null;
     let chartRelPath: string | null = null;
+    const renderStatChartImages = process.env.ULTRAPLAN_ENABLE_CHART_IMAGES === '1';
 
-    if (outline.chart) {
-      console.log(`[pipeline]   chart path: ${outline.chart.type} (${outline.chart.data.length} pts)`);
+    if (outline.chart && !renderStatChartImages) {
+      console.log(
+        `[pipeline]   chart spec ignored: ${outline.chart.type} (${outline.chart.data.length} pts). Chart/text-only images are disabled until typography is fixed.`,
+      );
+    }
+
+    if (outline.chart && renderStatChartImages) {
+      const chart = outline.chart;
+      console.log(`[pipeline]   chart path: ${chart.type} (${chart.data.length} pts)`);
       try {
         // Strip em-dashes from every chart-visible string. The drafter pipeline
         // does this for body prose but the chart spec bypasses that normalizer;
         // without this step, em-dashes render verbatim in the PNG and violate
         // the voice rule enforced by seo/no-em-dashes.
         const cleanedChart = {
-          ...outline.chart,
-          headline: stripEmDashes(outline.chart.headline),
-          source: outline.chart.source ? stripEmDashes(outline.chart.source) : undefined,
-          data: outline.chart.data.map((d) => ({
+          ...chart,
+          headline: stripEmDashes(chart.headline),
+          source: chart.source ? stripEmDashes(chart.source) : undefined,
+          data: chart.data.map((d) => ({
             ...d,
             label: stripEmDashes(d.label),
             ...(d.valueLabel ? { valueLabel: stripEmDashes(d.valueLabel) } : {}),
@@ -580,8 +588,8 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         const chartAbsPath = path.join(chartDir, 'chart-hero.png');
         fs.writeFileSync(chartAbsPath, chartPng);
         chartRelPath = `public/images/blog/${slug}/chart-hero.png`;
-        const chartLabel = outline.chart.data[0]?.valueLabel ?? String(outline.chart.data[0]?.value ?? '');
-        const altText = `${chartLabel} - ${outline.chart.headline}${outline.chart.source ? ` (${outline.chart.source})` : ''}`;
+        const chartLabel = chart.data[0]?.valueLabel ?? String(chart.data[0]?.value ?? '');
+        const altText = `${chartLabel} - ${chart.headline}${chart.source ? ` (${chart.source})` : ''}`;
         imageResult = {
           paths: [chartRelPath],
           altTexts: { [chartRelPath]: altText },
@@ -933,6 +941,7 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       publishedAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
       published: true,
+      ...(bundle.category_id ? { category_id: bundle.category_id } : {}),
       category: { slug: lane.replace(/_/g, '-'), title: LANE_TITLES[lane] ?? 'Article' },
       tags: LANE_TAGS[lane] ?? [],
       author: routeAuthorForPost({

@@ -130,7 +130,7 @@ export function categorizePost(fm: ParsedFrontmatter): string {
   }
 
   // Over-covered broad categories after the narrow ones have had a chance
-  if (/\b(service[- ]drive|service[- ]advisor|service[- ]retention|service[- ]department|service[- ]custom\w*|service[- ]schedul\w*|fixed[- ]ops|missed[- ]call|csi|voice[- ]agent)\b/.test(haystack)) {
+  if (/\b(service[- ]drive|service[- ]advisor|service[- ]retention|service[- ]department|service[- ]custom\w*|service[- ]schedul\w*|service[- ]capacity|service[- ]subscription\w*|service[- ]call\w*|fixed[- ]ops|missed[- ]call\w*|csi|voice[- ]agent)\b/.test(haystack)) {
     return 'service_drive';
   }
   if (/\b(speed[- ]to[- ]lead|\d+[- ]minute|lead[- ]response|web[- ]lead|follow[- ]up[- ]speed|first[- ]contact|lead[- ]loss|speed[- ]of[- ]response|bdc|lead[- ]generation|lead[- ]provider|inbound[- ]lead|lead[- ]handoff|sms.*text)\b/.test(haystack)) {
