@@ -373,46 +373,6 @@ function buildKeyTakeaways(paragraphs: string[]): string {
   return ['', '### Key Takeaways', '', ...bullets.map((b) => `- ${b}`), ''].join('\n');
 }
 
-function sourceNameById(bundle: Bundle): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const source of bundle.sources) {
-    const domain = source.domain.replace(/^www\./, '');
-    const siteName = domain.split('.')[0] || domain;
-    map.set(source.source_id, siteName.charAt(0).toUpperCase() + siteName.slice(1));
-  }
-  return map;
-}
-
-function escapeTableCell(text: string): string {
-  return plainText(text).replace(/\|/g, '/').slice(0, 180);
-}
-
-function buildEvidenceTable(paragraphs: Array<{ text: string; section_index: number; source_id?: string }>, outline: { sections: Array<{ heading: string }> }, bundle: Bundle): string {
-  const sources = sourceNameById(bundle);
-  const rows = paragraphs.slice(0, 6).map((p) => {
-    const heading = outline.sections[p.section_index]?.heading ?? 'Dealer operations';
-    const sentence = sentenceSplit(plainText(p.text))[0] ?? plainText(p.text);
-    return [
-      escapeTableCell(heading),
-      escapeTableCell(sentence),
-      escapeTableCell(sources.get(p.source_id ?? '') ?? p.source_id ?? 'Source'),
-    ];
-  });
-  if (rows.length < 4) return '';
-
-  const header = '| Dealer question | Evidence anchor | Source |';
-  const separator = '| --- | --- | --- |';
-  return [
-    '',
-    '### Evidence Map',
-    '',
-    header,
-    separator,
-    ...rows.map((r) => `| ${r.join(' | ')} |`),
-    '',
-  ].join('\n');
-}
-
 function buildFaqSection(headline: string, paragraphs: string[]): string {
   const answers = paragraphs
     .flatMap((p) => sentenceSplit(p))
@@ -846,18 +806,6 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         sectionSubsections,
         paras,
       ));
-
-      if (i === 0) {
-        const evidenceTable = buildEvidenceTable(
-          [
-            ...(introSource ? [{ text: introParagraph || introSource.text, section_index: introSource.section_index, source_id: introSource.source_id }] : []),
-            ...linkedParagraphs,
-          ],
-          outline,
-          bundle,
-        );
-        if (evidenceTable) bodyParts.push(evidenceTable);
-      }
 
       // Insert mid-article CTA after the middle section. Routed by the
       // bundle's category_id so a reputation post pitches Reputation
