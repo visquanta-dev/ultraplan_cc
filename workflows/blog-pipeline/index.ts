@@ -285,6 +285,36 @@ function fallbackSubsections(heading: string, count: number): string[] {
   ].slice(0, Math.max(1, Math.min(3, count)));
 }
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripGeneratedHeadingPrefix(text: string, knownHeadings: string[]): string {
+  let cleaned = cleanDashChars(text).trim();
+  const original = cleaned;
+
+  // The paragraph stage returns JSON text, while this renderer owns the H2/H3
+  // structure. Strip model-emitted headings so body copy cannot render as H3.
+  cleaned = cleaned.replace(/^#{1,6}\s+[^\n]{1,140}\n+\s*/g, '').trimStart();
+  const hadMarkdownHeading = /^#{1,6}\s+/.test(cleaned);
+  if (hadMarkdownHeading) cleaned = cleaned.replace(/^#{1,6}\s+/, '').trimStart();
+
+  const orderedHeadings = [...knownHeadings]
+    .map((heading) => cleanDashChars(heading).trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  for (const heading of orderedHeadings) {
+    const pattern = new RegExp(`^${escapeRegex(heading)}(?:\\s+|[:.;,!?-]+\\s+|$)`, 'i');
+    if (pattern.test(cleaned)) {
+      cleaned = cleaned.replace(pattern, '').trimStart();
+      break;
+    }
+  }
+
+  return cleaned || original;
+}
+
 function renderSectionWithSubsections(heading: string, subsections: string[] | undefined, paragraphs: string[]): string {
   const parts = [`## ${heading}\n`];
   if (paragraphs.length === 0) return parts.join('\n');
@@ -296,7 +326,9 @@ function renderSectionWithSubsections(heading: string, subsections: string[] | u
   paragraphs.forEach((paragraph, idx) => {
     const h3 = h3s[Math.min(idx, h3s.length - 1)];
     if (idx < h3s.length) parts.push(`### ${h3}\n`);
-    parts.push(paragraph);
+    const paragraphText = stripGeneratedHeadingPrefix(paragraph, [heading, ...h3s, ...(subsections ?? [])]);
+    if (!paragraphText) return;
+    parts.push(paragraphText);
     parts.push('');
   });
   return parts.join('\n');
@@ -690,9 +722,24 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // External links: convert (src_XXX) markers into inline source links
     console.log('[pipeline] Step 5b/7: Inserting external + internal links');
     const withExternalLinks = insertExternalLinks(dedupedParagraphs, bundle);
+    const renderedHeadings = normalizeRenderedHeadings(
+      outline.headline,
+      outline.sections.map((s) => s.heading),
+      lane,
+    );
+    const paragraphHeadingPrefixes = [
+      outline.headline,
+      ...renderedHeadings,
+      ...outline.sections.flatMap((section) => [
+        section.heading,
+        ...(section.subsections ?? []),
+      ]),
+    ];
     const sanitizedParagraphs = withExternalLinks.map((para) => ({
       ...para,
-      text: enforceReadableSentences(stripEmDashes(stripCitations(para.text))),
+      text: enforceReadableSentences(
+        stripGeneratedHeadingPrefix(stripEmDashes(stripCitations(para.text)), paragraphHeadingPrefixes),
+      ),
     }));
     const introSource = sanitizedParagraphs[0];
     const introParagraph = introSource
@@ -735,11 +782,6 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     const sectionCount = outline.sections.length;
     const midPoint = Math.floor(sectionCount / 2);
-    const renderedHeadings = normalizeRenderedHeadings(
-      outline.headline,
-      outline.sections.map((s) => s.heading),
-      lane,
-    );
     const allRenderedParagraphs = [
       introParagraph,
       ...linkedParagraphs.map((p) => p.text),

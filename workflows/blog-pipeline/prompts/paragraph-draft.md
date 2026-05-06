@@ -149,10 +149,11 @@ opening paragraph.
 
 ## SEO content structure rules (CRITICAL)
 
-8. **Use H3 subsections.** If the outline includes `subsections` for a section,
-   use them as H3 headings within your paragraphs. Format: start a paragraph
-   with `### Heading Text\n\n` followed by the paragraph content. This creates
-   proper H2 -> H3 hierarchy for SEO crawlers.
+8. **Do not write Markdown headings inside paragraph text.** If the outline
+   includes `subsections` for a section, the rendering pipeline will add those
+   H3 headings automatically. Your `text` field must contain clean paragraph
+   prose only. Never start a paragraph with `#`, `##`, `###`, or a repeated
+   subsection title.
 9. **Include bullet or numbered lists in at least 2 sections.** Use markdown
    list syntax (`- item` or `1. item`). Lists should contain 3-6 items with
    real data from the anchor quotes. Good for: ranked priorities, key metrics,
