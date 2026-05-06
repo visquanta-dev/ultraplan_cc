@@ -285,6 +285,14 @@ function fallbackSubsections(heading: string, count: number): string[] {
   ].slice(0, Math.max(1, Math.min(3, count)));
 }
 
+function chooseCuratedHeroPath(categoryId: string | undefined, headline: string): string {
+  const topic = `${categoryId ?? ''} ${headline}`.toLowerCase();
+  if (/\b(service|fixed ops|appointment|repair|call)\b/.test(topic)) {
+    return '/images/service-center.jpg';
+  }
+  return '/images/platform/unified-dashboard.png';
+}
+
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -589,6 +597,8 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     let multiImageResult: MultiOptionImageResult | null = null;
     let chartRelPath: string | null = null;
     const renderStatChartImages = process.env.ULTRAPLAN_ENABLE_CHART_IMAGES === '1';
+    const generateAiHeroImages = process.env.ULTRAPLAN_ENABLE_AI_HERO_IMAGES === '1';
+    let aiHeroGenerationSkipped = false;
 
     if (outline.chart && !renderStatChartImages) {
       console.log(
@@ -638,6 +648,18 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
         console.error(`[pipeline]   chart render FAILED: ${msg}\n${stack ?? ''}`);
         throw new Error(`Chart render failed (${msg}). Check chart-renderer + sharp install.`);
       }
+    } else if (!generateAiHeroImages) {
+      aiHeroGenerationSkipped = true;
+      imageResult = {
+        paths: [],
+        altTexts: {},
+        gateResults: [],
+        allPassed: true,
+        blockedImages: [],
+      };
+      console.log(
+        `[pipeline]   AI hero generation disabled; using curated site hero ${chooseCuratedHeroPath(bundle.category_id, outline.headline)}`,
+      );
     } else {
       // Use headline as overlay text — enrichment (TL;DR) happens in Step 5c
       // which runs AFTER this step, so enriched.tldr is not available here.
@@ -953,11 +975,9 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     // tag on the live post. Using a known-good existing image means the
     // post still ships with something visible instead of a 404'd hero.
     //
-    // The fallback path below MUST exist on the site repo. Currently
-    // using /images/wireframes/6.jpeg because it's already referenced
-    // by getPostFeaturedImage() as a category fallback and is present on
-    // disk. If that image moves, update this fallback too.
-    const FALLBACK_HERO_PATH = '/images/wireframes/6.jpeg';
+    // The curated path below MUST exist on the site repo. It intentionally
+    // points at real product/service assets, not generated dealership renders.
+    const curatedHeroPath = chooseCuratedHeroPath(bundle.category_id, outline.headline);
     // Multi-option pipeline: use the first option's path as the default hero.
     // The user will pick their preferred option in the PR and rename it.
     const heroRelPath = imageResult.paths.find((p) => p.includes('hero'))
@@ -967,11 +987,15 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     if (heroRelPath) {
       heroFrontmatterPath = '/' + heroRelPath.replace(/^public[/\\]/, '').replace(/\\/g, '/');
     } else {
-      heroFrontmatterPath = FALLBACK_HERO_PATH;
-      usedHeroFallback = true;
-      console.warn(
-        `[pipeline]   WARNING: no hero image generated (all ${imageResult.blockedImages.length} attempts blocked by image gates). Falling back to ${FALLBACK_HERO_PATH}. Replace manually before merge.`,
-      );
+      heroFrontmatterPath = curatedHeroPath;
+      usedHeroFallback = !aiHeroGenerationSkipped;
+      if (aiHeroGenerationSkipped) {
+        console.log(`[pipeline]   using curated hero ${curatedHeroPath}`);
+      } else {
+        console.warn(
+          `[pipeline]   WARNING: no hero image generated (all ${imageResult.blockedImages.length} attempts blocked by image gates). Falling back to ${curatedHeroPath}.`,
+        );
+      }
     }
 
     const frontmatter = {
