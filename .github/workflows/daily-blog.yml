@@ -1,12 +1,6 @@
 name: Daily Blog Post
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/daily-blog.yml'
-      - 'lib/topics/resolver.ts'
   schedule:
     # 10:05 AM America/Chicago = 15:05 UTC (CDT, UTC-5) or 16:05 UTC (CST, UTC-6)
     # Using 15:05 UTC keeps the run once daily while avoiding busier half-hour slots.
