@@ -483,14 +483,13 @@ async function scrapeAndAssemble(
   const freshCount = freshResults.length;
   console.log(`[resolver] After freshness filter: ${freshCount}/${succeeded} sources kept`);
 
-  // Research-density threshold: require at least 3 fresh sources. Matches
-  // config/categories.yaml rules.research_density.min_primary_sources.
-  // This is what "skip-if-thin" enforces — better no post than a post built
-  // on one or two shaky sources.
-  const MIN_PRIMARY_SOURCES = 3;
-  if (freshCount < MIN_PRIMARY_SOURCES) {
+  // Standard posts still need 3 fresh sources. Competitor-signal clusters may
+  // proceed with 2 because the site publish guard audits them as low-source.
+  const hasCompetitorSignals = freshResults.some((result) => isCompetitorOutbound(result.url));
+  const minPrimarySources = hasCompetitorSignals ? 2 : 3;
+  if (freshCount < minPrimarySources) {
     throw new ThinClusterError(
-      `only ${freshCount} fresh source${freshCount === 1 ? '' : 's'} after scrape + filter (need ≥${MIN_PRIMARY_SOURCES})`,
+      `only ${freshCount} fresh source${freshCount === 1 ? '' : 's'} after scrape + filter (need >=${minPrimarySources}${hasCompetitorSignals ? ' for competitor-signal policy' : ''})`,
     );
   }
 
