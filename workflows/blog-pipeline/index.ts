@@ -100,8 +100,27 @@ function cleanDashChars(text: string): string {
   return text.replace(/\s*[\u2013\u2014]\s*/g, ' - ');
 }
 
+function matchCapitalization(original: string, replacement: string): string {
+  if (original === original.toUpperCase()) return replacement.toUpperCase();
+  if (/^[A-Z]/.test(original)) {
+    return replacement.replace(/\b[a-z]/g, (char) => char.toUpperCase());
+  }
+  return replacement;
+}
+
+function normalizePreOwnedTerminology(text: string): string {
+  return text
+    .replace(/\bused[- ]car dealers\b/gi, (match) => matchCapitalization(match, 'pre-owned dealers'))
+    .replace(/\bused[- ]car dealer\b/gi, (match) => matchCapitalization(match, 'pre-owned dealer'))
+    .replace(/\bused[- ]car dealerships\b/gi, (match) => matchCapitalization(match, 'pre-owned dealerships'))
+    .replace(/\bused[- ]car dealership\b/gi, (match) => matchCapitalization(match, 'pre-owned dealership'))
+    .replace(/\bused[- ]car market\b/gi, (match) => matchCapitalization(match, 'pre-owned market'))
+    .replace(/\bused[- ]cars\b/gi, (match) => matchCapitalization(match, 'pre-owned vehicles'))
+    .replace(/\bused[- ]car\b/gi, (match) => matchCapitalization(match, 'pre-owned'));
+}
+
 function normalizeHeadlineForSeo(headline: string): string {
-  let cleaned = cleanDashChars(headline).replace(/\s+/g, ' ').trim();
+  let cleaned = normalizePreOwnedTerminology(cleanDashChars(headline)).replace(/\s+/g, ' ').trim();
   if (cleaned.length > 60) {
     cleaned = cleaned.slice(0, 60).replace(/\s+\S*$/, '').replace(/[,:;!?-]+$/g, '').trim();
   }
@@ -113,10 +132,10 @@ function normalizeHeadlineForSeo(headline: string): string {
 }
 
 function normalizeMetaDescriptionForSeo(description: string, headline: string, openingText: string): string {
-  let cleaned = cleanDashChars(description).replace(/\s+/g, ' ').trim();
+  let cleaned = normalizePreOwnedTerminology(cleanDashChars(description)).replace(/\s+/g, ' ').trim();
   if (cleaned.length >= 120 && cleaned.length <= 160) return cleaned;
 
-  const opening = cleanDashChars(openingText)
+  const opening = normalizePreOwnedTerminology(cleanDashChars(openingText))
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
@@ -760,7 +779,9 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
     const sanitizedParagraphs = withExternalLinks.map((para) => ({
       ...para,
       text: enforceReadableSentences(
-        stripGeneratedHeadingPrefix(stripEmDashes(stripCitations(para.text)), paragraphHeadingPrefixes),
+        normalizePreOwnedTerminology(
+          stripGeneratedHeadingPrefix(stripEmDashes(stripCitations(para.text)), paragraphHeadingPrefixes),
+        ),
       ),
     }));
     const introSource = sanitizedParagraphs[0];
@@ -819,7 +840,12 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
 
     outline.sections.forEach((section, i) => {
       const paras = bodyBySection.get(i) ?? [];
-      bodyParts.push(renderSectionWithSubsections(renderedHeadings[i] ?? stripEmDashes(section.heading), section.subsections, paras));
+      const sectionSubsections = section.subsections?.map(normalizePreOwnedTerminology);
+      bodyParts.push(renderSectionWithSubsections(
+        normalizePreOwnedTerminology(renderedHeadings[i] ?? stripEmDashes(section.heading)),
+        sectionSubsections,
+        paras,
+      ));
 
       if (i === 0) {
         const evidenceTable = buildEvidenceTable(
