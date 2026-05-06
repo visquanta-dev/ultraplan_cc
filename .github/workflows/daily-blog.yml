@@ -4,8 +4,7 @@ on:
   schedule:
     # 9:30 AM America/Chicago = 14:30 UTC (CDT, UTC-5) or 15:30 UTC (CST, UTC-6)
     # Using 14:30 UTC for CDT (summer). Adjust to 15:30 for CST (winter).
-    - cron: '30 14 * * 1-5'  # Mon-Fri at 9:30 AM Chicago time (CDT)
-    - cron: '30 20 * * 1-5'  # Mon-Fri at 3:30 PM Chicago time (CDT)
+    - cron: '30 14 * * *'  # Daily at 9:30 AM Chicago time (CDT)
   workflow_dispatch:  # Allow manual triggering from GitHub UI
     inputs:
       lane:
