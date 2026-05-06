@@ -1,6 +1,11 @@
 name: Daily Blog Post
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/daily-blog.yml'
   schedule:
     # 10:05 AM America/Chicago = 15:05 UTC (CDT, UTC-5) or 16:05 UTC (CST, UTC-6)
     # Using 15:05 UTC keeps the run once daily while avoiding busier half-hour slots.
@@ -23,7 +28,7 @@ on:
       max_attempts:
         description: 'Signal candidates to try before giving up (1-5; ignored for curated/originate)'
         required: false
-        default: '2'
+        default: '5'
 
 jobs:
   generate:
@@ -62,7 +67,7 @@ jobs:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
           ULTRAPLAN_DISCOVERY_SIGNALS: ${{ vars.ULTRAPLAN_DISCOVERY_SIGNALS || '0' }}
-          MAX_PIPELINE_ATTEMPTS: ${{ github.event.inputs.max_attempts || '2' }}
+          MAX_PIPELINE_ATTEMPTS: ${{ github.event.inputs.max_attempts || '5' }}
           ORIGINATE_SEED_B64: ${{ github.event.inputs.originate_seed_b64 }}
           ORIGINATE_CATEGORY: ${{ github.event.inputs.originate_category }}
         run: |
