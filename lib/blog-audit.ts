@@ -3,6 +3,14 @@ import type { GateReport, GateResult } from './gates/types';
 import { isCompetitorOutbound } from './sources/link-policy';
 
 type AuditStatus = 'pass' | 'warn' | 'fail' | 'overridden';
+type SourcePolicy = 'standard' | 'competitor-signal' | 'operator-pov' | 'strategic-pov';
+type AuditSourceType =
+  | 'official'
+  | 'industry'
+  | 'vendor'
+  | 'research'
+  | 'competitor-research-only'
+  | 'other';
 
 interface BuildBlogAuditInput {
   slug: string;
@@ -51,11 +59,12 @@ function isOlderThanMonths(date: string | undefined, months: number, now: Date):
   return parsed < cutoff;
 }
 
-function sourceTypeFor(source: Source): 'official' | 'industry' | 'vendor' | 'research' | 'other' {
+function sourceTypeFor(source: Source): AuditSourceType {
   const domain = source.domain.replace(/^www\./, '').toLowerCase();
+  if (isCompetitorOutbound(source.url)) return 'competitor-research-only';
   if (domain.includes('nada.org') || domain.endsWith('.gov')) return 'official';
   if (domain.includes('coxautoinc.com') || domain.includes('cdkglobal.com')) return 'industry';
-  if (isCompetitorOutbound(source.url)) return 'vendor';
+  if (domain === 'visquanta.com') return 'research';
   return 'industry';
 }
 
@@ -64,10 +73,20 @@ function sourceExcerpt(source: Source): string {
   return quote?.text.slice(0, 450) ?? `Source captured from ${source.domain}.`;
 }
 
+function sourcePolicyFor(bundle: Bundle): SourcePolicy {
+  const competitorSources = bundle.sources.filter((source) => isCompetitorOutbound(source.url));
+  const publicSources = bundle.sources.length - competitorSources.length;
+
+  if (bundle.originate_seed) return 'operator-pov';
+  if (competitorSources.length > 0 && publicSources < 3) return 'competitor-signal';
+  if (publicSources < 3) return 'strategic-pov';
+  return 'standard';
+}
+
 function auditSources(bundle: Bundle, now: Date) {
   return bundle.sources
-    .filter((source) => !isCompetitorOutbound(source.url))
     .map((source) => {
+      const competitorResearchOnly = isCompetitorOutbound(source.url);
       const publishedAt = dateOnly(source.published);
       const stale = isOlderThanMonths(publishedAt, 24, now);
       return {
@@ -76,10 +95,12 @@ function auditSources(bundle: Bundle, now: Date) {
         domain: source.domain.replace(/^www\./, ''),
         ...(publishedAt ? { published_at: publishedAt } : {}),
         source_type: sourceTypeFor(source),
-        tier: 'medium',
+        tier: competitorResearchOnly ? 'low' : 'medium',
         excerpt: sourceExcerpt(source),
-        relevance_reason: `Used by UltraPlan as source ${source.source_id} for ${bundle.topic_slug}; ${source.quotes.length} quote anchors were extracted for draft generation.`,
-        ...(stale
+        relevance_reason: competitorResearchOnly
+          ? `Used by UltraPlan as research-only competitor topic signal ${source.source_id} for ${bundle.topic_slug}; not intended as a published outbound citation.`
+          : `Used by UltraPlan as source ${source.source_id} for ${bundle.topic_slug}; ${source.quotes.length} quote anchors were extracted for draft generation.`,
+        ...(stale && !competitorResearchOnly
           ? {
               freshness_override: true,
               freshness_override_reason:
@@ -143,10 +164,16 @@ function approval(approvedBy: string, approvedAt: string, notes: string) {
 export function buildBlogAuditRecord(input: BuildBlogAuditInput): Record<string, unknown> {
   const now = input.generatedAt ?? new Date();
   const timestamp = now.toISOString();
+  const sourcePolicy = sourcePolicyFor(input.bundle);
   const sources = auditSources(input.bundle, now);
+  const publicSources = sources.filter((source) => source.source_type !== 'competitor-research-only');
+  const competitorSignals = sources.length - publicSources.length;
   const links = countLinks(input.markdownContent);
   const gateEntries = gateGuardrails(input.gateReport);
   const approvedBy = 'UltraPlan automated gate suite';
+  const standardSourceCount = 3;
+  const standardExternalLinks = 3;
+  const isLowSourcePolicy = sourcePolicy !== 'standard';
 
   return {
     slug: input.slug,
@@ -154,17 +181,23 @@ export function buildBlogAuditRecord(input: BuildBlogAuditInput): Record<string,
       (input.categoryId && TOPIC_LANE_BY_CATEGORY[input.categoryId]) ??
       TOPIC_LANE_BY_PIPELINE_LANE[input.lane],
     status: 'approved',
+    source_policy: sourcePolicy,
     created_at: timestamp,
     updated_at: timestamp,
     sources,
     guardrails: {
       sources: {
-        status: sources.length >= 3 ? 'pass' : 'fail',
-        score: Math.min(100, Math.round((sources.length / 3) * 100)),
-        notes: `${sources.length} link-safe source${sources.length === 1 ? '' : 's'} included in the audit record.`,
+        status: publicSources.length >= standardSourceCount ? 'pass' : isLowSourcePolicy ? 'warn' : 'fail',
+        score: Math.min(100, Math.round((publicSources.length / standardSourceCount) * 100)),
+        notes: isLowSourcePolicy
+          ? `${sourcePolicy} policy: ${publicSources.length} public source${publicSources.length === 1 ? '' : 's'} and ${competitorSignals} research-only competitor signal${competitorSignals === 1 ? '' : 's'} included in the audit record.`
+          : `${publicSources.length} link-safe public source${publicSources.length === 1 ? '' : 's'} included in the audit record.`,
       },
       links: {
-        status: links.internal >= 2 && links.external >= 3 ? 'pass' : 'warn',
+        status:
+          links.internal >= 2 && (isLowSourcePolicy || links.external >= standardExternalLinks)
+            ? 'pass'
+            : 'warn',
         notes: `${links.internal} internal link${links.internal === 1 ? '' : 's'} and ${links.external} external source link${links.external === 1 ? '' : 's'} detected in rendered markdown.`,
       },
       visual: {
