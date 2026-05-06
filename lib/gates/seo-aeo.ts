@@ -114,6 +114,22 @@ function isQuestionHeading(h: string): boolean {
   return h.trim().endsWith('?') || leaders.includes(first);
 }
 
+function countStructuredRows(body: string): number {
+  const tableLines = [...body.matchAll(/^\|/gm)].length;
+  const bulletLines = [...body.matchAll(/^\s*[-*]\s+\S/gm)].length;
+  const numberedLines = [...body.matchAll(/^\s*\d+\.\s+\S/gm)].length;
+  return tableLines + bulletLines + numberedLines;
+}
+
+function internalDraftArtifacts(body: string): string[] {
+  const artifacts: string[] = [];
+  if (/^###\s+Evidence Map\b/im.test(body)) artifacts.push('Evidence Map section');
+  if (/^\|\s*Dealer question\s*\|\s*Evidence anchor\s*\|\s*Source\s*\|/im.test(body)) {
+    artifacts.push('Evidence Map table');
+  }
+  return artifacts;
+}
+
 // ---------------------------------------------------------------------------
 // Checks (20 SEO + 20 AEO = 40 total points)
 // ---------------------------------------------------------------------------
@@ -283,18 +299,33 @@ const checks: Check[] = [
     };
   },
 
-  // -------------------- SEO 10: tables present --------------------
+  // -------------------- SEO 10: structured extraction blocks present --------------------
   (input) => {
     const body = extractBody(input.markdown);
-    const tableLines = [...body.matchAll(/^\|/gm)].length;
-    const passed = tableLines >= 6; // at least one table with 6+ rows, or two smaller
+    const structuredRows = countStructuredRows(body);
+    const passed = structuredRows >= 5;
     return {
-      id: 'seo/structured-data-tables',
+      id: 'seo/structured-extraction-blocks',
       category: 'seo',
       weight: 1,
-      score: passed ? 1 : tableLines >= 3 ? 0.5 : 0,
+      score: passed ? 1 : structuredRows >= 3 ? 0.5 : 0,
       passed,
-      reason: `${tableLines} table rows (target >=6)`,
+      reason: `${structuredRows} table/list rows (target >=5)`,
+    };
+  },
+
+  // -------------------- SEO 10b: no internal drafting artifacts --------------------
+  (input) => {
+    const body = extractBody(input.markdown);
+    const artifacts = internalDraftArtifacts(body);
+    const passed = artifacts.length === 0;
+    return {
+      id: 'seo/no-internal-draft-artifacts',
+      category: 'seo',
+      weight: 1,
+      score: passed ? 1 : 0,
+      passed,
+      reason: passed ? 'no internal drafting artifacts' : `found: ${artifacts.join(', ')}`,
     };
   },
 
@@ -706,7 +737,15 @@ const checks: Check[] = [
 // Gate entry point
 // ---------------------------------------------------------------------------
 
-const MAX_SCORE = 20; // computed from check weights below
+const MAX_SCORE = checks.reduce((sum, check) => {
+  const result = check({
+    markdown: '',
+    outline: { headline: '', lane: 'daily_seo', sections: [] } as unknown as Outline,
+    paragraphs: [],
+    frontmatter: { title: '', slug: '', metaDescription: '', image: '' },
+  });
+  return sum + result.weight;
+}, 0);
 const PASS_THRESHOLD = 1; // 100% required before PR creation
 
 export async function runSeoAeoGate(
