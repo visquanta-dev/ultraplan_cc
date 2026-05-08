@@ -77,26 +77,39 @@ export async function POST(request: NextRequest) {
   // Base64-encode for clean workflow_dispatch input transport
   const seedB64 = Buffer.from(seed, 'utf-8').toString('base64');
 
-  const res = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ref: 'main',
-        inputs: {
-          lane,
-          originate_seed_b64: seedB64,
-          originate_category: category,
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          Accept: 'application/vnd.github+json',
+          'Content-Type': 'application/json',
         },
-      }),
-    },
-  );
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: {
+            lane,
+            originate_seed_b64: seedB64,
+            originate_category: category,
+          },
+        }),
+      },
+    );
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? `GitHub dispatch failed before response: ${err.message}`
+            : 'GitHub dispatch failed before response',
+      },
+      { status: 502 },
+    );
+  }
 
   if (!res.ok) {
     const text = await res.text();

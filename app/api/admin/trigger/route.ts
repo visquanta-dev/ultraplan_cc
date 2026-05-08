@@ -30,22 +30,35 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const inputs: Record<string, string> = { lane, strategy };
+  const inputs: Record<string, string> = { lane };
   if (curated_bucket) inputs.curated_bucket = curated_bucket;
 
-  const res = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        Accept: 'application/vnd.github+json',
-        'Content-Type': 'application/json',
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'X-GitHub-Api-Version': '2022-11-28',
+          Accept: 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main', inputs }),
       },
-      body: JSON.stringify({ ref: 'main', inputs }),
-    },
-  );
+    );
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? `GitHub dispatch failed before response: ${err.message}`
+            : 'GitHub dispatch failed before response',
+      },
+      { status: 502 },
+    );
+  }
 
   if (!res.ok) {
     const text = await res.text();

@@ -346,10 +346,14 @@ export async function checkPostOverlap(args: {
       const postSameAs = new Set(post.entities.map((e) => e.sameAs));
       const shared = [...entitySameAs].filter((s) => postSameAs.has(s)).length;
       if (shared >= 3) {
-        throw new PostOverlapError(
-          `3/3 entities identical (${[...entitySameAs].filter((s) => postSameAs.has(s)).join(', ')})`,
-          post.slug,
-        );
+        const cos = titleCosine(title, post.title);
+        const sharedSources = [...fingerprints].filter((f) => post.sourceFingerprints.has(f));
+        if (cos > 0.2 || sharedSources.length > 0) {
+          throw new PostOverlapError(
+            `3/3 entities identical (${[...entitySameAs].filter((s) => postSameAs.has(s)).join(', ')})`,
+            post.slug,
+          );
+        }
       }
     }
     // Title cosine. Dropped from 0.55 to 0.35 after the 2026-04-18 false
