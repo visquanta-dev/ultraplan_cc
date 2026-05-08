@@ -5,6 +5,7 @@ import { checkRephraseDistances } from '../../lib/stages/rephrase-distance';
 import { voiceTransform } from '../../lib/stages/voice-transform';
 import { runWithRetry } from '../../lib/gates/retry-loop';
 import { runMultiOptionImagePipeline, type ImagePipelineResult, type MultiOptionImageResult } from '../../lib/image/pipeline';
+import { loadImageStyle } from '../../lib/image/style-loader';
 import { renderChart } from '../../lib/image/chart-renderer';
 import { createDraftPR } from '../../lib/github';
 import { logRun, logBlocked, extractGateScores, type RunRecord } from '../../lib/admin/run-logger';
@@ -972,11 +973,22 @@ export async function runBlogPipeline(input: PipelineInput): Promise<PipelineRes
       }
     }
 
+    const imageStyle = loadImageStyle(lane);
+    const imageAspect = chartRelPath
+      ? '1200:630'
+      : heroRelPath
+        ? imageStyle.dimensions.hero.aspect_ratio
+        : undefined;
+
     const frontmatter = {
       title: stripEmDashes(outline.headline),
       slug,
       metaDescription,
       image: heroFrontmatterPath,
+      imageMode: chartRelPath ? 'data_visual' : 'editorial_photo',
+      ...(imageAspect ? { imageAspect } : {}),
+      imageFocalPoint: 'center',
+      hideImageOverlay: false,
       readingTime,
       publishedAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
