@@ -196,6 +196,20 @@ async function main() {
     } as unknown as Record<string, unknown>;
 
     if (result.verdict === 'published') break;
+
+    // Publish-side failures (PAT scope, GitHub rate-limit / outage) will hit
+    // every subsequent attempt identically — re-scraping and re-drafting a
+    // fresh topic just burns OpenRouter budget for nothing. Bail out and
+    // surface the failure; the next run can try again once publish is healthy.
+    const errStr = typeof result.error === 'string' ? result.error : '';
+    const isPublishFailure =
+      errStr.includes('[github]') ||
+      errStr.includes('Resource not accessible by personal access token');
+    if (isPublishFailure) {
+      stamp(`attempt ${attempt}/${maxAttempts}: publish-side failure (${errStr.slice(0, 140)}); aborting outer retries to preserve OpenRouter budget`);
+      break;
+    }
+
     if (attempt < maxAttempts) {
       stamp(`attempt ${attempt}/${maxAttempts}: not published (${result.verdict}); trying next candidate`);
     }
