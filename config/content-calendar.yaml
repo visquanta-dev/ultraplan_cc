@@ -1,13 +1,13 @@
-generated_at: 2026-05-17T13:42:56.633Z
+generated_at: 2026-05-24T13:47:09.904Z
 ahrefs_units_used: 0
-total_topics: 180
-total_unpublished: 180
+total_topics: 177
+total_unpublished: 177
 pillars:
   - pillar: dealership inventory management
     vertical: dealer_operations
     product_page: /
     best_score: 5750
-    total_traffic_potential: 279550
+    total_traffic_potential: 389400
     topics:
       - keyword: vauto'
         volume: 50
@@ -37,6 +37,20 @@ pillars:
         cpc: 600
         score: 4187.5
         published: false
+      - keyword: vautologin
+        volume: 150
+        kd: 10
+        traffic_potential: 68000
+        cpc: 250
+        score: 3400
+        published: false
+      - keyword: vehicle maintenance
+        volume: 5000
+        kd: 15
+        traffic_potential: 44000
+        cpc: 70
+        score: 1760
+        published: false
       - keyword: provisions auto
         volume: 40
         kd: 3
@@ -44,26 +58,19 @@ pillars:
         cpc: 50
         score: 461.54
         published: false
-      - keyword: first look inventory
-        volume: 20
-        kd: 0
-        traffic_potential: 1900
-        cpc: 400
-        score: 190
-        published: false
       - keyword: automated inventory tracking
         volume: 100
-        kd: 15
-        traffic_potential: 1200
+        kd: 11
+        traffic_potential: 1100
         cpc: 1000
-        score: 48
+        score: 52.38
         published: false
       - keyword: management systems
         volume: 1100
-        kd: 6
-        traffic_potential: 450
+        kd: 10
+        traffic_potential: 300
         cpc: 40
-        score: 28.13
+        score: 15
         published: false
       - keyword: car dealership inventory management strategies
         volume: 10
@@ -97,7 +104,7 @@ pillars:
     vertical: service_department
     product_page: /service-drive
     best_score: 3575.76
-    total_traffic_potential: 167200
+    total_traffic_potential: 178400
     topics:
       - keyword: ford dealership service department near me
         volume: 30
@@ -120,6 +127,13 @@ pillars:
         cpc: 250
         score: 1200
         published: false
+      - keyword: chevy volt repair near me
+        volume: 30
+        kd: 0
+        traffic_potential: 11000
+        cpc: 250
+        score: 1100
+        published: false
       - keyword: toyota service dealership
         volume: 30
         kd: 12
@@ -133,6 +147,13 @@ pillars:
         traffic_potential: 7200
         cpc: 250
         score: 720
+        published: false
+      - keyword: mccords toyota service
+        volume: 10
+        kd: 0
+        traffic_potential: 200
+        cpc: 140
+        score: 20
         published: false
       - keyword: how to run a dealership service department
         volume: 100
@@ -155,18 +176,11 @@ pillars:
         cpc: 250
         score: 0
         published: false
-      - keyword: chevy apppointment
-        volume: 10
-        kd: 8
-        traffic_potential: 0
-        cpc: 150
-        score: 0
-        published: false
   - pillar: dealership call tracking
     vertical: dealer_marketing
     product_page: /auto-master-suite
     best_score: 2461.54
-    total_traffic_potential: 47300
+    total_traffic_potential: 44200
     topics:
       - keyword: marketing call tracking
         volume: 150
@@ -174,20 +188,6 @@ pillars:
         traffic_potential: 32000
         cpc: 700
         score: 2461.54
-        published: false
-      - keyword: car war
-        volume: 20
-        kd: 0
-        traffic_potential: 3000
-        cpc: null
-        score: 300
-        published: false
-      - keyword: automotive call tracking
-        volume: 70
-        kd: 0
-        traffic_potential: 3000
-        cpc: null
-        score: 300
         published: false
       - keyword: car wars login
         volume: 1500
@@ -203,19 +203,26 @@ pillars:
         cpc: null
         score: 250
         published: false
+      - keyword: automotive call tracking
+        volume: 70
+        kd: 2
+        traffic_potential: 2900
+        cpc: null
+        score: 241.67
+        published: false
       - keyword: carwars
         volume: 2700
-        kd: 20
+        kd: 6
         traffic_potential: 2900
         cpc: 6
-        score: 96.67
+        score: 181.25
         published: false
       - keyword: callrevu login
         volume: 1000
-        kd: 1
+        kd: 3
         traffic_potential: 350
         cpc: 1
-        score: 31.82
+        score: 26.92
         published: false
       - keyword: what is call tracking
         volume: 150
@@ -307,15 +314,15 @@ pillars:
         cpc: null
         score: 0
         published: false
-      - keyword: auto dealer seo marketing agency
-        volume: 150
+      - keyword: auto dealer seo agency
+        volume: 10
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
         published: false
-      - keyword: auto dealer seo agency
-        volume: 10
+      - keyword: auto dealer seo marketing agency
+        volume: 150
         kd: 0
         traffic_potential: 0
         cpc: null
@@ -331,16 +338,9 @@ pillars:
   - pillar: dealership digital marketing
     vertical: dealer_marketing
     product_page: /auto-master-suite
-    best_score: 427.78
-    total_traffic_potential: 23020
+    best_score: 369.23
+    total_traffic_potential: 5580
     topics:
-      - keyword: www.dealer.com
-        volume: 20
-        kd: 8
-        traffic_potential: 7700
-        cpc: 300
-        score: 427.78
-        published: false
       - keyword: digital marketing for automotive
         volume: 150
         kd: 3
@@ -350,17 +350,17 @@ pillars:
         published: false
       - keyword: auto dealership digital marketing
         volume: 100
-        kd: 16
-        traffic_potential: 7700
+        kd: 21
+        traffic_potential: 700
         cpc: 500
-        score: 296.15
+        score: 22.58
         published: false
-      - keyword: auto advertising agency
-        volume: 200
-        kd: 9
-        traffic_potential: 2800
-        cpc: 700
-        score: 147.37
+      - keyword: marketing vehicle
+        volume: 80
+        kd: 0
+        traffic_potential: 60
+        cpc: 80
+        score: 6
         published: false
       - keyword: auto marketing services
         volume: 100
@@ -408,7 +408,7 @@ pillars:
     vertical: dealer_operations
     product_page: /
     best_score: 230.77
-    total_traffic_potential: 7090
+    total_traffic_potential: 7290
     topics:
       - keyword: becoming a dealer
         volume: 20
@@ -433,10 +433,17 @@ pillars:
         published: false
       - keyword: car dealership revenue
         volume: 30
-        kd: 4
-        traffic_potential: 800
+        kd: 8
+        traffic_potential: 900
         cpc: null
-        score: 57.14
+        score: 50
+        published: false
+      - keyword: used car dealer profit margin
+        volume: 200
+        kd: 0
+        traffic_potential: 400
+        cpc: null
+        score: 40
         published: false
       - keyword: how much profit do dealers make on used cars
         volume: 50
@@ -451,13 +458,6 @@ pillars:
         traffic_potential: 400
         cpc: 80
         score: 33.33
-        published: false
-      - keyword: used car dealer profit margin
-        volume: 200
-        kd: 1
-        traffic_potential: 300
-        cpc: null
-        score: 27.27
         published: false
       - keyword: car dealership margins
         volume: 80
@@ -533,7 +533,7 @@ pillars:
     vertical: bdc_operations
     product_page: /speed-to-lead
     best_score: 220
-    total_traffic_potential: 9310
+    total_traffic_potential: 8560
     topics:
       - keyword: bdc position at car dealership
         volume: 40
@@ -566,16 +566,16 @@ pillars:
       - keyword: service bdc
         volume: 200
         kd: 0
-        traffic_potential: 1100
+        traffic_potential: 350
         cpc: 350
-        score: 110
+        score: 35
         published: false
       - keyword: bdc managers
         volume: 20
-        kd: 0
+        kd: 17
         traffic_potential: 10
         cpc: null
-        score: 1
+        score: 0.37
         published: false
       - keyword: automotive bdc outsourced solutions
         volume: 10
@@ -595,7 +595,7 @@ pillars:
     vertical: bdc_operations
     product_page: /speed-to-lead
     best_score: 210
-    total_traffic_potential: 2800
+    total_traffic_potential: 2950
     topics:
       - keyword: bdc meaning dealership
         volume: 200
@@ -613,10 +613,10 @@ pillars:
         published: false
       - keyword: sales business development
         volume: 150
-        kd: 1
-        traffic_potential: 200
+        kd: 0
+        traffic_potential: 350
         cpc: 60
-        score: 18.18
+        score: 35
         published: false
       - keyword: dealership bdc solutions
         volume: 10
@@ -652,103 +652,97 @@ pillars:
         cpc: null
         score: 0
         published: false
-  - pillar: dealership service retention
+  - pillar: service advisor training
     vertical: service_department
     product_page: /service-drive
-    best_score: 162.5
-    total_traffic_potential: 4090
+    best_score: 150
+    total_traffic_potential: 3810
     topics:
-      - keyword: retention strategies
-        volume: 1000
-        kd: 14
-        traffic_potential: 3900
-        cpc: 35
-        score: 162.5
+      - keyword: service advisor jobs near me
+        volume: 4600
+        kd: 0
+        traffic_potential: 1500
+        cpc: 7
+        score: 150
         published: false
-      - keyword: service package
-        volume: 150
-        kd: 3
-        traffic_potential: 100
-        cpc: 140
-        score: 7.69
-        published: false
-      - keyword: personalized messaging
-        volume: 150
-        kd: 7
-        traffic_potential: 90
-        cpc: 130
-        score: 5.29
-        published: false
-      - keyword: dealership service retention
+      - keyword: cdk service advisor training
         volume: 30
         kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
+        traffic_potential: 700
+        cpc: 25
+        score: 70
         published: false
-  - pillar: fixed ops marketing
-    vertical: service_department
-    product_page: /service-drive
-    best_score: 76.92
-    total_traffic_potential: 2130
-    topics:
-      - keyword: marketing solution
-        volume: 500
-        kd: 3
+      - keyword: recommended service
+        volume: 20
+        kd: 12
         traffic_potential: 1000
-        cpc: 200
-        score: 76.92
-        published: false
-      - keyword: fixed ops automotive
-        volume: 40
-        kd: 4
-        traffic_potential: 450
         cpc: null
-        score: 32.14
+        score: 45.45
         published: false
-      - keyword: branded videos
-        volume: 150
-        kd: 2
+      - keyword: pre screening
+        volume: 400
+        kd: 3
         traffic_potential: 350
-        cpc: 200
-        score: 29.17
+        cpc: 130
+        score: 26.92
         published: false
-      - keyword: fixed ops marketing
-        volume: 90
-        kd: 1
+      - keyword: service advisor salary
+        volume: 900
+        kd: 0
         traffic_potential: 150
-        cpc: 300
-        score: 13.64
+        cpc: 25
+        score: 15
         published: false
-      - keyword: corporate marketing
-        volume: 450
-        kd: 2
-        traffic_potential: 100
-        cpc: 300
-        score: 8.33
+      - keyword: service writing training
+        volume: 20
+        kd: 12
+        traffic_potential: 90
+        cpc: null
+        score: 4.09
         published: false
-      - keyword: request demo
+      - keyword: service advisor at car dealership
+        volume: 20
+        kd: 0
+        traffic_potential: 20
+        cpc: 30
+        score: 2
+        published: false
+      - keyword: chris collins service advisor training
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: 20
+        score: 0
+        published: false
+      - keyword: service advisor training essentials
+        volume: 30
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+      - keyword: rv specific service advisor sales training
         volume: 100
-        kd: 1
-        traffic_potential: 80
-        cpc: 350
-        score: 7.27
-        published: false
-      - keyword: dealership fixed ops marketing
-        volume: 30
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
         published: false
-      - keyword: fixed ops digital marketing
-        volume: 30
+      - keyword: service advisor training marine
+        volume: 20
         kd: 0
         traffic_potential: 0
         cpc: null
         score: 0
         published: false
-      - keyword: custom landing
+      - keyword: service advisor training course
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: 100
+        score: 0
+        published: false
+      - keyword: honda service advisor training
         volume: 10
         kd: 0
         traffic_potential: 0
@@ -758,9 +752,16 @@ pillars:
   - pillar: dealership marketing ideas
     vertical: dealer_marketing
     product_page: /auto-master-suite
-    best_score: 72.73
-    total_traffic_potential: 4930
+    best_score: 100
+    total_traffic_potential: 5330
     topics:
+      - keyword: marketing for auto dealers
+        volume: 60
+        kd: 3
+        traffic_potential: 1300
+        cpc: 500
+        score: 100
+        published: false
       - keyword: auto dealership marketing ideas
         volume: 90
         kd: 1
@@ -796,13 +797,6 @@ pillars:
         cpc: null
         score: 52.94
         published: false
-      - keyword: marketing for auto dealers
-        volume: 60
-        kd: 15
-        traffic_potential: 900
-        cpc: 500
-        score: 36
-        published: false
       - keyword: free oil
         volume: 80
         kd: 0
@@ -812,10 +806,10 @@ pillars:
         published: false
       - keyword: customer base
         volume: 1000
-        kd: 19
+        kd: 11
         traffic_potential: 150
         cpc: 600
-        score: 5.17
+        score: 7.14
         published: false
       - keyword: dealership holiday marketing ideas
         volume: 40
@@ -866,239 +860,18 @@ pillars:
         cpc: null
         score: 0
         published: false
-  - pillar: service advisor training
-    vertical: service_department
-    product_page: /service-drive
-    best_score: 70
-    total_traffic_potential: 3760
-    topics:
-      - keyword: cdk service advisor training
-        volume: 30
-        kd: 0
-        traffic_potential: 700
-        cpc: 25
-        score: 70
-        published: false
-      - keyword: service advisor jobs near me
-        volume: 4600
-        kd: 13
-        traffic_potential: 1600
-        cpc: 7
-        score: 69.57
-        published: false
-      - keyword: recommended service
-        volume: 20
-        kd: 12
-        traffic_potential: 1000
-        cpc: null
-        score: 45.45
-        published: false
-      - keyword: pre screening
-        volume: 400
-        kd: 2
-        traffic_potential: 250
-        cpc: 130
-        score: 20.83
-        published: false
-      - keyword: service advisor salary
-        volume: 900
-        kd: 0
-        traffic_potential: 150
-        cpc: 25
-        score: 15
-        published: false
-      - keyword: service writing training
-        volume: 20
-        kd: 12
-        traffic_potential: 60
-        cpc: null
-        score: 2.73
-        published: false
-      - keyword: chris collins service advisor training
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: 20
-        score: 0
-        published: false
-      - keyword: service advisor training essentials
-        volume: 30
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-      - keyword: rv specific service advisor sales training
-        volume: 100
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-      - keyword: service advisor training marine
-        volume: 20
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-      - keyword: service advisor training course
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: 100
-        score: 0
-        published: false
-      - keyword: honda service advisor training
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-  - pillar: dealership customer experience
-    vertical: customer_experience
-    product_page: /reputation-management
-    best_score: 60
-    total_traffic_potential: 2340
-    topics:
-      - keyword: customer buying
-        volume: 20
-        kd: 15
-        traffic_potential: 1500
-        cpc: null
-        score: 60
-        published: false
-      - keyword: best customer experience
-        volume: 250
-        kd: 21
-        traffic_potential: 300
-        cpc: 70
-        score: 9.68
-        published: false
-      - keyword: auto dealership customer experience
-        volume: 30
-        kd: 0
-        traffic_potential: 80
-        cpc: null
-        score: 8
-        published: false
-      - keyword: customer experience car dealership
-        volume: 40
-        kd: 0
-        traffic_potential: 80
-        cpc: null
-        score: 8
-        published: false
-      - keyword: customer experience challenges
-        volume: 150
-        kd: 0
-        traffic_potential: 80
-        cpc: 250
-        score: 8
-        published: false
-      - keyword: service teams
-        volume: 70
-        kd: 20
-        traffic_potential: 200
-        cpc: 15
-        score: 6.67
-        published: false
-      - keyword: dealership customer experience
-        volume: 150
-        kd: 0
-        traffic_potential: 60
-        cpc: null
-        score: 6
-        published: false
-      - keyword: improve dealership customer experience
-        volume: 70
-        kd: 0
-        traffic_potential: 40
-        cpc: null
-        score: 4
-        published: false
-      - keyword: online dealership customer shopping experience
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-      - keyword: ai tools for dealership customer experience
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
-  - pillar: dealership bdc training
-    vertical: bdc_operations
-    product_page: /speed-to-lead
-    best_score: 31.82
-    total_traffic_potential: 980
-    topics:
-      - keyword: dealer fx
-        volume: 450
-        kd: 1
-        traffic_potential: 350
-        cpc: 450
-        score: 31.82
-        published: false
-      - keyword: proactive training solutions
-        volume: 10
-        kd: 2
-        traffic_potential: 250
-        cpc: 80
-        score: 20.83
-        published: false
-      - keyword: dealership bdc training
-        volume: 20
-        kd: 0
-        traffic_potential: 150
-        cpc: 90
-        score: 15
-        published: false
-      - keyword: auto bdc training
-        volume: 70
-        kd: 0
-        traffic_potential: 150
-        cpc: 250
-        score: 15
-        published: false
-      - keyword: automotive dealership bdc training
-        volume: 20
-        kd: 0
-        traffic_potential: 60
-        cpc: 250
-        score: 6
-        published: false
-      - keyword: service bdc training
-        volume: 10
-        kd: 0
-        traffic_potential: 20
-        cpc: 300
-        score: 2
-        published: false
-      - keyword: dealership sales bdc training
-        volume: 10
-        kd: 0
-        traffic_potential: 0
-        cpc: null
-        score: 0
-        published: false
   - pillar: dealership csi scores
     vertical: customer_experience
     product_page: /reputation-management
-    best_score: 30
-    total_traffic_potential: 1210
+    best_score: 47.62
+    total_traffic_potential: 1900
     topics:
-      - keyword: what does csi stand for
-        volume: 1000
-        kd: 0
-        traffic_potential: 300
-        cpc: 3
-        score: 30
+      - keyword: satisfaction index
+        volume: 20
+        kd: 11
+        traffic_potential: 1000
+        cpc: null
+        score: 47.62
         published: false
       - keyword: products services
         volume: 200
@@ -1128,13 +901,6 @@ pillars:
         cpc: null
         score: 10
         published: false
-      - keyword: total score
-        volume: 90
-        kd: 2
-        traffic_potential: 10
-        cpc: 25
-        score: 0.83
-        published: false
       - keyword: training to improve csi scores dealership
         volume: 10
         kd: 0
@@ -1143,6 +909,130 @@ pillars:
         score: 0
         published: false
       - keyword: ai tools for improving dealership csi scores
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+  - pillar: fixed ops marketing
+    vertical: service_department
+    product_page: /service-drive
+    best_score: 47.37
+    total_traffic_potential: 1900
+    topics:
+      - keyword: marketing solution
+        volume: 500
+        kd: 9
+        traffic_potential: 900
+        cpc: 200
+        score: 47.37
+        published: false
+      - keyword: branded videos
+        volume: 150
+        kd: 2
+        traffic_potential: 350
+        cpc: 200
+        score: 29.17
+        published: false
+      - keyword: fixed ops automotive
+        volume: 40
+        kd: 7
+        traffic_potential: 300
+        cpc: null
+        score: 17.65
+        published: false
+      - keyword: fixed ops marketing
+        volume: 90
+        kd: 2
+        traffic_potential: 100
+        cpc: 300
+        score: 8.33
+        published: false
+      - keyword: corporate marketing
+        volume: 450
+        kd: 2
+        traffic_potential: 100
+        cpc: 300
+        score: 8.33
+        published: false
+      - keyword: request demo
+        volume: 100
+        kd: 17
+        traffic_potential: 150
+        cpc: 350
+        score: 5.56
+        published: false
+      - keyword: dealership fixed ops marketing
+        volume: 30
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+      - keyword: fixed ops digital marketing
+        volume: 30
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+      - keyword: custom landing
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+  - pillar: dealership bdc training
+    vertical: bdc_operations
+    product_page: /speed-to-lead
+    best_score: 31.82
+    total_traffic_potential: 1000
+    topics:
+      - keyword: dealer fx
+        volume: 450
+        kd: 1
+        traffic_potential: 350
+        cpc: 450
+        score: 31.82
+        published: false
+      - keyword: proactive training solutions
+        volume: 10
+        kd: 1
+        traffic_potential: 250
+        cpc: 80
+        score: 22.73
+        published: false
+      - keyword: dealership bdc training
+        volume: 20
+        kd: 0
+        traffic_potential: 150
+        cpc: 90
+        score: 15
+        published: false
+      - keyword: auto bdc training
+        volume: 70
+        kd: 0
+        traffic_potential: 150
+        cpc: 250
+        score: 15
+        published: false
+      - keyword: automotive dealership bdc training
+        volume: 20
+        kd: 0
+        traffic_potential: 60
+        cpc: 250
+        score: 6
+        published: false
+      - keyword: service bdc training
+        volume: 10
+        kd: 0
+        traffic_potential: 40
+        cpc: 300
+        score: 4
+        published: false
+      - keyword: dealership sales bdc training
         volume: 10
         kd: 0
         traffic_potential: 0
@@ -1171,6 +1061,95 @@ pillars:
         published: false
       - keyword: ai common
         volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+  - pillar: dealership customer experience
+    vertical: customer_experience
+    product_page: /reputation-management
+    best_score: 12.5
+    total_traffic_potential: 720
+    topics:
+      - keyword: best customer experience
+        volume: 250
+        kd: 22
+        traffic_potential: 400
+        cpc: 70
+        score: 12.5
+        published: false
+      - keyword: customer experience car dealership
+        volume: 40
+        kd: 0
+        traffic_potential: 80
+        cpc: null
+        score: 8
+        published: false
+      - keyword: customer experience challenges
+        volume: 150
+        kd: 0
+        traffic_potential: 80
+        cpc: 250
+        score: 8
+        published: false
+      - keyword: auto dealership customer experience
+        volume: 30
+        kd: 0
+        traffic_potential: 60
+        cpc: null
+        score: 6
+        published: false
+      - keyword: dealership customer experience
+        volume: 150
+        kd: 0
+        traffic_potential: 60
+        cpc: null
+        score: 6
+        published: false
+      - keyword: improve dealership customer experience
+        volume: 70
+        kd: 0
+        traffic_potential: 40
+        cpc: null
+        score: 4
+        published: false
+      - keyword: online dealership customer shopping experience
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+      - keyword: ai tools for dealership customer experience
+        volume: 10
+        kd: 0
+        traffic_potential: 0
+        cpc: null
+        score: 0
+        published: false
+  - pillar: dealership service retention
+    vertical: service_department
+    product_page: /service-drive
+    best_score: 7.69
+    total_traffic_potential: 190
+    topics:
+      - keyword: service package
+        volume: 150
+        kd: 3
+        traffic_potential: 100
+        cpc: 140
+        score: 7.69
+        published: false
+      - keyword: personalized messaging
+        volume: 150
+        kd: 7
+        traffic_potential: 90
+        cpc: 130
+        score: 5.29
+        published: false
+      - keyword: dealership service retention
+        volume: 30
         kd: 0
         traffic_potential: 0
         cpc: null
